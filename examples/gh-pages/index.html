@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <title>ELm Image</title>
+    <posthtml-head-elements>
+        <script src="./bundle.js"></script>
+    </posthtml-head-elements>
+
+</head>
+
+<body>
+<main></main>
+<script>
+    var redirect = sessionStorage.redirect;
+    delete sessionStorage.redirect;
+    if (redirect && redirect !== location.href) {
+        history.replaceState(null, null, redirect);
+    }
+    Elm.Main.init({ node: document.querySelector('main') });
+
+</script>
+
+</body>
+
+</html>
