@@ -1,6 +1,6 @@
 module Circles exposing (main)
 
-import Render.Playground exposing (..)
+import Playground exposing (..)
 
 
 
@@ -12,13 +12,28 @@ main =
 
 
 view time =
-    [ ring 70 darkGreen 5
-        |> rotate (spin 2 time)
-    , ring 140 green 9
-        |> rotate (spin 2.5 time)
-    , ring 210 lightGreen 11
-        |> rotate (spin 1.5 time)
+    [ [ ring 70 darkGreen 5
+            |> rotate (spin 20 time)
+      , ring 140 green 9
+            |> rotate (spin 25 time)
+      , ring 210 lightGreen 11
+            |> rotate (spin 15 time)
+      ]
+        |> group
+
+    --|> scale 3
     ]
+
+
+
+--main =
+--    picture
+--        [ [ ring 70 darkGreen 5
+--          , ring 140 green 9
+--          , ring 210 lightGreen 11
+--          ]
+--            |> group
+--        ]
 
 
 ring radius color circles =
@@ -40,5 +55,7 @@ ring radius color circles =
 c1 radius color =
     group
         [ circle color 30
+            |> moveUp radius
+        , image 70 70 "images/mario/stand/left.gif"
             |> moveUp radius
         ]

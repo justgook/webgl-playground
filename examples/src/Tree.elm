@@ -2,7 +2,7 @@ module Tree exposing (main)
 
 --https://ellie-app.com/7nVtFgNfSK4a1
 
-import Render.Playground exposing (..)
+import Playground exposing (..)
 
 
 main =
@@ -26,8 +26,8 @@ view computer { w, h, s, t } =
 update computer { w, h, s, t } =
     { w = w + toX computer.keyboard
     , h = h + toY computer.keyboard
-    , s = w / 2 + w * computer.mouse.x / computer.screen.width
-    , t = 150 * computer.mouse.y / computer.screen.height
+    , s = w / 2 + w * 0.5 * computer.mouse.x / computer.screen.width
+    , t = 100 * computer.mouse.y / computer.screen.height
     }
 
 

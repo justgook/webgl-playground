@@ -18,7 +18,7 @@
     if (redirect && redirect !== location.href) {
         history.replaceState(null, null, redirect);
     }
-    Elm.Main.init({ node: document.querySelector('main') });
+    Elm[Object.keys(Elm)[0]].init({ node: document.querySelector('main') });
 
 </script>
 

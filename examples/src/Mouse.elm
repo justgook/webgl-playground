@@ -1,6 +1,6 @@
 module Mouse exposing (main)
 
-import Render.Playground exposing (..)
+import Playground exposing (..)
 
 
 main =

@@ -1,4 +1,4 @@
-module Render.Mat3 exposing (Mat3, identity, makeRotate, makeScale, makeTranslate, mul, toGL)
+module Playground.Mat3 exposing (Mat3, identity, makeRotate, makeScale, makeTranslate, mul, toGL)
 
 import Math.Vector2
 import Math.Vector4

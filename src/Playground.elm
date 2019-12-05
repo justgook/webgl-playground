@@ -1,4 +1,4 @@
-module Render.Playground exposing
+module Playground exposing
     ( picture, animation, game
     , Shape, circle, oval, square, rectangle, triangle, pentagon, hexagon, octagon, polygon
     , words
@@ -98,19 +98,20 @@ module Render.Playground exposing
 import Browser
 import Browser.Dom as Dom
 import Browser.Events as E
+import Dict exposing (Dict)
 import Html
 import Html.Attributes as H
 import Json.Decode as D
 import Math.Vector2
 import Math.Vector3
 import Math.Vector4
-import Render.LowLevel
-import Render.Mat2 as Mat2 exposing (Mat2)
-import Render.Mat3 as Mat3
-import Set
-import Task
+import Playground.LowLevel
+import Playground.Mat3 as Mat3
+import Set exposing (Set)
+import Task exposing (Task)
 import Time
 import WebGL exposing (Entity)
+import WebGL.Texture as Texture exposing (nonPowerOfTwoOptions)
 
 
 
@@ -129,24 +130,34 @@ import WebGL exposing (Entity)
             ]
 
 -}
-picture : List Shape -> Program () Screen ( Float, Float )
+picture : List Shape -> Program () Picture Msg
 picture shapes =
     let
         init () =
-            ( toScreen 600 600, Task.perform (\{ scene } -> ( scene.width, scene.height )) Dom.getViewport )
-
-        view screen =
-            { title = "Playground"
-            , body = [ render screen shapes ]
-            }
-
-        update ( width, height ) _ =
-            ( toScreen width height
-            , Cmd.none
+            ( Picture (toScreen 600 600) Dict.empty []
+            , Task.perform (\{ scene } -> Resized (toScreen scene.width scene.height)) Dom.getViewport
             )
 
+        view (Picture screen _ entities) =
+            { title = "Playground"
+            , body = [ viewWrap screen entities ]
+            }
+
+        update msg ((Picture screen textures entities) as model) =
+            (case msg of
+                Resized newScreen ->
+                    Picture newScreen textures entities
+
+                GotTexture r ->
+                    Picture screen (gotTextures r textures) entities
+
+                _ ->
+                    model
+            )
+                |> renderPicture shapes
+
         subscriptions _ =
-            E.onResize (\w h -> ( toFloat w, toFloat h ))
+            E.onResize toResized
     in
     Browser.document
         { init = init
@@ -154,6 +165,27 @@ picture shapes =
         , update = update
         , subscriptions = subscriptions
         }
+
+
+renderPicture : List Shape -> Picture -> ( Picture, Cmd Msg )
+renderPicture shapes (Picture screen textures _) =
+    let
+        ( entities, missing ) =
+            render screen textures shapes
+
+        ( newTextures, cmd ) =
+            case missing of
+                [] ->
+                    ( textures, Cmd.none )
+
+                _ ->
+                    requestTexture missing textures
+    in
+    ( Picture screen newTextures entities, cmd )
+
+
+type Picture
+    = Picture Screen TextureManager (List Entity)
 
 
 
@@ -559,21 +591,19 @@ animation : (Time -> List Shape) -> Program () Animation Msg
 animation viewFrame =
     let
         init () =
-            ( Animation E.Visible (toScreen 600 600) (Time (Time.millisToPosix 0))
+            ( Animation E.Visible (toScreen 600 600) Dict.empty [] (Time (Time.millisToPosix 0))
             , Task.perform GotViewport Dom.getViewport
             )
 
-        view (Animation _ screen time) =
+        view (Animation _ screen _ entities _) =
             { title = "Playground"
-            , body = [ render screen (viewFrame time) ]
+            , body = [ viewWrap screen entities ]
             }
 
-        update msg model =
-            ( animationUpdate msg model
-            , Cmd.none
-            )
+        update =
+            animationUpdate viewFrame
 
-        subscriptions (Animation visibility _ _) =
+        subscriptions (Animation visibility _ _ _ _) =
             case visibility of
                 E.Hidden ->
                     E.onVisibilityChange VisibilityChanged
@@ -590,44 +620,62 @@ animation viewFrame =
 
 
 type Animation
-    = Animation E.Visibility Screen Time
+    = Animation E.Visibility Screen TextureManager (List Entity) Time
 
 
 animationSubscriptions : Sub Msg
 animationSubscriptions =
     Sub.batch
-        [ E.onResize Resized
+        [ E.onResize toResized
         , E.onAnimationFrame Tick
         , E.onVisibilityChange VisibilityChanged
         ]
 
 
-animationUpdate : Msg -> Animation -> Animation
-animationUpdate msg ((Animation v s t) as state) =
+toResized : Int -> Int -> Msg
+toResized w h =
+    Resized (toScreen (toFloat w) (toFloat h))
+
+
+animationUpdate : (Time -> List Shape) -> Msg -> Animation -> ( Animation, Cmd Msg )
+animationUpdate viewFrame msg ((Animation v screen textures entities t) as state) =
     case msg of
-        Tick posix ->
-            Animation v s (Time posix)
+        Tick time ->
+            let
+                ( newEntities, missing ) =
+                    render screen textures (viewFrame (Time time))
+            in
+            case missing of
+                [] ->
+                    ( Animation v screen textures newEntities (Time time), Cmd.none )
+
+                _ ->
+                    requestTexture missing textures
+                        |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Time time))
 
         VisibilityChanged vis ->
-            Animation vis s t
+            ( Animation vis screen textures entities t, Cmd.none )
 
         GotViewport { viewport } ->
-            Animation v (toScreen viewport.width viewport.height) t
+            ( Animation v (toScreen viewport.width viewport.height) textures entities t, Cmd.none )
 
-        Resized w h ->
-            Animation v (toScreen (toFloat w) (toFloat h)) t
+        Resized newScreen ->
+            ( Animation v newScreen textures entities t, Cmd.none )
 
         KeyChanged _ _ ->
-            state
+            ( state, Cmd.none )
 
         MouseMove _ _ ->
-            state
+            ( state, Cmd.none )
 
         MouseClick ->
-            state
+            ( state, Cmd.none )
 
         MouseButton _ ->
-            state
+            ( state, Cmd.none )
+
+        GotTexture r ->
+            ( Animation v screen (gotTextures r textures) entities t, Cmd.none )
 
 
 
@@ -693,21 +741,22 @@ game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> m
 game viewMemory updateMemory initialMemory =
     let
         init () =
-            ( Game E.Visible initialMemory initialComputer
+            ( Game
+                { visibility = E.Visible
+                , memory = initialMemory
+                , textures = Dict.empty
+                , computer = initialComputer
+                , entities = []
+                }
             , Task.perform GotViewport Dom.getViewport
             )
 
-        view (Game _ memory computer) =
+        view (Game { memory, textures, computer, entities }) =
             { title = "Playground"
-            , body = [ render computer.screen (viewMemory computer memory) ]
+            , body = [ viewWrap computer.screen entities ]
             }
 
-        update msg model =
-            ( gameUpdate updateMemory msg model
-            , Cmd.none
-            )
-
-        subscriptions (Game visibility _ _) =
+        subscriptions (Game { visibility }) =
             case visibility of
                 E.Hidden ->
                     E.onVisibilityChange VisibilityChanged
@@ -718,7 +767,7 @@ game viewMemory updateMemory initialMemory =
     Browser.document
         { init = init
         , view = view
-        , update = update
+        , update = gameUpdate viewMemory updateMemory
         , subscriptions = subscriptions
         }
 
@@ -739,7 +788,7 @@ initialComputer =
 gameSubscriptions : Sub Msg
 gameSubscriptions =
     Sub.batch
-        [ E.onResize Resized
+        [ E.onResize toResized
         , E.onKeyUp (D.map (KeyChanged False) (D.field "key" D.string))
         , E.onKeyDown (D.map (KeyChanged True) (D.field "key" D.string))
         , E.onAnimationFrame Tick
@@ -756,39 +805,71 @@ gameSubscriptions =
 
 
 type Game memory
-    = Game E.Visibility memory Computer
+    = Game
+        { visibility : E.Visibility
+        , memory : memory
+        , textures : TextureManager
+        , computer : Computer
+        , entities : List Entity
+        }
+
+
+type alias TextureManager =
+    Dict String TextureData
+
+
+type TextureData
+    = Loading
+    | Success { texture : Texture.Texture, size : Math.Vector2.Vec2 }
 
 
 type Msg
     = KeyChanged Bool String
     | Tick Time.Posix
     | GotViewport Dom.Viewport
-    | Resized Int Int
+    | Resized Screen
     | VisibilityChanged E.Visibility
     | MouseMove Float Float
     | MouseClick
     | MouseButton Bool
+    | GotTexture (Result Texture.Error (List ( String, Texture.Texture )))
 
 
-gameUpdate : (Computer -> memory -> memory) -> Msg -> Game memory -> Game memory
-gameUpdate updateMemory msg (Game vis memory computer) =
+gameUpdate : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> Msg -> Game memory -> ( Game memory, Cmd Msg )
+gameUpdate viewMemory updateMemory msg (Game ({ visibility, memory, textures, computer } as model)) =
     case msg of
         Tick time ->
-            Game vis (updateMemory computer memory) <|
-                if computer.mouse.click then
-                    { computer | time = Time time, mouse = mouseClick False computer.mouse }
+            let
+                newModel =
+                    { model
+                        | memory = updateMemory computer memory
+                        , computer =
+                            if computer.mouse.click then
+                                { computer | time = Time time, mouse = mouseClick False computer.mouse }
 
-                else
-                    { computer | time = Time time }
+                            else
+                                { computer | time = Time time }
+                    }
+
+                ( entities, missing ) =
+                    render computer.screen textures (viewMemory newModel.computer newModel.memory)
+            in
+            case missing of
+                [] ->
+                    ( Game { newModel | entities = entities }, Cmd.none )
+
+                _ ->
+                    requestTexture missing textures
+                        |> Tuple.mapFirst (\loadingTextures -> Game { newModel | entities = entities, textures = loadingTextures })
 
         GotViewport { viewport } ->
-            Game vis memory { computer | screen = toScreen viewport.width viewport.height }
+            ( Game { model | computer = { computer | screen = toScreen viewport.width viewport.height } }, Cmd.none )
 
-        Resized w h ->
-            Game vis memory { computer | screen = toScreen (toFloat w) (toFloat h) }
+        Resized newScreen ->
+            ( Game { model | computer = { computer | screen = newScreen } }, Cmd.none )
 
         KeyChanged isDown key ->
-            Game vis memory { computer | keyboard = updateKeyboard isDown key computer.keyboard }
+            ( Game { model | computer = { computer | keyboard = updateKeyboard isDown key computer.keyboard } }, Cmd.none )
 
         MouseMove pageX pageY ->
             let
@@ -798,21 +879,79 @@ gameUpdate updateMemory msg (Game vis memory computer) =
                 y =
                     computer.screen.top - pageY
             in
-            Game vis memory { computer | mouse = mouseMove x y computer.mouse }
+            ( Game { model | computer = { computer | mouse = mouseMove x y computer.mouse } }, Cmd.none )
 
         MouseClick ->
-            Game vis memory { computer | mouse = mouseClick True computer.mouse }
+            ( Game { model | computer = { computer | mouse = mouseClick True computer.mouse } }, Cmd.none )
 
         MouseButton isDown ->
-            Game vis memory { computer | mouse = mouseDown isDown computer.mouse }
+            ( Game { model | computer = { computer | mouse = mouseDown isDown computer.mouse } }, Cmd.none )
 
-        VisibilityChanged visibility ->
-            Game visibility
-                memory
-                { computer
-                    | keyboard = emptyKeyboard
-                    , mouse = Mouse computer.mouse.x computer.mouse.y False False
-                }
+        VisibilityChanged vis ->
+            ( { model
+                | visibility = vis
+                , computer =
+                    { computer
+                        | keyboard = emptyKeyboard
+                        , mouse = Mouse computer.mouse.x computer.mouse.y False False
+                    }
+              }
+                |> Game
+            , Cmd.none
+            )
+
+        GotTexture r ->
+            ( Game { model | textures = gotTextures r model.textures }, Cmd.none )
+
+
+requestTexture : List String -> TextureManager -> ( TextureManager, Cmd Msg )
+requestTexture missing textures =
+    missing
+        |> List.foldl
+            (\url ( acc1, acc2 ) ->
+                let
+                    textureName =
+                        stripTextureUrl url
+                in
+                ( Dict.insert textureName Loading acc1
+                , (Texture.loadWith textureOption textureName
+                    |> Task.map (Tuple.pair textureName)
+                  )
+                    :: acc2
+                )
+            )
+            ( textures, [] )
+        |> Tuple.mapSecond (Task.sequence >> Task.attempt GotTexture)
+
+
+gotTextures : Result error (List ( String, Texture.Texture )) -> TextureManager -> TextureManager
+gotTextures r textures =
+    case r of
+        Ok texturesList ->
+            List.foldl
+                (\( name, t ) ->
+                    { texture = t
+                    , size =
+                        Texture.size t
+                            |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
+                    }
+                        |> Success
+                        |> Dict.insert name
+                )
+                textures
+                texturesList
+
+        Err _ ->
+            textures
+
+
+stripTextureUrl a =
+    a
+
+
+setIfNotExists : String -> TextureManager -> TextureManager
+setIfNotExists a =
+    Dict.update a (Maybe.withDefault Loading >> Just)
 
 
 
@@ -1628,8 +1767,8 @@ colorClamp number =
 -- RENDER
 
 
-render : Screen -> List Shape -> Html.Html msg
-render screen shapes =
+viewWrap : Screen -> List Entity -> Html.Html msg
+viewWrap screen =
     WebGL.toHtmlWith webGLOption
         [ H.style "position" "absolute"
         , H.style "top" "0"
@@ -1639,7 +1778,12 @@ render screen shapes =
         , H.width (round screen.width)
         , H.height (round screen.height)
         ]
-        (List.foldr (renderShape screen Mat3.identity) [] shapes)
+
+
+render : Screen -> TextureManager -> List Shape -> ( List Entity, List String )
+render screen textures shapes =
+    List.foldr (renderShape screen textures Mat3.identity) ( [], Set.empty ) shapes
+        |> Tuple.mapSecond Set.toList
 
 
 webGLOption : List WebGL.Option
@@ -1650,6 +1794,14 @@ webGLOption =
     --, WebGL.clearColor (29 / 255) (33 / 255) (45 / 255) 1
     , WebGL.clearColor 1 1 1 1
     ]
+
+
+textureOption : Texture.Options
+textureOption =
+    { nonPowerOfTwoOptions
+        | magnify = Texture.linear
+        , minify = Texture.linear
+    }
 
 
 
@@ -1663,10 +1815,6 @@ roundAngle a =
             1000000000
     in
     (round a * trigPrecision |> toFloat) / trigPrecision
-
-
-flip fn a b =
-    fn b a
 
 
 createMat3_ tx ty sx sy a_ =
@@ -1686,7 +1834,8 @@ createMat3_ tx ty sx sy a_ =
     Mat3.mul t (Mat3.mul r s_)
 
 
-renderShape screen parent (Shape x y angle s o form) acc =
+renderShape : Screen -> TextureManager -> Mat3.Mat3 -> Shape -> ( List Entity, Set String ) -> ( List Entity, Set String )
+renderShape screen textures parent (Shape x y angle s o form) (( entities, missing ) as acc) =
     let
         addAlpha c =
             c |> Math.Vector3.toRecord |> (\c1 -> Math.Vector4.vec4 c1.x c1.y c1.z)
@@ -1711,12 +1860,14 @@ renderShape screen parent (Shape x y angle s o form) acc =
                         (radius * 2 * s)
                         angle
             in
-            Render.LowLevel.circle
+            ( Playground.LowLevel.circle
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
                 }
-                :: acc
+                :: entities
+            , missing
+            )
 
         Oval color width height ->
             let
@@ -1728,12 +1879,14 @@ renderShape screen parent (Shape x y angle s o form) acc =
                         (height * s)
                         angle
             in
-            Render.LowLevel.circle
+            ( Playground.LowLevel.circle
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
                 }
-                :: acc
+                :: entities
+            , missing
+            )
 
         Rectangle color width height ->
             let
@@ -1745,12 +1898,14 @@ renderShape screen parent (Shape x y angle s o form) acc =
                         (height * s)
                         angle
             in
-            Render.LowLevel.rect
+            ( Playground.LowLevel.rect
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
                 }
-                :: acc
+                :: entities
+            , missing
+            )
 
         Ngon color n radius ->
             let
@@ -1762,30 +1917,61 @@ renderShape screen parent (Shape x y angle s o form) acc =
                         (radius * 2 * s)
                         angle
             in
-            Render.LowLevel.ngon
+            ( Playground.LowLevel.ngon
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
                 , n = toFloat n
                 }
-                :: acc
+                :: entities
+            , missing
+            )
 
         Polygon color points ->
-            "renderPolygon color points x y angle s alpha"
-                |> Debug.todo "IMPLEMENT ME::Polygon"
+            --"renderPolygon color points x y angle s alpha"
+            --    |> Debug.todo "IMPLEMENT ME::Polygon"
+            acc
 
         Image width height src ->
-            "renderImage width height src x y angle s alpha"
-                |> Debug.todo "IMPLEMENT ME::Image"
+            let
+                name =
+                    stripTextureUrl src
+            in
+            case ( Set.member name missing, Dict.get name textures ) of
+                ( _, Just (Success { texture, size }) ) ->
+                    let
+                        ( t1, t2 ) =
+                            newWay
+                                (x * 2)
+                                (y * 2)
+                                (width * s)
+                                (height * s)
+                                angle
+                    in
+                    ( Playground.LowLevel.image
+                        { image = texture
+                        , translation = t2
+                        , transformation = t1
+                        , imageSize = size
+                        }
+                        :: entities
+                    , missing
+                    )
+
+                ( False, Nothing ) ->
+                    ( entities, Set.insert src missing )
+
+                _ ->
+                    acc
 
         Words color string ->
-            "renderWords color string x y angle s alpha"
-                |> Debug.todo "IMPLEMENT ME::Words"
+            --"renderWords color string x y angle s alpha"
+            --    |> Debug.todo "IMPLEMENT ME::Words"
+            acc
 
         Group shapes ->
             shapes
-                |> List.foldl (renderShape screen (createMat3 (x * 2) (y * 2) s s angle))
-                    acc
+                |> List.foldr (renderShape screen textures (createMat3 (x * 2) (y * 2) s s angle)) acc
 
 
 hexColor2Vec3 : String -> Maybe Math.Vector3.Vec3

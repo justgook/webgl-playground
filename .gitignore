@@ -25,6 +25,7 @@ documentation.json
 
 #Deployment
 examples/gh-pages/*
+!examples/gh-pages/images/*
 !examples/gh-pages/404.html
 !examples/gh-pages/index.html
 !examples/gh-pages/app.css

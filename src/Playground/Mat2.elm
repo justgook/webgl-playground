@@ -1,4 +1,4 @@
-module Render.Mat2 exposing (Mat2, makeRotate, makeScale, mul)
+module Playground.Mat2 exposing (Mat2, makeRotate, makeScale, mul)
 
 
 type alias Mat2 =
