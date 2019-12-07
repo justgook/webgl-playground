@@ -6,7 +6,7 @@ module Playground exposing
     , move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY
     , scale, rotate, fade
     , group
-    , Time, spin, wave, zigzag
+    , Time, spin, wave, zigzag, toFrac
     , Computer, Mouse, Screen, Keyboard, toX, toY, toXY
     , Color, rgb, red, orange, yellow, green, blue, purple, brown
     , lightRed, lightOrange, lightYellow, lightGreen, lightBlue, lightPurple, lightBrown
@@ -56,7 +56,7 @@ module Playground exposing
 
 # Time
 
-@docs Time, spin, wave, zigzag
+@docs Time, spin, wave, zigzag, toFrac
 
 
 # Computer
@@ -105,8 +105,9 @@ import Json.Decode as D
 import Math.Vector2
 import Math.Vector3
 import Math.Vector4
-import Playground.LowLevel
+import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..), initShape)
 import Playground.Mat3 as Mat3
+import Playground.Shaders
 import Set exposing (Set)
 import Task exposing (Task)
 import Time
@@ -550,6 +551,7 @@ zigzag lo hi period time =
     lo + (hi - lo) * abs (2 * toFrac period time - 1)
 
 
+{-| -}
 toFrac : Float -> Time -> Float
 toFrac period (Time posix) =
     let
@@ -851,6 +853,7 @@ gameUpdate viewMemory updateMemory msg (Game ({ visibility, memory, textures, co
                                 { computer | time = Time time }
                     }
 
+                --TODO move that after all updates
                 ( entities, missing ) =
                     render computer.screen textures (viewMemory newModel.computer newModel.memory)
             in
@@ -1055,30 +1058,8 @@ Read on to see examples of [`circle`](#circle), [`rectangle`](#rectangle),
 [`words`](#words), [`image`](#image), and many more!
 
 -}
-type Shape
-    = Shape
-        Number
-        -- x
-        Number
-        -- y
-        Number
-        -- angle
-        Number
-        -- scale
-        Number
-        -- alpha
-        Form
-
-
-type Form
-    = Circle Color Number
-    | Oval Color Number Number
-    | Rectangle Color Number Number
-    | Ngon Color Int Number
-    | Polygon Color (List ( Number, Number ))
-    | Image Number Number String
-    | Words Color String
-    | Group (List Shape)
+type alias Shape =
+    Playground.Internal.Shape
 
 
 {-| Make circles:
@@ -1095,7 +1076,7 @@ the circle.
 -}
 circle : Color -> Number -> Shape
 circle color radius =
-    Shape 0 0 0 1 1 (Circle color radius)
+    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Circle color radius }
 
 
 {-| Make ovals:
@@ -1109,7 +1090,7 @@ is 200 pixels wide and 100 pixels tall.
 -}
 oval : Color -> Number -> Number -> Shape
 oval color width height =
-    Shape 0 0 0 1 1 (Oval color width height)
+    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Oval color width height }
 
 
 {-| Make squares. Here are two squares combined to look like an empty box:
@@ -1128,7 +1109,7 @@ be 80 pixels by 80 pixels.
 -}
 square : Color -> Number -> Shape
 square color n =
-    Shape 0 0 0 1 1 (Rectangle color n n)
+    initShape (Rectangle color n n)
 
 
 {-| Make rectangles. This example makes a red cross:
@@ -1147,7 +1128,7 @@ part of the cross, the thinner and taller part.
 -}
 rectangle : Color -> Number -> Number -> Shape
 rectangle color width height =
-    Shape 0 0 0 1 1 (Rectangle color width height)
+    initShape (Rectangle color width height)
 
 
 {-| Make triangles. So if you wanted to draw the Egyptian pyramids, you could
@@ -1166,7 +1147,7 @@ the pyramid is `200`. Pretty big!
 -}
 triangle : Color -> Number -> Shape
 triangle color radius =
-    Shape 0 0 0 1 1 (Ngon color 3 radius)
+    initShape (Ngon color 3 radius)
 
 
 {-| Make pentagons:
@@ -1184,7 +1165,7 @@ of the five points is 100 pixels.
 -}
 pentagon : Color -> Number -> Shape
 pentagon color radius =
-    Shape 0 0 0 1 1 (Ngon color 5 radius)
+    initShape (Ngon color 5 radius)
 
 
 {-| Make hexagons:
@@ -1204,7 +1185,7 @@ honeycomb pattern!
 -}
 hexagon : Color -> Number -> Shape
 hexagon color radius =
-    Shape 0 0 0 1 1 (Ngon color 6 radius)
+    initShape (Ngon color 6 radius)
 
 
 {-| Make octogons:
@@ -1222,7 +1203,7 @@ from the center.
 -}
 octagon : Color -> Number -> Shape
 octagon color radius =
-    Shape 0 0 0 1 1 (Ngon color 8 radius)
+    initShape (Ngon color 8 radius)
 
 
 {-| Make any shape you want! Here is a very thin triangle:
@@ -1241,7 +1222,7 @@ octagon color radius =
 -}
 polygon : Color -> List ( Number, Number ) -> Shape
 polygon color points =
-    Shape 0 0 0 1 1 (Polygon color points)
+    initShape (Polygon color points)
 
 
 {-| Add some image from the internet:
@@ -1258,7 +1239,7 @@ You provide the width, height, and then the URL of the image you want to show.
 -}
 image : Number -> Number -> String -> Shape
 image w h src =
-    Shape 0 0 0 1 1 (Image w h src)
+    initShape (Image w h src)
 
 
 {-| Show some words!
@@ -1275,7 +1256,7 @@ You can use [`scale`](#scale) to make the words bigger or smaller.
 -}
 words : Color -> String -> Shape
 words color string =
-    Shape 0 0 0 1 1 (Words color string)
+    initShape (Words color string)
 
 
 {-| Put shapes together so you can [`move`](#move) and [`rotate`](#rotate)
@@ -1309,7 +1290,7 @@ them as a group. Maybe you want to put a bunch of stars in the sky:
 -}
 group : List Shape -> Shape
 group shapes =
-    Shape 0 0 0 1 1 (Group shapes)
+    initShape (Group shapes)
 
 
 
@@ -1334,8 +1315,8 @@ group shapes =
 
 -}
 move : Number -> Number -> Shape -> Shape
-move dx dy (Shape x y a s o f) =
-    Shape (x + dx) (y + dy) a s o f
+move dx dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | x = x + dx, y = y + dy }
 
 
 {-| Move a shape up by some number of pixels. So if you wanted to make a tree
@@ -1371,8 +1352,8 @@ above the ground, you could move the sky up and the ground down:
 
 -}
 moveDown : Number -> Shape -> Shape
-moveDown dy (Shape x y a s o f) =
-    Shape x (y - dy) a s o f
+moveDown dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | y = y - dy }
 
 
 {-| Move shapes to the left.
@@ -1388,8 +1369,8 @@ moveDown dy (Shape x y a s o f) =
 
 -}
 moveLeft : Number -> Shape -> Shape
-moveLeft dx (Shape x y a s o f) =
-    Shape (x - dx) y a s o f
+moveLeft dx (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | x = x - dx }
 
 
 {-| Move shapes to the right.
@@ -1426,8 +1407,8 @@ Using `moveX` feels a bit nicer here because the movement may be positive or neg
 
 -}
 moveX : Number -> Shape -> Shape
-moveX dx (Shape x y a s o f) =
-    Shape (x + dx) y a s o f
+moveX dx (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | x = x + dx }
 
 
 {-| Move the `y` coordinate of a shape by some amount. Maybe you want to make
@@ -1451,8 +1432,8 @@ top of the screen, since the values are negative sometimes.
 
 -}
 moveY : Number -> Shape -> Shape
-moveY dy (Shape x y a s o f) =
-    Shape x (y + dy) a s o f
+moveY dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | y = y + dy }
 
 
 {-| Make a shape bigger or smaller. So if you wanted some [`words`](#words) to
@@ -1468,8 +1449,8 @@ be larger, you could say:
 
 -}
 scale : Number -> Shape -> Shape
-scale ns (Shape x y a s o f) =
-    Shape x y a (s * ns) o f
+scale ns (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | sx = sx * ns, sy = sy * ns }
 
 
 {-| Rotate shapes in degrees.
@@ -1487,8 +1468,8 @@ The degrees go **counter-clockwise** to match the direction of the
 
 -}
 rotate : Number -> Shape -> Shape
-rotate da (Shape x y a s o f) =
-    Shape x y (a + da) s o f
+rotate da (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape { shape | a = a + da }
 
 
 {-| Fade a shape. This lets you make shapes see-through or even completely
@@ -1510,8 +1491,8 @@ and `1` is completely solid.
 
 -}
 fade : Number -> Shape -> Shape
-fade o (Shape x y a s _ f) =
-    Shape x y a s o f
+fade o (Shape shape) =
+    Shape { shape | o = o }
 
 
 
@@ -1834,18 +1815,19 @@ createMat3_ tx ty sx sy a_ =
     Mat3.mul t (Mat3.mul r s_)
 
 
-renderShape : Screen -> TextureManager -> Mat3.Mat3 -> Shape -> ( List Entity, Set String ) -> ( List Entity, Set String )
-renderShape screen textures parent (Shape x y angle s o form) (( entities, missing ) as acc) =
-    let
-        addAlpha c =
-            c |> Math.Vector3.toRecord |> (\c1 -> Math.Vector4.vec4 c1.x c1.y c1.z)
+addAlpha c =
+    c |> Math.Vector3.toRecord |> (\c1 -> Math.Vector4.vec4 c1.x c1.y c1.z)
 
-        createMat3 tx ty sx sy a_ =
-            createMat3_ tx ty sx sy a_
+
+renderShape : Screen -> TextureManager -> Mat3.Mat3 -> Shape -> ( List Entity, Set String ) -> ( List Entity, Set String )
+renderShape screen textures parent (Shape { x, y, a, sx, sy, o, form }) (( entities, missing ) as acc) =
+    let
+        createMat3 tx ty sx_ sy_ a_ =
+            createMat3_ tx ty sx_ sy_ a_
                 |> Mat3.mul parent
 
-        newWay tx ty sx sy a_ =
-            createMat3 tx ty sx sy a_
+        newWay tx ty sx_ sy_ a_ =
+            createMat3 tx ty sx_ sy_ a_
                 |> Mat3.mul (Mat3.makeScale (1 / screen.width) (1 / screen.height))
                 |> Mat3.toGL
     in
@@ -1856,11 +1838,11 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
                     newWay
                         (x * 2)
                         (y * 2)
-                        (radius * 2 * s)
-                        (radius * 2 * s)
-                        angle
+                        (radius * 2 * sx)
+                        (radius * 2 * sy)
+                        a
             in
-            ( Playground.LowLevel.circle
+            ( Playground.Shaders.circle
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
@@ -1875,11 +1857,11 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
                     newWay
                         (x * 2)
                         (y * 2)
-                        (width * s)
-                        (height * s)
-                        angle
+                        (width * sx)
+                        (height * sy)
+                        a
             in
-            ( Playground.LowLevel.circle
+            ( Playground.Shaders.circle
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
@@ -1894,11 +1876,11 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
                     newWay
                         (x * 2)
                         (y * 2)
-                        (width * s)
-                        (height * s)
-                        angle
+                        (width * sx)
+                        (height * sy)
+                        a
             in
-            ( Playground.LowLevel.rect
+            ( Playground.Shaders.rect
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
@@ -1913,11 +1895,11 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
                     newWay
                         (x * 2)
                         (y * 2)
-                        (radius * 2 * s)
-                        (radius * 2 * s)
-                        angle
+                        (radius * 2 * sx)
+                        (radius * 2 * sy)
+                        a
             in
-            ( Playground.LowLevel.ngon
+            ( Playground.Shaders.ngon
                 { color = addAlpha color o
                 , translation = t2
                 , transformation = t1
@@ -1928,6 +1910,7 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
             )
 
         Polygon color points ->
+            --https://package.elm-lang.org/packages/ianmackenzie/elm-geometry/latest/Polygon2d#triangulate
             --"renderPolygon color points x y angle s alpha"
             --    |> Debug.todo "IMPLEMENT ME::Polygon"
             acc
@@ -1944,11 +1927,11 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
                             newWay
                                 (x * 2)
                                 (y * 2)
-                                (width * s)
-                                (height * s)
-                                angle
+                                (width * sx)
+                                (height * sy)
+                                a
                     in
-                    ( Playground.LowLevel.image
+                    ( Playground.Shaders.image
                         { image = texture
                         , translation = t2
                         , transformation = t1
@@ -1969,9 +1952,41 @@ renderShape screen textures parent (Shape x y angle s o form) (( entities, missi
             --    |> Debug.todo "IMPLEMENT ME::Words"
             acc
 
+        Custom element ->
+            case element of
+                CustomEnd width height fn ->
+                    let
+                        ( t1, t2 ) =
+                            newWay
+                                (x * 2)
+                                (y * 2)
+                                (width * sx)
+                                (height * sy)
+                                a
+                    in
+                    ( fn t2 t1 o
+                        :: entities
+                    , missing
+                    )
+
+                CustomTextured src fn ->
+                    let
+                        name =
+                            stripTextureUrl src
+                    in
+                    case ( Set.member name missing, Dict.get name textures ) of
+                        ( _, Just (Success { texture, size }) ) ->
+                            renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a) (fn texture) acc
+
+                        ( False, Nothing ) ->
+                            ( entities, Set.insert src missing )
+
+                        _ ->
+                            acc
+
         Group shapes ->
             shapes
-                |> List.foldr (renderShape screen textures (createMat3 (x * 2) (y * 2) s s angle)) acc
+                |> List.foldr (renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a)) acc
 
 
 hexColor2Vec3 : String -> Maybe Math.Vector3.Vec3

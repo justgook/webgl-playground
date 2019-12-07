@@ -1,4 +1,4 @@
-module Playground.LowLevel exposing (circle, image, ngon, rect)
+module Playground.Shaders exposing (circle, clipPlate, entitySettings, image, imagePixelFragment, ngon, rect, uvVertex)
 
 import Math.Vector2
 import Math.Vector4
@@ -60,8 +60,7 @@ type alias TileUV =
 
 entitySettings : List Setting
 entitySettings =
-    [ WebGL.cullFace WebGL.front
-    , Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha
+    [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha
     , WebGL.colorMask True True True False
     ]
 
