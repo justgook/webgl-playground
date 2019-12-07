@@ -1,6 +1,9 @@
 module Mario exposing (main)
 
+import Array
 import Playground exposing (..)
+import Playground.Advanced exposing (scaleX)
+import Playground.Extra exposing (sprite)
 
 
 
@@ -14,7 +17,7 @@ main =
         , y = 0
         , vx = 0
         , vy = 0
-        , dir = "right"
+        , dir = 1
         }
 
 
@@ -36,20 +39,26 @@ view computer mario =
     [ rectangle (rgb 174 238 238) w h
     , rectangle (rgb 74 163 41) w 100
         |> moveY b
-    , image 70 70 (toGif mario)
+    , sprite 20 27 (getFrame mario computer.time) "images/mario.png"
+        |> scale 2
+        |> scaleX mario.dir
         |> move mario.x (b + 76 + mario.y)
     ]
 
 
-toGif mario =
+getFrame mario time =
+    let
+        frame =
+            toFrac 0.75 time |> (*) 8 |> floor
+    in
     if mario.y > 0 then
-        "images/mario/jump/" ++ mario.dir ++ ".gif"
+        5
 
     else if mario.vx /= 0 then
-        "images/mario/walk/" ++ mario.dir ++ ".gif"
+        Array.get frame run |> Maybe.withDefault 0
 
     else
-        "images/mario/stand/" ++ mario.dir ++ ".gif"
+        0
 
 
 
@@ -76,7 +85,7 @@ update computer mario =
                 mario.vy - dt / 8
 
         x =
-            mario.x + dt * vx
+            mario.x + dt * vx * 2
 
         y =
             mario.y + dt * vy
@@ -90,8 +99,12 @@ update computer mario =
             mario.dir
 
         else if vx < 0 then
-            "left"
+            1
 
         else
-            "right"
+            -1
     }
+
+
+run =
+    Array.fromList [ 0, 1, 2, 1, 0, 3, 4, 3 ]
