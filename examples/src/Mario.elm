@@ -39,7 +39,7 @@ view computer mario =
     [ rectangle (rgb 174 238 238) w h
     , rectangle (rgb 74 163 41) w 100
         |> moveY b
-    , sprite 20 27 (getFrame mario computer.time) "images/mario.png"
+    , sprite 20 27 (getFrame mario computer.time) "assets/mario.png"
         |> scale 2
         |> scaleX mario.dir
         |> move mario.x (b + 76 + mario.y)

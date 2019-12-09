@@ -89,15 +89,11 @@ verSprite =
             uniform vec2 imageSize;
             varying vec2 uv;
             void main () {
-
-
-                            vec2 ratio = spriteSize / imageSize;
-                            vec2 offset = vec2(index * ratio.x, 0);
-                            uv = (aP * .5 + 0.5) * ratio + offset;
-
+                vec2 ratio = spriteSize / imageSize;
                 float row = floor(index * ratio.x);
                 float column = index - row * (ratio.x);
-
+                vec2 offset = vec2(column, row) * ratio;
+                uv = (aP * .5 + 0.5) * ratio + offset;
                 gl_Position = vec4(aP * mat2(transformation) + translation, 0.5, 1.0);
             }
         |]
