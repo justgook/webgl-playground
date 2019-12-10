@@ -1,5 +1,7 @@
 # Elm Playground
 
+Fork of [evancz/elm-playground](https://package.elm-lang.org/packages/evancz/elm-playground/latest/), but with [WebGL](https://package.elm-lang.org/packages/elm-explorations/webgl/latest/) backend.
+
 Create pictures, animations, and games with Elm!
 
 This is the package I wanted when I was learning programming. Start by putting shapes on screen and work up to making games. I hope this package will be fun for a broad range of ages and backgrounds!

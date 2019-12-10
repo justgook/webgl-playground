@@ -28,9 +28,7 @@ main =
             , rectangle red 100 2 |> moveY -100
             , rectangle red 2 100 |> moveX 100
             , rectangle red 2 100 |> moveX -100
-            , sprite 20 27 (getFrame frame) "./mario.png"
-                |> scale 3
-                |> scaleX dir
+            , words red "Hello World"
             ]
 
 

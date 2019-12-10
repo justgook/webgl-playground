@@ -1,16 +1,52 @@
-module Playground.Extra exposing (sprite)
+module Playground.Extra exposing
+    ( scaleX, scaleY
+    , tile
+    )
 
 {-|
 
-@docs sprite
+
+# Customize Shapes
+
+@docs scaleX, scaleY
+
+
+# Shapes
+
+@docs tile
 
 -}
 
 import Math.Vector2 exposing (vec2)
 import Playground exposing (Number, Shape)
-import Playground.Advanced exposing (custom, entitySettings, mesh, useTexture)
-import WebGL
+import Playground.Advanced exposing (custom, useTexture)
+import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..))
+import Playground.Render as Render exposing (Render)
 import WebGL.Texture
+
+
+{-| Make a shape **horizontally** bigger or smaller.
+Also can be used to flip object:
+
+    sprite 20 27 0 "images/mario.png"
+        |> scaleX -1
+
+-}
+scaleX : Number -> Shape -> Shape
+scaleX sx (Shape shape) =
+    Shape { shape | sx = shape.sx * sx }
+
+
+{-| Make a shape **vertically** bigger or smaller.
+Also can be used to flip object:
+
+    sprite 20 27 0 "images/mario.png"
+        |> scaleX -1
+
+-}
+scaleY : Number -> Shape -> Shape
+scaleY sy (Shape shape) =
+    Shape { shape | sy = shape.sy * sy }
 
 
 {-| Show a piece of an sprite sheet.
@@ -18,35 +54,18 @@ import WebGL.Texture
 For example, if your animation is on the first row, it has 7 frames, and you want to loop it
 every 5 seconds you can write:
 
-    sprite width height (spin (1.0 / 5.0) * 7 // 360) "sprites.png"
+    sprite width height (spin (1.0 / 6.0) * 7 // 360) "sprites.png"
 
 -}
-sprite : Number -> Number -> Int -> String -> Shape
-sprite tileW tileH index atlas =
+tile : Number -> Number -> Int -> String -> Shape
+tile tileW tileH index atlas =
     useTexture atlas <|
         \t ->
-            custom tileW tileH <|
-                \translation transformation opacity ->
-                    renderSprite
-                        { translation = translation
-                        , transformation = transformation
-                        , index = toFloat index
-                        , spriteSize = vec2 tileW tileH
-                        , image = t
-                        , imageSize = size t
-                        }
+            custom tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
 
 
-size t =
-    WebGL.Texture.size t |> (\( w, h ) -> vec2 (toFloat w) (toFloat h))
-
-
-renderSprite =
-    WebGL.entityWith
-        entitySettings
-        verSprite
-        fragSprite
-        mesh
+triangle =
+    ""
 
 
 
@@ -78,39 +97,5 @@ renderSprite =
 --        )
 
 
-verSprite =
-    [glsl|
-            precision mediump float;
-            attribute vec2 aP;
-            uniform vec4 transformation;
-            uniform vec2 translation;
-            uniform float index;
-            uniform vec2 spriteSize;
-            uniform vec2 imageSize;
-            varying vec2 uv;
-            void main () {
-                vec2 ratio = spriteSize / imageSize;
-                float row = floor(index * ratio.x);
-                float column = index - row * (ratio.x);
-                vec2 offset = vec2(column, row) * ratio;
-                uv = (aP * .5 + 0.5) * ratio + offset;
-                gl_Position = vec4(aP * mat2(transformation) + translation, 0.5, 1.0);
-            }
-        |]
-
-
-fragSprite =
-    --(2i + 1)/(2N) Pixel perfect center
-    --diffuseColor
-    [glsl|
-        precision mediump float;
-        varying vec2 uv;
-        uniform vec2 imageSize;
-        uniform sampler2D image;
-
-        void main () {
-            vec2 pixel = (floor(uv * imageSize) + 0.5) / imageSize;
-            gl_FragColor = texture2D(image, pixel);
-//            gl_FragColor = vec4(0,0,1.,1.);
-        }
-    |]
+size t =
+    WebGL.Texture.size t |> (\( w, h ) -> vec2 (toFloat w) (toFloat h))

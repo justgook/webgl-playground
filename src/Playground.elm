@@ -105,10 +105,10 @@ import Json.Decode as D
 import Math.Vector2
 import Math.Vector3
 import Math.Vector4 as Vec4 exposing (vec4)
-import Playground.Advanced
 import Playground.Font.GoodNeighbors as Font
 import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..), initShape)
 import Playground.Mat3 as Mat3
+import Playground.Render as Render
 import Set exposing (Set)
 import Task exposing (Task)
 import Time
@@ -1077,7 +1077,7 @@ the circle.
 -}
 circle : Color -> Number -> Shape
 circle color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.circle color)))
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.circle color)))
 
 
 {-| Make ovals:
@@ -1091,7 +1091,7 @@ is 200 pixels wide and 100 pixels tall.
 -}
 oval : Color -> Number -> Number -> Shape
 oval color width height =
-    initShape (Custom (CustomEnd width height (Playground.Advanced.circle color)))
+    initShape (Custom (CustomEnd width height (Render.circle color)))
 
 
 {-| Make squares. Here are two squares combined to look like an empty box:
@@ -1110,7 +1110,7 @@ be 80 pixels by 80 pixels.
 -}
 square : Color -> Number -> Shape
 square color n =
-    initShape (Custom (CustomEnd n n (Playground.Advanced.rect color)))
+    initShape (Custom (CustomEnd n n (Render.rect color)))
 
 
 {-| Make rectangles. This example makes a red cross:
@@ -1129,7 +1129,7 @@ part of the cross, the thinner and taller part.
 -}
 rectangle : Color -> Number -> Number -> Shape
 rectangle color width height =
-    initShape (Custom (CustomEnd width height (Playground.Advanced.rect color)))
+    initShape (Custom (CustomEnd width height (Render.rect color)))
 
 
 {-| Make triangles. So if you wanted to draw the Egyptian pyramids, you could
@@ -1148,7 +1148,7 @@ the pyramid is `200`. Pretty big!
 -}
 triangle : Color -> Number -> Shape
 triangle color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 3 color)))
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 3 color)))
 
 
 {-| Make pentagons:
@@ -1166,7 +1166,7 @@ of the five points is 100 pixels.
 -}
 pentagon : Color -> Number -> Shape
 pentagon color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 5 color)))
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 5 color)))
 
 
 {-| Make hexagons:
@@ -1186,7 +1186,7 @@ honeycomb pattern!
 -}
 hexagon : Color -> Number -> Shape
 hexagon color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 6 color)))
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 6 color)))
 
 
 {-| Make octogons:
@@ -1204,7 +1204,7 @@ from the center.
 -}
 octagon : Color -> Number -> Shape
 octagon color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 8 color)))
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 8 color)))
 
 
 {-| Make any shape you want! Here is a very thin triangle:
@@ -1247,7 +1247,7 @@ image width height src =
                     t
                         |> Texture.size
                         |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
-                        |> Playground.Advanced.image t
+                        |> Render.image t
                         |> CustomEnd width height
                         |> Custom
                         |> initShape
@@ -1322,7 +1322,7 @@ char color t imgSize { w, h } x y uv =
         , sy = 1
         , o = 1
         , form =
-            CustomEnd w h (Playground.Advanced.char color uv t imgSize)
+            CustomEnd w h (Render.spriteWithColor t imgSize uv color)
                 |> Custom
         }
 

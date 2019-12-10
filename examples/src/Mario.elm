@@ -2,8 +2,7 @@ module Mario exposing (main)
 
 import Array
 import Playground exposing (..)
-import Playground.Advanced exposing (scaleX)
-import Playground.Extra exposing (sprite)
+import Playground.Extra exposing (scaleX, tile)
 
 
 
@@ -39,7 +38,7 @@ view computer mario =
     [ rectangle (rgb 174 238 238) w h
     , rectangle (rgb 74 163 41) w 100
         |> moveY b
-    , sprite 20 27 (getFrame mario computer.time) spriteSheet
+    , tile 20 27 (getFrame mario computer.time) spriteSheet
         |> scale 2
         |> scaleX mario.dir
         |> move mario.x (b + 76 + mario.y)

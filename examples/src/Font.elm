@@ -5,13 +5,13 @@ import Playground exposing (..)
 
 main =
     picture
-        [ aaaa
+        [ text
             |> group
             |> scale 3
         ]
 
 
-aaaa =
+text =
     [ "ABCDEFGHIJKLMNOPQRSTUVWXYZ" |> words red
     , "abcdefghijklmnopqrstuvwxyz" |> words red
     , "0123456789" |> words red
