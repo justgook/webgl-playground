@@ -4,7 +4,10 @@ import Playground exposing (..)
 import Random
 
 
-main : Program () (Game State) Playground.Msg
+
+--main : Program () (Game State) Playground.Msg
+
+
 main =
     game view update init
 

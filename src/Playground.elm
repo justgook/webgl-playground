@@ -104,10 +104,11 @@ import Html.Attributes as H
 import Json.Decode as D
 import Math.Vector2
 import Math.Vector3
-import Math.Vector4
+import Math.Vector4 as Vec4 exposing (vec4)
+import Playground.Advanced
+import Playground.Font.GoodNeighbors as Font
 import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..), initShape)
 import Playground.Mat3 as Mat3
-import Playground.Shaders
 import Set exposing (Set)
 import Task exposing (Task)
 import Time
@@ -1076,7 +1077,7 @@ the circle.
 -}
 circle : Color -> Number -> Shape
 circle color radius =
-    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Circle color radius }
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.circle color)))
 
 
 {-| Make ovals:
@@ -1090,7 +1091,7 @@ is 200 pixels wide and 100 pixels tall.
 -}
 oval : Color -> Number -> Number -> Shape
 oval color width height =
-    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Oval color width height }
+    initShape (Custom (CustomEnd width height (Playground.Advanced.circle color)))
 
 
 {-| Make squares. Here are two squares combined to look like an empty box:
@@ -1109,7 +1110,7 @@ be 80 pixels by 80 pixels.
 -}
 square : Color -> Number -> Shape
 square color n =
-    initShape (Rectangle color n n)
+    initShape (Custom (CustomEnd n n (Playground.Advanced.rect color)))
 
 
 {-| Make rectangles. This example makes a red cross:
@@ -1128,7 +1129,7 @@ part of the cross, the thinner and taller part.
 -}
 rectangle : Color -> Number -> Number -> Shape
 rectangle color width height =
-    initShape (Rectangle color width height)
+    initShape (Custom (CustomEnd width height (Playground.Advanced.rect color)))
 
 
 {-| Make triangles. So if you wanted to draw the Egyptian pyramids, you could
@@ -1147,7 +1148,7 @@ the pyramid is `200`. Pretty big!
 -}
 triangle : Color -> Number -> Shape
 triangle color radius =
-    initShape (Ngon color 3 radius)
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 3 color)))
 
 
 {-| Make pentagons:
@@ -1165,7 +1166,7 @@ of the five points is 100 pixels.
 -}
 pentagon : Color -> Number -> Shape
 pentagon color radius =
-    initShape (Ngon color 5 radius)
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 5 color)))
 
 
 {-| Make hexagons:
@@ -1185,7 +1186,7 @@ honeycomb pattern!
 -}
 hexagon : Color -> Number -> Shape
 hexagon color radius =
-    initShape (Ngon color 6 radius)
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 6 color)))
 
 
 {-| Make octogons:
@@ -1203,7 +1204,7 @@ from the center.
 -}
 octagon : Color -> Number -> Shape
 octagon color radius =
-    initShape (Ngon color 8 radius)
+    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Playground.Advanced.ngon 8 color)))
 
 
 {-| Make any shape you want! Here is a very thin triangle:
@@ -1238,8 +1239,26 @@ You provide the width, height, and then the URL of the image you want to show.
 
 -}
 image : Number -> Number -> String -> Shape
-image w h src =
-    initShape (Image w h src)
+image width height src =
+    initShape
+        (Custom
+            (CustomTextured src
+                (\t ->
+                    t
+                        |> Texture.size
+                        |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
+                        |> Playground.Advanced.image t
+                        |> CustomEnd width height
+                        |> Custom
+                        |> initShape
+                )
+            )
+        )
+
+
+
+--initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 8 color)))
+--initShape (Image w h src)
 
 
 {-| Show some words!
@@ -1256,7 +1275,56 @@ You can use [`scale`](#scale) to make the words bigger or smaller.
 -}
 words : Color -> String -> Shape
 words color string =
-    initShape (Words color string)
+    let
+        config =
+            Font.config
+    in
+    initShape
+        (Custom
+            (CustomTextured config.image
+                (\t ->
+                    let
+                        ( imgW, imgH ) =
+                            t
+                                |> Texture.size
+                                |> Tuple.mapBoth toFloat toFloat
+
+                        imgSize =
+                            Math.Vector2.vec2 imgW imgH
+
+                        ( chars, width ) =
+                            String.toList string
+                                |> List.foldl
+                                    (\a ( l, w ) ->
+                                        let
+                                            c =
+                                                config.letters a
+
+                                            uv =
+                                                vec4 (c.x / imgW) (c.y / imgH) (c.w / imgW) (c.h / imgH)
+                                        in
+                                        ( char color t imgSize c (w + 0.5 * c.w) c.o uv :: l, w + c.w + config.spacing )
+                                    )
+                                    ( [], 0 )
+                    in
+                    Shape { x = (width - config.spacing) * -0.5, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group chars }
+                )
+            )
+        )
+
+
+char color t imgSize { w, h } x y uv =
+    Shape
+        { x = x
+        , y = y
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            CustomEnd w h (Playground.Advanced.char color uv t imgSize)
+                |> Custom
+        }
 
 
 {-| Put shapes together so you can [`move`](#move) and [`rotate`](#rotate)
@@ -1678,7 +1746,7 @@ darkCharcoal =
 {-| -}
 white : Color
 white =
-    Maybe.withDefault (Math.Vector3.vec3 0 0 0) <| hexColor2Vec3 "#FFFFFF"
+    Maybe.withDefault (Math.Vector3.vec3 0 0 0) <| hexColor2Vec3 "#ffffff"
 
 
 {-| -}
@@ -1815,8 +1883,8 @@ createMat3_ tx ty sx sy a_ =
     Mat3.mul t (Mat3.mul r s_)
 
 
-addAlpha c =
-    c |> Math.Vector3.toRecord |> (\c1 -> Math.Vector4.vec4 c1.x c1.y c1.z)
+setAlpha c =
+    c |> Math.Vector3.toRecord |> (\c1 -> vec4 c1.x c1.y c1.z)
 
 
 renderShape : Screen -> TextureManager -> Mat3.Mat3 -> Shape -> ( List Entity, Set String ) -> ( List Entity, Set String )
@@ -1832,126 +1900,6 @@ renderShape screen textures parent (Shape { x, y, a, sx, sy, o, form }) (( entit
                 |> Mat3.toGL
     in
     case form of
-        Circle color radius ->
-            let
-                ( t1, t2 ) =
-                    newWay
-                        (x * 2)
-                        (y * 2)
-                        (radius * 2 * sx)
-                        (radius * 2 * sy)
-                        a
-            in
-            ( Playground.Shaders.circle
-                { color = addAlpha color o
-                , translation = t2
-                , transformation = t1
-                }
-                :: entities
-            , missing
-            )
-
-        Oval color width height ->
-            let
-                ( t1, t2 ) =
-                    newWay
-                        (x * 2)
-                        (y * 2)
-                        (width * sx)
-                        (height * sy)
-                        a
-            in
-            ( Playground.Shaders.circle
-                { color = addAlpha color o
-                , translation = t2
-                , transformation = t1
-                }
-                :: entities
-            , missing
-            )
-
-        Rectangle color width height ->
-            let
-                ( t1, t2 ) =
-                    newWay
-                        (x * 2)
-                        (y * 2)
-                        (width * sx)
-                        (height * sy)
-                        a
-            in
-            ( Playground.Shaders.rect
-                { color = addAlpha color o
-                , translation = t2
-                , transformation = t1
-                }
-                :: entities
-            , missing
-            )
-
-        Ngon color n radius ->
-            let
-                ( t1, t2 ) =
-                    newWay
-                        (x * 2)
-                        (y * 2)
-                        (radius * 2 * sx)
-                        (radius * 2 * sy)
-                        a
-            in
-            ( Playground.Shaders.ngon
-                { color = addAlpha color o
-                , translation = t2
-                , transformation = t1
-                , n = toFloat n
-                }
-                :: entities
-            , missing
-            )
-
-        Polygon color points ->
-            --https://package.elm-lang.org/packages/ianmackenzie/elm-geometry/latest/Polygon2d#triangulate
-            --"renderPolygon color points x y angle s alpha"
-            --    |> Debug.todo "IMPLEMENT ME::Polygon"
-            acc
-
-        Image width height src ->
-            let
-                name =
-                    stripTextureUrl src
-            in
-            case ( Set.member name missing, Dict.get name textures ) of
-                ( _, Just (Success { texture, size }) ) ->
-                    let
-                        ( t1, t2 ) =
-                            newWay
-                                (x * 2)
-                                (y * 2)
-                                (width * sx)
-                                (height * sy)
-                                a
-                    in
-                    ( Playground.Shaders.image
-                        { image = texture
-                        , translation = t2
-                        , transformation = t1
-                        , imageSize = size
-                        }
-                        :: entities
-                    , missing
-                    )
-
-                ( False, Nothing ) ->
-                    ( entities, Set.insert src missing )
-
-                _ ->
-                    acc
-
-        Words color string ->
-            --"renderWords color string x y angle s alpha"
-            --    |> Debug.todo "IMPLEMENT ME::Words"
-            acc
-
         Custom element ->
             case element of
                 CustomEnd width height fn ->
@@ -1987,6 +1935,12 @@ renderShape screen textures parent (Shape { x, y, a, sx, sy, o, form }) (( entit
         Group shapes ->
             shapes
                 |> List.foldr (renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a)) acc
+
+        Polygon color points ->
+            --https://package.elm-lang.org/packages/ianmackenzie/elm-geometry/latest/Polygon2d#triangulate
+            --"renderPolygon color points x y angle s alpha"
+            --    |> Debug.todo "IMPLEMENT ME::Polygon"
+            acc
 
 
 hexColor2Vec3 : String -> Maybe Math.Vector3.Vec3

@@ -20,14 +20,8 @@ type Shape
 
 
 type Form
-    = Circle Color Number
-    | Oval Color Number Number
-    | Rectangle Color Number Number
-    | Ngon Color Int Number
-    | Polygon Color (List ( Number, Number ))
+    = Polygon Color (List ( Number, Number ))
     | Custom CustomCustom
-    | Image Number Number String
-    | Words Color String
     | Group (List Shape)
 
 
@@ -46,13 +40,13 @@ type alias Number =
     Float
 
 
+initShape : Form -> Shape
+initShape form =
+    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = form }
+
+
 type alias Render =
     Math.Vector2.Vec2
     -> Math.Vector4.Vec4
     -> Float
     -> WebGL.Entity
-
-
-initShape : Form -> Shape
-initShape form =
-    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = form }

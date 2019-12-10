@@ -7,10 +7,8 @@ module Playground.Extra exposing (sprite)
 -}
 
 import Math.Vector2 exposing (vec2)
-import Math.Vector4
 import Playground exposing (Number, Shape)
-import Playground.Advanced exposing (custom, useTexture)
-import Playground.Shaders as LowLevel exposing (clipPlate, entitySettings)
+import Playground.Advanced exposing (custom, entitySettings, mesh, useTexture)
 import WebGL
 import WebGL.Texture
 
@@ -48,34 +46,36 @@ renderSprite =
         entitySettings
         verSprite
         fragSprite
-        clipPlate
+        mesh
 
 
-{-| -}
-tileMap : Number -> Number -> String -> String -> Shape
-tileMap tileW tileH atlas lut =
-    useTexture lut
-        (\lutTexture ->
-            let
-                ( lutW, lutH ) =
-                    WebGL.Texture.size lutTexture
-                        |> Tuple.mapBoth toFloat toFloat
-            in
-            useTexture atlas
-                (\atlasTexture ->
-                    (\translation transformation opacity ->
-                        LowLevel.rect
-                            { color = Math.Vector4.vec4 1 0 0 opacity
-                            , translation = translation
-                            , transformation = transformation
-                            , atlasSize = WebGL.Texture.size atlasTexture
-                            , atlas = atlasTexture
-                            , lut = lutTexture
-                            }
-                    )
-                        |> custom (lutW * tileW) (lutH * tileH)
-                )
-        )
+
+--
+--{-| -}
+--tileMap : Number -> Number -> String -> String -> Shape
+--tileMap tileW tileH atlas lut =
+--    useTexture lut
+--        (\lutTexture ->
+--            let
+--                ( lutW, lutH ) =
+--                    WebGL.Texture.size lutTexture
+--                        |> Tuple.mapBoth toFloat toFloat
+--            in
+--            useTexture atlas
+--                (\atlasTexture ->
+--                    (\translation transformation opacity ->
+--                        LowLevel.rectOld
+--                            { color = Math.Vector4.vec4 1 0 0 opacity
+--                            , translation = translation
+--                            , transformation = transformation
+--                            , atlasSize = WebGL.Texture.size atlasTexture
+--                            , atlas = atlasTexture
+--                            , lut = lutTexture
+--                            }
+--                    )
+--                        |> custom (lutW * tileW) (lutH * tileH)
+--                )
+--        )
 
 
 verSprite =
