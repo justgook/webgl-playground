@@ -102,12 +102,13 @@ import Dict exposing (Dict)
 import Html
 import Html.Attributes as H
 import Json.Decode as D
-import Math.Vector2
+import Math.Vector2 exposing (vec2)
 import Math.Vector3
-import Math.Vector4 as Vec4 exposing (vec4)
+import Math.Vector4 exposing (vec4)
 import Playground.Font.GoodNeighbors as Font
-import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..), initShape)
+import Playground.Internal exposing (Form(..), Number, Shape(..))
 import Playground.Mat3 as Mat3
+import Playground.Polygon exposing (signedArea, triangulate)
 import Playground.Render as Render
 import Set exposing (Set)
 import Task exposing (Task)
@@ -1077,7 +1078,15 @@ the circle.
 -}
 circle : Color -> Number -> Shape
 circle color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.circle color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form (radius * 2) (radius * 2) (Render.circle color)
+        }
 
 
 {-| Make ovals:
@@ -1091,7 +1100,15 @@ is 200 pixels wide and 100 pixels tall.
 -}
 oval : Color -> Number -> Number -> Shape
 oval color width height =
-    initShape (Custom (CustomEnd width height (Render.circle color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form width height (Render.circle color)
+        }
 
 
 {-| Make squares. Here are two squares combined to look like an empty box:
@@ -1110,7 +1127,15 @@ be 80 pixels by 80 pixels.
 -}
 square : Color -> Number -> Shape
 square color n =
-    initShape (Custom (CustomEnd n n (Render.rect color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form n n (Render.rect color)
+        }
 
 
 {-| Make rectangles. This example makes a red cross:
@@ -1129,7 +1154,15 @@ part of the cross, the thinner and taller part.
 -}
 rectangle : Color -> Number -> Number -> Shape
 rectangle color width height =
-    initShape (Custom (CustomEnd width height (Render.rect color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form width height (Render.rect color)
+        }
 
 
 {-| Make triangles. So if you wanted to draw the Egyptian pyramids, you could
@@ -1148,7 +1181,15 @@ the pyramid is `200`. Pretty big!
 -}
 triangle : Color -> Number -> Shape
 triangle color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 3 color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form (radius * 2) (radius * 2) (Render.ngon 3 color)
+        }
 
 
 {-| Make pentagons:
@@ -1166,7 +1207,15 @@ of the five points is 100 pixels.
 -}
 pentagon : Color -> Number -> Shape
 pentagon color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 5 color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form (radius * 2) (radius * 2) (Render.ngon 5 color)
+        }
 
 
 {-| Make hexagons:
@@ -1186,17 +1235,23 @@ honeycomb pattern!
 -}
 hexagon : Color -> Number -> Shape
 hexagon color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 6 color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form (radius * 2) (radius * 2) (Render.ngon 6 color)
+        }
 
 
 {-| Make octogons:
 
-import Playground exposing (..)
+    import Playground exposing (..)
 
-main =
-picture
-[ octagon red 100
-]
+    main =
+        picture [ octagon red 100 ]
 
 You give the color and radius, so each point of this stop sign is 100 pixels
 from the center.
@@ -1204,7 +1259,15 @@ from the center.
 -}
 octagon : Color -> Number -> Shape
 octagon color radius =
-    initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 8 color)))
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form (radius * 2) (radius * 2) (Render.ngon 8 color)
+        }
 
 
 {-| Make any shape you want! Here is a very thin triangle:
@@ -1223,7 +1286,30 @@ octagon color radius =
 -}
 polygon : Color -> List ( Number, Number ) -> Shape
 polygon color points =
-    initShape (Polygon color points)
+    (if signedArea points < 0 then
+        List.reverse points
+
+     else
+        points
+    )
+        |> triangulate
+        |> List.map
+            (\( ( p1x, p1y ), ( p2x, p2y ), ( p3x, p3y ) ) ->
+                polygonTriangle color ( vec2 p1x p1y, vec2 p2x p2y, vec2 p3x p3y )
+            )
+        |> group
+
+
+polygonTriangle color data =
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form = Form 2 2 (Render.triangle color data)
+        }
 
 
 {-| Add some image from the internet:
@@ -1240,25 +1326,32 @@ You provide the width, height, and then the URL of the image you want to show.
 -}
 image : Number -> Number -> String -> Shape
 image width height src =
-    initShape
-        (Custom
-            (CustomTextured src
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Textured src
                 (\t ->
-                    t
-                        |> Texture.size
-                        |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
-                        |> Render.image t
-                        |> CustomEnd width height
-                        |> Custom
-                        |> initShape
+                    Shape
+                        { x = 0
+                        , y = 0
+                        , a = 0
+                        , sx = 1
+                        , sy = 1
+                        , o = 1
+                        , form =
+                            t
+                                |> Texture.size
+                                |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
+                                |> Render.image t
+                                |> Form width height
+                        }
                 )
-            )
-        )
-
-
-
---initShape (Custom (CustomEnd (radius * 2) (radius * 2) (Render.ngon 8 color)))
---initShape (Image w h src)
+        }
 
 
 {-| Show some words!
@@ -1279,9 +1372,15 @@ words color string =
         config =
             Font.config
     in
-    initShape
-        (Custom
-            (CustomTextured config.image
+    Shape
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Textured config.image
                 (\t ->
                     let
                         ( imgW, imgH ) =
@@ -1309,8 +1408,7 @@ words color string =
                     in
                     Shape { x = (width - config.spacing) * -0.5, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group chars }
                 )
-            )
-        )
+        }
 
 
 char color t imgSize { w, h } x y uv =
@@ -1321,9 +1419,7 @@ char color t imgSize { w, h } x y uv =
         , sx = 1
         , sy = 1
         , o = 1
-        , form =
-            CustomEnd w h (Render.spriteWithColor t imgSize uv color)
-                |> Custom
+        , form = Form w h (Render.spriteWithColor t imgSize color uv)
         }
 
 
@@ -1358,7 +1454,7 @@ them as a group. Maybe you want to put a bunch of stars in the sky:
 -}
 group : List Shape -> Shape
 group shapes =
-    initShape (Group shapes)
+    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group shapes }
 
 
 
@@ -1853,13 +1949,10 @@ textureOption =
     }
 
 
-
---fmod a b =
---    a - b * toFloat (floor (a / b))
-
-
 roundAngle a =
     let
+        --fmod a b =
+        --    a - b * toFloat (floor (a / b))
         trigPrecision =
             1000000000
     in
@@ -1900,47 +1993,39 @@ renderShape screen textures parent (Shape { x, y, a, sx, sy, o, form }) (( entit
                 |> Mat3.toGL
     in
     case form of
-        Custom element ->
-            case element of
-                CustomEnd width height fn ->
-                    let
-                        ( t1, t2 ) =
-                            newWay
-                                (x * 2)
-                                (y * 2)
-                                (width * sx)
-                                (height * sy)
-                                a
-                    in
-                    ( fn t2 t1 o
-                        :: entities
-                    , missing
-                    )
+        Form width height fn ->
+            let
+                ( t1, t2 ) =
+                    newWay
+                        (x * 2)
+                        (y * 2)
+                        (width * sx)
+                        (height * sy)
+                        a
+            in
+            ( fn t2 t1 o
+                :: entities
+            , missing
+            )
 
-                CustomTextured src fn ->
-                    let
-                        name =
-                            stripTextureUrl src
-                    in
-                    case ( Set.member name missing, Dict.get name textures ) of
-                        ( _, Just (Success { texture, size }) ) ->
-                            renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a) (fn texture) acc
+        Textured src fn ->
+            let
+                name =
+                    stripTextureUrl src
+            in
+            case ( Set.member name missing, Dict.get name textures ) of
+                ( _, Just (Success { texture, size }) ) ->
+                    renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a) (fn texture) acc
 
-                        ( False, Nothing ) ->
-                            ( entities, Set.insert src missing )
+                ( False, Nothing ) ->
+                    ( entities, Set.insert src missing )
 
-                        _ ->
-                            acc
+                _ ->
+                    acc
 
         Group shapes ->
             shapes
                 |> List.foldr (renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a)) acc
-
-        Polygon color points ->
-            --https://package.elm-lang.org/packages/ianmackenzie/elm-geometry/latest/Polygon2d#triangulate
-            --"renderPolygon color points x y angle s alpha"
-            --    |> Debug.todo "IMPLEMENT ME::Polygon"
-            acc
 
 
 hexColor2Vec3 : String -> Maybe Math.Vector3.Vec3

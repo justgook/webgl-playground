@@ -1,12 +1,12 @@
 module Playground.Advanced exposing (custom, useTexture)
 
-{-| Advanced user section, for usage in packages, or custom shader creation.
+{-| Advanced user section, for usage in packages, or custom Shape creation.
 
 @docs custom, useTexture
 
 -}
 
-import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..), initShape)
+import Playground.Internal exposing (Form(..), Number, Shape(..))
 import Playground.Render exposing (Render)
 import WebGL.Texture as Texture exposing (Texture)
 
@@ -28,13 +28,13 @@ import WebGL.Texture as Texture exposing (Texture)
 
 -}
 custom : Number -> Number -> Render -> Shape
-custom width height fn =
-    initShape (Custom (CustomEnd width height fn))
+custom width height render =
+    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
 
 
-{-| Get texture for your custom shader
+{-| Get texture for your custom Shape
 
-    useTexture "images/mario/stand/left.gif" <|
+    useTexture "image.png" <|
         \t ->
             custom 32 32 <|
                 myCustomRender t
@@ -42,4 +42,4 @@ custom width height fn =
 -}
 useTexture : String -> (Texture.Texture -> Shape) -> Shape
 useTexture url fn =
-    initShape (Custom (CustomTextured url fn))
+    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }

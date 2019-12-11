@@ -30,17 +30,27 @@ import WebGL.Texture exposing (Texture)
 
 
 {-| -}
-vertTriangle : Shader { a | i : Int } b {}
+vertTriangle : Shader { a | i : Float } { b | uP : Vec2, uT : Vec4, vert0 : Vec2, vert1 : Vec2, vert2 : Vec2 } {}
 vertTriangle =
     --http://in2gpu.com/2014/11/24/creating-a-triangle-in-opengl-shader/
     [glsl|
     precision mediump float;
-    attribute int i;
+    attribute float i;
+    uniform vec2 vert0;
+    uniform vec2 vert1;
+    uniform vec2 vert2;
+    uniform vec4 uT;
+    uniform vec2 uP;
     void main () {
-     const vec4 vertices[3] = vec4[3](vec4( 0.25, -0.25, 0.5, 1.0),
-                                             vec4(-0.25, -0.25, 0.5, 1.0),
-                                             vec4( 0.25, 0.25, 0.5, 1.0));
-            gl_Position = vertices[gl_VertexID];
+     vec2 aP;
+     if (i == 0.) {
+        aP = vert0;
+     } else if (i == 1.) {
+        aP = vert1;
+     } else if (i == 2.) {
+        aP = vert2;
+     }
+     gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
     }
     |]
 
@@ -62,7 +72,7 @@ vertSprite =
             void main () {
                 vec2 aP_ = aP * .5 + 0.5;
                 uv =  uUV.xy + (aP_ * uUV.zw);
-                gl_Position = vec4(aP * mat2(uT) + uP, 0.5, 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
             }
         |]
 
@@ -114,24 +124,33 @@ vertRect =
 
 
 {-| -}
-vertTile : Shader { a | aP : Vec2 } { b | imageSize : Vec2, index : Float, spriteSize : Vec2, transformation : Vec4, translation : Vec2 } { uv : Vec2 }
+vertTile :
+    Shader { a | aP : Vec2 }
+        { b
+            | uImgSize : Vec2
+            , index : Float
+            , spriteSize : Vec2
+            , uP : Vec2
+            , uT : Vec4
+        }
+        { uv : Vec2 }
 vertTile =
     [glsl|
             precision mediump float;
             attribute vec2 aP;
-            uniform vec4 transformation;
-            uniform vec2 translation;
+            uniform vec4 uT;
+            uniform vec2 uP;
             uniform float index;
             uniform vec2 spriteSize;
-            uniform vec2 imageSize;
+            uniform vec2 uImgSize;
             varying vec2 uv;
             void main () {
-                vec2 ratio = spriteSize / imageSize;
+                vec2 ratio = spriteSize / uImgSize;
                 float row = floor(index * ratio.x);
                 float column = index - row * (ratio.x);
                 vec2 offset = vec2(column, row) * ratio;
                 uv = (aP * .5 + 0.5) * ratio + offset;
-                gl_Position = vec4(aP * mat2(transformation) + translation, 0.5, 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, 0.5, 1.0);
             }
         |]
 
@@ -141,34 +160,34 @@ vertTile =
 
 
 {-| -}
-fragImage : Shader a { b | image : Texture, imageSize : Vec2 } { uv : Vec2 }
+fragImage : Shader a { b | uImg : Texture, uImgSize : Vec2 } { uv : Vec2 }
 fragImage =
     --(2i + 1)/(2N) Pixel perfect center
     [glsl|
         precision mediump float;
         varying vec2 uv;
-        uniform vec2 imageSize;
-        uniform sampler2D image;
+        uniform vec2 uImgSize;
+        uniform sampler2D uImg;
 
         void main () {
-            vec2 pixel = (floor(uv * imageSize) + 0.5) / imageSize;
-            gl_FragColor = texture2D(image, pixel);
+            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
+            gl_FragColor = texture2D(uImg, pixel);
         }
     |]
 
 
 {-| -}
-fragImageColor : Shader a { b | color : Vec4, image : Texture, imageSize : Vec2 } { uv : Vec2 }
+fragImageColor : Shader a { b | color : Vec4, uImg : Texture, uImgSize : Vec2 } { uv : Vec2 }
 fragImageColor =
     [glsl|
         precision mediump float;
         varying vec2 uv;
-        uniform vec2 imageSize;
-        uniform sampler2D image;
+        uniform vec2 uImgSize;
+        uniform sampler2D uImg;
         uniform vec4 color;
         void main () {
-            vec2 pixel = (floor(uv * imageSize) + 0.5) / imageSize;
-            gl_FragColor = texture2D(image, pixel) * color;
+            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
+            gl_FragColor = texture2D(uImg, pixel) * color;
         }
     |]
 
@@ -176,7 +195,6 @@ fragImageColor =
 {-| -}
 fragFill : Shader a { b | color : Vec4 } {}
 fragFill =
-    --https://thndl.com/square-shaped-shaders.html
     [glsl|
         precision mediump float;
         uniform vec4 color;
@@ -206,6 +224,7 @@ fragCircle =
 fragNgon : Shader a { b | color : Vec4, n : Float } { uv : Vec2 }
 fragNgon =
     --https://thebookofshaders.com/07/
+    --https://thndl.com/square-shaped-shaders.html
     [glsl|
         precision mediump float;
         uniform vec4 color;
@@ -228,7 +247,7 @@ fragNgon =
 
 
 {-| -}
-meshTriangle : WebGL.Mesh { i : Int }
+meshTriangle : WebGL.Mesh { i : Float }
 meshTriangle =
     WebGL.triangleStrip
         [ { i = 0 }
@@ -261,7 +280,7 @@ fragImageSaturation =
     [glsl|
         precision mediump float;
         varying vec2 uv;
-        uniform sampler2D image;
+        uniform sampler2D uImg;
         uniform float adjustment;
         vec3 saturation(vec3 rgb, float adj) {
             // Algorithm from Chapter 16 of OpenGL Shading Language
@@ -270,7 +289,7 @@ fragImageSaturation =
             return mix(intensity, rgb, adj);
         }
         void main () {
-            gl_FragColor = texture2D(image, uv);
+            gl_FragColor = texture2D(uImg, uv);
             gl_FragColor.xyz=saturation(gl_FragColor.xyz, adjustment);
         }
     |]
@@ -283,18 +302,18 @@ rotSprite =
 
         precision mediump float;
         varying vec2 uv;
-        uniform vec2 imageSize;
-        uniform sampler2D image;
+        uniform vec2 uImgSize;
+        uniform sampler2D uImg;
 
         void main () {
-            vec2 pixel = (floor(uv * imageSize) + 0.5) / imageSize;
-            gl_FragColor = texture2D(image, pixel);
+            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
+            gl_FragColor = texture2D(uImg, pixel);
 
         }
     |]
 
 
-{-| FILTERS !!! <https://dev.to/lesnitsky/webgl-month-day-9-image-filters-5g8e>
+{-| FILTERS !!! <https://dev.to/lesnitsky/webgl-month-day-9-uImg-filters-5g8e>
 -}
 sepia =
     [glsl|

@@ -1,4 +1,4 @@
-module Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..), initShape)
+module Playground.Internal exposing (Form(..), Number, Shape(..))
 
 import Math.Vector2
 import Math.Vector3
@@ -20,14 +20,9 @@ type Shape
 
 
 type Form
-    = Polygon Color (List ( Number, Number ))
-    | Custom CustomCustom
+    = Form Number Number Render
+    | Textured String (Texture.Texture -> Shape)
     | Group (List Shape)
-
-
-type CustomCustom
-    = CustomEnd Number Number Render
-    | CustomTextured String (Texture.Texture -> Shape)
 
 
 type alias Color =
@@ -38,11 +33,6 @@ type alias Color =
 -}
 type alias Number =
     Float
-
-
-initShape : Form -> Shape
-initShape form =
-    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = form }
 
 
 type alias Render =

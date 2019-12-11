@@ -20,7 +20,7 @@ module Playground.Extra exposing
 import Math.Vector2 exposing (vec2)
 import Playground exposing (Number, Shape)
 import Playground.Advanced exposing (custom, useTexture)
-import Playground.Internal exposing (CustomCustom(..), Form(..), Number, Shape(..))
+import Playground.Internal exposing (Form(..), Number, Shape(..))
 import Playground.Render as Render exposing (Render)
 import WebGL.Texture
 
@@ -62,39 +62,6 @@ tile tileW tileH index atlas =
     useTexture atlas <|
         \t ->
             custom tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
-
-
-triangle =
-    ""
-
-
-
---
---{-| -}
---tileMap : Number -> Number -> String -> String -> Shape
---tileMap tileW tileH atlas lut =
---    useTexture lut
---        (\lutTexture ->
---            let
---                ( lutW, lutH ) =
---                    WebGL.Texture.size lutTexture
---                        |> Tuple.mapBoth toFloat toFloat
---            in
---            useTexture atlas
---                (\atlasTexture ->
---                    (\translation transformation opacity ->
---                        LowLevel.rectOld
---                            { color = Math.Vector4.vec4 1 0 0 opacity
---                            , translation = translation
---                            , transformation = transformation
---                            , atlasSize = WebGL.Texture.size atlasTexture
---                            , atlas = atlasTexture
---                            , lut = lutTexture
---                            }
---                    )
---                        |> custom (lutW * tileW) (lutH * tileH)
---                )
---        )
 
 
 size t =

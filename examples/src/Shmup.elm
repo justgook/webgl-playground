@@ -1,11 +1,7 @@
-module Shmup exposing (foldFilter2, main)
+module Shmup exposing (main)
 
 import Playground exposing (..)
 import Random
-
-
-
---main : Program () (Game State) Playground.Msg
 
 
 main =
@@ -14,21 +10,17 @@ main =
 
 view : Computer -> State -> List Shape
 view computer state =
-    [ ship |> move state.player.x state.player.y
+    [ state.score
+        |> String.fromInt
+        |> words white
+        |> moveY (computer.screen.top - 25)
+        |> scale 3
+    , ship |> move state.player.x state.player.y
     ]
+        |> andFold state.explosions (\{ current, x, y } -> (::) (current |> move x y))
         |> andFold state.mobs (\mob -> (::) (meteor_big |> rotate (spin (2 / clamp 1 10 mob.speedX) computer.time) |> scale (mob.r * 2 / 96) |> move mob.x mob.y))
         |> andFold state.bullets (\bullet -> (::) (laser |> move bullet.x bullet.y))
         |> andFold [ "" ] (\_ -> fillBackground computer)
-
-
-fillBackground { screen } acc =
-    List.range (floor (screen.bottom / 256)) (ceiling (screen.top / 256))
-        |> List.foldl
-            (\b acc2 ->
-                List.range (floor (screen.left / 256)) (ceiling (screen.right / 256))
-                    |> List.foldl (\a acc_ -> (background |> move (toFloat a * 256) (toFloat b * 256)) :: acc_) acc2
-            )
-            acc
 
 
 update computer state =
@@ -37,19 +29,12 @@ update computer state =
             state.player
     in
     if state.init then
-        { state
-            | player =
-                { player
-                    | x =
-                        player.x
-                            + toX computer.keyboard
-                            * player.speedX
-                            |> clamp computer.screen.left computer.screen.right
-                }
-        }
+        state
+            |> moveShip computer
             |> updateMob computer
+            |> updateExplosions computer
             |> updateBullet computer
-            |> applyIf computer.keyboard.space (shoot computer)
+            |> updateShoot computer
             |> collide computer
 
     else
@@ -65,6 +50,45 @@ update computer state =
         }
 
 
+updateExplosions computer state =
+    if spin 0.01 computer.time < 125 then
+        { state
+            | explosions =
+                List.foldr
+                    (\e acc ->
+                        case e.next of
+                            shape :: next ->
+                                { e | current = shape, next = next } :: acc
+
+                            [] ->
+                                acc
+                    )
+                    []
+                    state.explosions
+        }
+
+    else
+        state
+
+
+updateShoot computer state =
+    let
+        weapon =
+            state.weapon
+    in
+    if computer.keyboard.space && modBy weapon.rate state.weapon.counter == 1 then
+        shoot computer { state | weapon = { weapon | counter = weapon.counter + 1 } }
+
+    else if not computer.keyboard.space && weapon.reserved && modBy weapon.rate state.weapon.counter == 1 then
+        shoot computer { state | weapon = { weapon | counter = weapon.counter + 1, reserved = False } }
+
+    else if computer.keyboard.space && modBy weapon.rate state.weapon.counter /= 1 then
+        { state | weapon = { weapon | counter = weapon.counter + 1, reserved = True } }
+
+    else
+        { state | weapon = { weapon | counter = weapon.counter + 1 } }
+
+
 collide computer state =
     let
         isColliding_ a b acc =
@@ -73,7 +97,14 @@ collide computer state =
                     ( nMob, nSeed ) =
                         Random.step (generatorMob computer) acc.seed
                 in
-                ( Nothing, Just nMob, { acc | seed = nSeed } )
+                ( Nothing
+                , Just nMob
+                , { acc
+                    | score = acc.score + round b.r
+                    , explosions = { explosion | x = b.x, y = b.y } :: acc.explosions
+                    , seed = nSeed
+                  }
+                )
 
             else
                 ( Just a, Just b, acc )
@@ -100,15 +131,32 @@ shoot computer state =
             , y = state.player.y
             , r = 10
             , speedX = 0
-            , speedY = 20
+            , speedY = 12
             }
     in
     { state | bullets = bullet :: state.bullets }
 
 
+moveShip computer state =
+    let
+        player =
+            state.player
+    in
+    { state
+        | player =
+            { player
+                | x =
+                    player.x
+                        + toX computer.keyboard
+                        * player.speedX
+                        |> clamp computer.screen.left computer.screen.right
+            }
+    }
+
+
 updateMob computer state =
     state.mobs
-        |> List.foldl
+        |> List.foldr
             (\mob ( mobs, seed ) ->
                 let
                     y =
@@ -164,9 +212,16 @@ type alias Object =
 type alias State =
     { init : Bool
     , player : Object
+    , score : Int
     , seed : Random.Seed
     , mobs : List Object
     , bullets : List Object
+    , explosions : List Animation
+    , weapon :
+        { counter : Int
+        , reserved : Bool
+        , rate : Int
+        }
     }
 
 
@@ -179,9 +234,16 @@ init =
         , speedX = 20
         , speedY = 0
         }
+    , score = 0
     , seed = Random.initialSeed 42
     , mobs = []
     , bullets = []
+    , explosions = []
+    , weapon =
+        { counter = 0
+        , reserved = False
+        , rate = 10
+        }
     }
 
 
@@ -195,7 +257,7 @@ applyIf bool f world =
 
 
 andFold l fn acc =
-    List.foldl fn acc l
+    List.foldr fn acc l
 
 
 foldFilter fn acc l1 l2 =
@@ -219,7 +281,7 @@ foldFilter1 fn ( acc1, acc2, acc3 ) l =
 foldFilter2 fn ( item, acc, acc3 ) l =
     case l of
         [] ->
-            ( Just item, acc, acc3 )
+            ( Just item, List.reverse acc, acc3 )
 
         x :: rest ->
             case fn item x acc3 of
@@ -230,10 +292,20 @@ foldFilter2 fn ( item, acc, acc3 ) l =
                     foldFilter2 fn ( a, acc, acc3_ ) rest
 
                 ( Nothing, Just b, acc3_ ) ->
-                    ( Nothing, b :: acc ++ rest, acc3_ )
+                    ( Nothing, List.reverse (b :: acc) ++ rest, acc3_ )
 
                 ( Nothing, Nothing, acc3_ ) ->
-                    ( Nothing, acc ++ rest, acc3_ )
+                    ( Nothing, List.reverse acc ++ rest, acc3_ )
+
+
+fillBackground { screen } acc =
+    List.range (floor (screen.bottom / 256)) (ceiling (screen.top / 256))
+        |> List.foldl
+            (\b acc2 ->
+                List.range (floor (screen.left / 256)) (ceiling (screen.right / 256))
+                    |> List.foldl (\a acc_ -> (background |> move (toFloat a * 256) (toFloat b * 256)) :: acc_) acc2
+            )
+            acc
 
 
 
@@ -266,3 +338,36 @@ laser =
 
 background =
     image 256 256 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyFpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNS1jMDIxIDc5LjE1NDkxMSwgMjAxMy8xMC8yOS0xMTo0NzoxNiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIChXaW5kb3dzKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo2MjE5OUU4OTg4RDAxMUUzOEEyRkNDM0VCNzYzOTA1NCIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo2MjE5OUU4QTg4RDAxMUUzOEEyRkNDM0VCNzYzOTA1NCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjYyMTk5RTg3ODhEMDExRTM4QTJGQ0MzRUI3NjM5MDU0IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjYyMTk5RTg4ODhEMDExRTM4QTJGQ0MzRUI3NjM5MDU0Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+yeMMlwAAB7VJREFUeNrs3f+S0zYC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"
+
+
+explosion06 =
+    image 96 96 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAABGdBTUEAALGOfPtRkwAAAwBQTFRFAAAAYy8dd00ir2sm0YAj/5UZ//Qj////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeNRfPAAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAAKGSURBVGiB7ZnbloMgDEWN///PTpeCCclJCEhn5sE8tMolm9wQ2+34smwv4J8D6COmaSGAyBAsEixiKQCMeQQwLloOGB2TCTJPB4qeATLyJMjn/Fg5vh4BxHThPccQDOjHNj0FAmjfBwhUCbDXAUyY4IgFUJWmDQyZBBAAmLt9ZxtH0xQbwLd06b8I1HenAzCN15fQ/yGcmTBcyXVCtd9071WugeNbhfZHY4XQv5OQEYAPO84KYf3nx8O9yORnq/8kxAJcFPLYPfUqWA8GOKqLAk5RAEDeSu+md8rU8D4FoM2hqCViH9EiFzXrLoDS1jkqSYCfcOwYavO/FEcKwCsSTRagJTRcAjg/gEVQde6hwYA7w7OAlAE3QJbQwZ6RLCoRbfXjjasDsCIX3C6f49QuzgK4RqGpssN654wJXNzWjNjNzJwEMdn0CF+/CPgwoKmfuHCknvsqWNxW+oX+YMMmBpA8nwWmb9zfDHKtEMNEWHXKYkCrxii2ADPLs+BAaecATH0DpRZQFJJZhq+hVnVHf+cdLag8cxyYAHRqewLAzh0GlHmdZzKnx/UpD7k59foco12kU/V+juX1a0IQA1LSB5QdfwbQf2kjwoe9MIscgKn6HIDMXMdHKpSlhzgGgQXqpHBrzgLsycdkkTGfjGU6GfUzIcoimC66wcmpIUB8ZAYtktBOV1kEDeg+po+yCaChidM10k+qx69ED0Bqhb01MCGMgVaZ3UcFQJuy5pffrwMOkT4dF9kRaQLuaF6h1PcS9uibPhgRU4d/fQcj0m+ZA4DmGPYA4Dp9GaArXwYkjo/L/8PRuAUACu7+7F+omc1iCICpU9j/BJiTF/ACXsALeAEv4FcAP71+VufWkVIFAAAAAElFTkSuQmCC"
+
+
+explosion05 =
+    image 96 96 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAABGdBTUEAALGOfPtRkwAAAwBQTFRFAAAAYy8dd00ir2sm0YAj/5UZ//Qj////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeNRfPAAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAATlSURBVGiB7ZnbcuQqDEVHAv//J3vaIG1tYcBOzknVPISHVLpttHQXdv85f3j9+QX8AuRaPwcQXz8EENFrbQjP9B3gI78UECay3hi4BWittVwQkZksCQu/BRApDaAfgE4ILn9PeAYU8xFrayw1F+p3AZ/912pi1ZeEa7Rf3ZqwB6g6QCGs0z7Gqf5nQCc0+d1bnw/Xx0v+YQTVsk3kXRbBKR9APY5G6K5pvFqU7lghlgBzSg/xpfFhJrRVioVfizttQVgAPhuSyKax+aiY86/6MP1Vlm6aAqTLJ0LpMagZEFFfV/QNID26Tf7hWkNgBIEJlsZTwsyC6+6jAzqjq4wga68DJ3gez+ttArjUKS7fCQxwhxSLSW9WXwGoZQ0BTOH2PxqFuvfw3XlD3AFeqG01+Uj4Vl5FAmApG1a9scCamBGs3xVFsjqtVTdq7X0WOSAyH9WG8vLaOJxQ1IbTA0AAoLykyNqnYpRq1hXqrG9joK2oClqcJSLlTeRVKagMvROmgDDBvYSGHTblYvZgPwFEMAoHAOKC9pT8Zwl1r4U5QBQiumo9wtE9uJJbeDSq/MlFVsrIcKR7PaI/sXx0Ds/XNaBfCpHRzGAAGqDnMRWbJ9vWgksZ35g0dPmHx6GmTsidewcw8dU7nOJEQQY0ADWqq+KW/SK7qHUDqGnKe11UauA17CkxP+XBgpYKQygFZxbvfmaENfPDu8kLC1h+NNEou6Z8l2l9dg44U89mADxrrogQdP1tRLThHN0cvWPesgMgkYkMUJo/Hv7I0hijq5EAwNUrSX71IBAgWkWpJJ+U3wLYAOjmndK+qIefjfo3B7QgAzJjBjDvplZs8g/nttT0gRCAJmlqgWTAgRB4K+55lBtRDLj1ySsDahgA6zVNBxxJi42kCPCslyYATfqSAqhM6AbQPEC1WLS3AAimhqS9eSd50W47kgbCqg7GSW85UnEsRM/0KaTWwq977ECwB+BYwozqp0IXXA5kKlncL28HTpznoKb7yPzbAfykk8Me9bwCyABASFXUj1ueqcjVtGE70cQSlTYPIe1jhxqQJero0DUgnosTgDkFBNxkzcmnzwagRtDYHZ6mTBoAId8I8yyy1wM6aKw2hAYCTsCm0CvA6af+7JnP39Y9hkKhk0pY0E3bA/wcrv7E5EWN8+1ooBmFA41uhr6ZIP6u4BKFniF0/OGkir7iwVkCzgBgeGl0vUE+xkTN03QHSC+C/MHez9fJN3GTDU/uv8JDjWMwRhouR7y9xynfBNGo5gWArEDC8D+UuEX4cd8DEYCdi05/2zhUsqiWEZD7u3vyEeAFnROSXqp95AsPunEa7QANQkVG8gPgR5SUsBYwHUfO7CEwi46wDvLxXJZq+gEgeJ+sqVyROCE+iBkgryzIyzZCdDaBMHcDlg/iY1h7UGVY5EYP8XIeMEDYE4Pj5wQA1hMtE+6OGCSfE0LIl0cAZUq2x+WTHrH80oMFJ0uauybuovSlaw+A8yYwnr5IxIy8PvySdGy+yXjSw2+RfQzWIrA3uynfcJ6rp8xHApSLN9V792wArsx8f3oVvpO+BMSGqX5biV8EpJ+ysuv7Zd70HnDe9M1yBwMS/R1gDl255ruAYcNDNL/mItuS/nkCzNf3XHQv6v8DwEF+v+lLv4h/3UH/wE/uv4BfwD8A+AsOxlyTeMJMMAAAAABJRU5ErkJggg=="
+
+
+explosion04 =
+    image 96 96 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAABGdBTUEAALGOfPtRkwAAAwBQTFRFAAAAYy8dd00ir2sm0YAj/5UZ//Qj////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeNRfPAAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAAU4SURBVGiB7ZnrcuMgDIULCPv9nzhrJB1JYHDY7PTPTpjpJcY9H7qC3Z/XL4+fL+AL+AI2AIVHzr8EuLSJiBHjVM7C/hdAEf1KE6Xs7I8BrMCjMmMyV6/xiHgGqAIDqPPSpX9du+aOgxEfAS79epxnkyBxRha/8w9ibpv/GHCJXn9/Adoi22opm9slNuA/EB4AZoADqK27ckBI/HPI9OcAFbA48LVG4J88KYAVYQ3IvEgQNJtK88r1mRQkcDZpUYlLgMSxVl0iiYsUWTW9eAh+RVgAtEpNRbzlvI5gSfYXAA4iAywC8ov7hKzQxF8NsQsomiSkAChVu9rUCIHR265rmwDNcpeFR8g11YHaRjgycxMmgFyC6QJwC9Q1Fh4Alj66Azg9tUCRO0ieWlHG1boELG3fJpk0BxzaIGSt1hOMoPq8jNBx9wClhAI2bxhADGrZyoDLCN0yuKXfN74ZoNTTG0RbMXqOAwx5nrX6tjHZW+cAiLXk44+nAqTY2PmHUa23ck8a3HQDtBLWetI+RsEA/hLfh6viRsbWkTADdF2gdj21Wo8OFnDZYWvYAEjLP+4ANeu0T6HV+iIGwgyAPJHM8yJQI4I93sqrJ8EzIAvA6tbCF0bQR1rJIrR1dwX9c9N3yQA46jiOCDjC/COg6fvfS16Dd/hEN7C5+cc14NJ3+5t+bqN0LjpGAo1JV5aAnGOSg8BVcYpskKIRgAa8BrC+HoSsgDLXWbuIYLo+6QmmrcE3n7WLmn/Ow/QP7FuVW86h+0KpkFbR1n68G/GVeZqKg0KZmh/i0YXbWQkAPkiCUB4A6uzYdJA2wWMix/ciYzhS7DxteotW0QyI/SUmZGgCevyVIof7YVHRp6E5gOox9IRhIGnd1W6JRv6ub4DLyqrlPuY5flFf4yDDyB5Q2cTXG8CtkKTQZMHWlSFowYaRr9czYOIZhE76CJIAc6JfNwFz1xeLbvWurEu3RzWClUtAmetrQ9Km1AcJR7yMsLdvixikoae5AsWm1+WYTHpq6YF2nkUpzUzAmU0ioCtwQAUAp325e1oHKaWJCZZ/xPvCkGGh+8mT5zMgp9veGLtnuc3yVmZJ26oarShNAGLCsHW8A9j5FJ1EHnKXgD7ORNGECOv1+QBpBM7oBeCa0Lox/xCsIKIbguLuZIXX9KeAVwOkeKbodxHyeoUBLm6J1WKdVoA2dOuoeA4Iz2GlN6GdVbrVi5fyYEDcMgVgVVPsiCTOuh3Bgj72D7p5qDtVgIBXWdlrpyWf2UbUEaLbWgp1+v25yGxoyqVYddrWjufPzogu80p5ArzUAshne6DFOyJ5zQILahfig482ownD2ZQJCc/AWLQeJQDoTUBzkrMNlfQIkFzSp2BuZMVecRV30b3suNh2AGKEPYjbZmCZq0HQE9iYUW9d1EbWY468ztSQWwg9KhOAHGffWSAA0neZfgxSi8xXZQTIEnYAxfqQqNu7F62GlmX5ZoLp7wHQHxRA2B8FIJa5fCyDHQAULXPQT4t5KA8m4Ci/AUjZA/kMiK/c9P6c8lMlCyCZiikiNQsI2lHiboHN4B2AN09tRt6CzGf2ctkIDr/vBitAbBE5djlI5zRMrPSn7+ySIbK0V9jTvony0NhtLWOI1wBRwG9wGevLHAg5yE/05681AUgR0C0zADD03lFr8WI22ZDuV8Z1+u7nn2f663fXfr/FoUhsg5zr64+7zs7/0XyxnV2Bs1z/NiB1+sHEbsz+eOs/gQuNDfndfzUuRd6obwNUafPejwAfjy/gC/gC/gfAH9oEDV7SNcjaAAAAAElFTkSuQmCC"
+
+
+explosion03 =
+    image 96 96 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAABGdBTUEAALGOfPtRkwAAAwBQTFRFAAAAYy8dd00ir2sm0YAj/5UZ//Qj////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeNRfPAAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAALlSURBVGiB7ZjbjqshCIXnQuj7P/HeLSoCgmLbSeZCM5Me8nd9sMTjz79fbj8XcAEXcAEXcAF/EFCo/RqgcPs+ALgdIraApxbgqwFoyHcAL/mq/yK8/pARXwCQPDyo1RwIhA3xMYDceXBDzuQkiSWgRz8Qz38YXZIhLAAq/EaoeVRYLokFAHAGdHn6kCLEAEd/xJ/PIQJQ8c8AckmmsCUEgFICfQXIpOADSpiAAeCW4AKe+lpKipoMdoQA4AY/sd4F1ATSgDXBAZQNoA80njTOAXUI+OPgMSYlBNzPezOAFwA3+mEP6e/npBCwcIc7YABiQgRY2U/vyJtEHXkAiADNOKxjTC0NeUBdJJcJ4GgAu044Aqg+lpW68MgFaIfEJxQ5GEBESAHQvJUe9Sn1BKAHQZd6mCq1gIDgAqaZVEBag2mHcQiYCLozyKyqT1/GhKAPxt5Bl48isHxD5AGAoy0AKEckQhLQ9ougCM7InnoFIQ2ow7NXuiii7wFqBr0rrV/dM1vOLsFbcFr4Kn5UA25koQAewQcgC4jgZcByxuBns4BReyaNqarMwDgHTGkgr3XYHRKzE3gED2DDFPpc+XNiNO6OAP1FjgoH8HgHIIqwhs2SqsAYzJuwNED7whlJ0SopknkD0GYc7QqIQxoou9IAUIAxoykA7VnQAuYJz5kqQHsEYxtGbhMQ275lfH0A0ARoglxXYMniUWdNCCY71ZGCp/VUpujvj7YZ8DBwAuZ3/bkkoPQfYDO9b0O72aq3xT2Mty4HK5r4eT3qcaAyAVFP4f4uOOEo69kk6xyM5w4BNQfT0Zootu/cw96y7x8CqZBmPes5CHi0MwoAxdUTwYJp4eYxOCcLQjsCjNu0qjbre0qLu4qhwEmIY2uRjOUtZHjb0jpCGaTkVYvkF/dFsw2xfiy/upAqHuJUfn1nVwxjSGaU9wB5V52P+AjgEs70t3fXH8qnbt8/UM8BPmsXcAEXcAF/AfAfIBbtTUiE0+IAAAAASUVORK5CYII="
+
+
+type alias Animation =
+    { current : Shape
+    , next : List Shape
+    , x : Float
+    , y : Float
+    }
+
+
+explosion : Animation
+explosion =
+    { x = 0
+    , y = 0
+    , current = circle white 8
+    , next = [ circle white 16, circle white 24, explosion03, explosion04, explosion05, explosion06 ]
+    }
