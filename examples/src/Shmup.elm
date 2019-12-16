@@ -5,49 +5,145 @@ import Random
 
 
 main =
-    game view update init
+    game view update Init
 
 
 view : Computer -> State -> List Shape
-view computer state =
-    [ state.score
-        |> String.fromInt
-        |> words white
-        |> moveY (computer.screen.top - 25)
-        |> scale 3
-    , ship |> move state.player.x state.player.y
-    ]
-        |> andFold state.explosions (\{ current, x, y } -> (::) (current |> move x y))
-        |> andFold state.mobs (\mob -> (::) (meteor_big |> rotate (spin (2 / clamp 1 10 mob.speedX) computer.time) |> scale (mob.r * 2 / 96) |> move mob.x mob.y))
-        |> andFold state.bullets (\bullet -> (::) (laser |> move bullet.x bullet.y))
-        |> andFold [ "" ] (\_ -> fillBackground computer)
+view computer phase =
+    case phase of
+        Play state ->
+            [ state.score
+                |> String.fromInt
+                |> words white
+                |> moveY (computer.screen.top - 25)
+                |> scale 3
+            , ship
+                |> move state.player.x state.player.y
+                |> applyIf (state.invulnerability > 0)
+                    (fade (zigzag 0 1 0.25 computer.time)
+                        >> moveY (0.5 * toFloat state.invulnerability)
+                    )
+                |> applyIf (state.invulnerability > 60) (fade 0)
+            ]
+                |> (++)
+                    (List.indexedMap
+                        (\i icon -> icon |> move (computer.screen.right - 35 * toFloat i - 25) (computer.screen.top - 25))
+                        (List.repeat state.lifeLeft lifeIcon)
+                    )
+                |> andFold state.explosions (\{ current, x, y } -> (::) (current |> move x y |> scale 2))
+                |> andFold state.mobs (\mob -> (::) (meteor_big |> rotate mob.a |> scale (mob.r * 2 / 96) |> move mob.x mob.y))
+                |> andFold state.bullets (\bullet -> (::) (bullet.shape computer.time |> move bullet.x bullet.y))
+                |> andFold [ "" ] (\_ -> fillBackground computer)
+                |> (\v ->
+                        if state.shake > 0 then
+                            v
+                                |> group
+                                |> move (sin (zigzag 0 3 0.125 computer.time) * state.shake) (cos (zigzag 0 5 0.125 computer.time) * state.shake)
+                                |> List.singleton
+
+                        else
+                            v
+                   )
+
+        Intro state ->
+            [ group
+                [ words white "SHUMP"
+                    |> scale 2
+                    |> moveY (wave 3 7 3 computer.time)
+                , words white "> Press SPACE <"
+                    |> moveY -20
+                , "Highscore "
+                    ++ String.fromInt state.score
+                    |> words white
+                    |> moveY -40
+                ]
+                |> scale 5
+            ]
+                |> andFold state.mobs (\mob -> (::) (meteor_big |> rotate mob.a |> scale (mob.r * 2 / 96) |> move mob.x mob.y))
+                |> andFold state.explosions (\{ current, x, y } -> (::) (current |> move x y |> scale 2))
+                |> andFold [ "" ] (\_ -> fillBackground computer)
+
+        Init ->
+            []
 
 
-update computer state =
+update computer phase =
+    case phase of
+        Play state ->
+            if state.shake > 12 && state.shake < 15 then
+                Play { state | shake = state.shake - 1 }
+
+            else
+                state
+                    |> moveShip computer
+                    |> updateMob computer
+                    |> updateExplosions computer
+                    |> updateBullet computer
+                    |> updateShoot computer
+                    |> collideBulletEnemy computer
+                    |> (\s ->
+                            if s.shake > 0 then
+                                { s | shake = s.shake - 1 }
+
+                            else
+                                s
+                       )
+                    |> (\s ->
+                            if s.invulnerability <= 0 then
+                                collidePlayerEnemy computer s
+
+                            else
+                                Play { s | invulnerability = s.invulnerability - 1 }
+                       )
+
+        Intro state ->
+            if state.timeout > 0 then
+                { state | timeout = state.timeout - 1 }
+                    |> updateMob computer
+                    |> updateExplosions computer
+                    |> Intro
+
+            else if computer.keyboard.space then
+                startWave computer { bottomShoot | seed = state.seed }
+                    |> Play
+
+            else
+                state
+                    |> updateMob computer
+                    |> Intro
+
+        Init ->
+            let
+                ( mobs, seed ) =
+                    breedMobs computer bottomShoot.seed
+            in
+            Intro
+                { mobs = mobs
+                , seed = seed
+                , score = 0
+                , timeout = 0
+                , explosions = []
+                }
+
+
+startWave computer data =
     let
         player =
-            state.player
-    in
-    if state.init then
-        state
-            |> moveShip computer
-            |> updateMob computer
-            |> updateExplosions computer
-            |> updateBullet computer
-            |> updateShoot computer
-            |> collide computer
+            bottomShoot.player
 
-    else
-        let
-            ( mobs, seed ) =
-                Random.step (Random.list 10 (generatorMob computer)) state.seed
-        in
-        { state
-            | init = True
-            , mobs = mobs
-            , seed = seed
-            , player = { player | y = computer.screen.bottom + player.r + 20 }
-        }
+        ( mobs, seed ) =
+            breedMobs computer data.seed
+    in
+    { data
+        | mobs = mobs
+        , seed = seed
+        , score = 0
+        , player = { player | y = computer.screen.bottom + player.r + 20 }
+    }
+
+
+breedMobs computer seed =
+    Random.step (Random.list 8 (generatorMob computer)) seed
 
 
 updateExplosions computer state =
@@ -72,24 +168,59 @@ updateExplosions computer state =
 
 
 updateShoot computer state =
-    let
-        weapon =
+    if computer.keyboard.space then
+        List.foldl
+            (\weapon ( acc, model ) ->
+                if computer.keyboard.space && weapon.counter <= 0 then
+                    ( { weapon | counter = weapon.interval } :: acc, shoot weapon model )
+
+                else if weapon.counter > 0 then
+                    ( { weapon | counter = weapon.counter - 1 } :: acc, model )
+
+                else
+                    ( acc, model )
+            )
+            ( [], state )
             state.weapon
-    in
-    if computer.keyboard.space && modBy weapon.rate state.weapon.counter == 1 then
-        shoot computer { state | weapon = { weapon | counter = weapon.counter + 1 } }
-
-    else if not computer.keyboard.space && weapon.reserved && modBy weapon.rate state.weapon.counter == 1 then
-        shoot computer { state | weapon = { weapon | counter = weapon.counter + 1, reserved = False } }
-
-    else if computer.keyboard.space && modBy weapon.rate state.weapon.counter /= 1 then
-        { state | weapon = { weapon | counter = weapon.counter + 1, reserved = True } }
+            |> (\( a, b ) -> { b | weapon = a })
 
     else
-        { state | weapon = { weapon | counter = weapon.counter + 1 } }
+        state
 
 
-collide computer state =
+collidePlayerEnemy computer state =
+    let
+        isColliding_ a b acc =
+            if distanceSquared a b < (a.r * a.r + b.r * b.r) then
+                ( Just a
+                , Just b
+                , { acc
+                    | explosions = { explosion | x = a.x, y = a.y } :: acc.explosions
+                    , invulnerability = 80
+                    , lifeLeft = acc.lifeLeft - 1
+                  }
+                )
+
+            else
+                ( Just a, Just b, acc )
+
+        ( _, _, newState ) =
+            foldFilter isColliding_ state [ state.player ] state.mobs
+    in
+    if newState.lifeLeft > 0 then
+        Play newState
+
+    else
+        Intro
+            { mobs = newState.mobs
+            , seed = newState.seed
+            , score = newState.score
+            , timeout = 100
+            , explosions = newState.explosions
+            }
+
+
+collideBulletEnemy computer state =
     let
         isColliding_ a b acc =
             if distanceSquared a b < (a.r * a.r + b.r * b.r) then
@@ -103,6 +234,12 @@ collide computer state =
                     | score = acc.score + round b.r
                     , explosions = { explosion | x = b.x, y = b.y } :: acc.explosions
                     , seed = nSeed
+                    , shake =
+                        if acc.shake < 3 then
+                            15
+
+                        else
+                            acc.shake
                   }
                 )
 
@@ -111,27 +248,41 @@ collide computer state =
 
         ( bullets, mobs, newState ) =
             foldFilter isColliding_ state state.bullets state.mobs
+
+        ( mobs_, seed_ ) =
+            if newState.score // 500 > state.score // 500 then
+                let
+                    ( nMob, nSeed ) =
+                        Random.step (generatorMob computer) newState.seed
+                in
+                ( nMob :: mobs, nSeed )
+
+            else
+                ( mobs, newState.seed )
     in
-    { newState | bullets = bullets, mobs = mobs }
+    { newState | bullets = bullets, mobs = mobs_, seed = seed_ }
 
 
+generatorMob : Computer -> Random.Generator Object
 generatorMob computer =
-    Random.map5 Object
-        (Random.float computer.screen.left computer.screen.right)
-        (Random.constant computer.screen.top)
-        (Random.float 15 50)
-        (Random.float -3 3)
-        (Random.float -8 -3)
+    Random.map Object (normal 0 computer.screen.right)
+        |> randomAndMap (Random.constant computer.screen.top)
+        |> randomAndMap (normal 40 10)
+        |> randomAndMap (Random.constant 0)
+        |> randomAndMap (normal 0 3)
+        |> randomAndMap (normal -6 1.5)
 
 
-shoot computer state =
+shoot weapon state =
     let
         bullet =
-            { x = state.player.x
-            , y = state.player.y
-            , r = 10
-            , speedX = 0
-            , speedY = 12
+            { x = state.player.x + weapon.bullet.x
+            , y = state.player.y + weapon.bullet.y
+            , r = weapon.bullet.r
+            , a = weapon.bullet.a
+            , speedX = weapon.bullet.speedX
+            , speedY = weapon.bullet.speedY
+            , shape = weapon.bullet.shape
             }
     in
     { state | bullets = bullet :: state.bullets }
@@ -149,6 +300,7 @@ moveShip computer state =
                     player.x
                         + toX computer.keyboard
                         * player.speedX
+                        |> clamp computer.screen.left computer.screen.right
                         |> clamp computer.screen.left computer.screen.right
             }
     }
@@ -173,7 +325,7 @@ updateMob computer state =
                     ( nMob :: mobs, nSeed )
 
                 else
-                    ( { mob | y = y, x = x } :: mobs, seed )
+                    ( { mob | y = y, x = x, a = spin (3 / -mob.speedX) computer.time } :: mobs, seed )
             )
             ( [], state.seed )
         |> (\( mobs, seed ) -> { state | mobs = mobs, seed = seed })
@@ -204,56 +356,99 @@ type alias Object =
     { x : Float
     , y : Float
     , r : Float
+    , a : Float
     , speedX : Float
     , speedY : Float
     }
 
 
-type alias State =
-    { init : Bool
-    , player : Object
-    , score : Int
-    , seed : Random.Seed
-    , mobs : List Object
-    , bullets : List Object
-    , explosions : List Animation
-    , weapon :
-        { counter : Int
-        , reserved : Bool
-        , rate : Int
+type State
+    = Init
+    | Intro
+        { mobs : List Object
+        , seed : Random.Seed
+        , score : Int
+        , timeout : Int
+        , explosions : List Animation
         }
-    }
+    | Play
+        { player : Object
+        , invulnerability : Int
+        , score : Int
+        , lifeLeft : Int
+        , seed : Random.Seed
+        , mobs : List Object
+        , bullets : List Bullet
+        , explosions : List Animation
+        , weapon :
+            List
+                { counter : Int
+                , interval : Int
+                , bullet : Bullet
+                }
+        , shake : Number
+        }
 
 
-init =
-    { init = False
-    , player =
+bottomShoot =
+    { player =
         { x = 0
         , y = 0
         , r = 30
+        , a = 0
         , speedX = 20
         , speedY = 0
         }
+    , invulnerability = 60
+    , lifeLeft = 3
     , score = 0
     , seed = Random.initialSeed 42
     , mobs = []
     , bullets = []
     , explosions = []
     , weapon =
-        { counter = 0
-        , reserved = False
-        , rate = 10
-        }
+        [ { counter = 5
+          , interval = 10
+          , bullet =
+                { x = -30
+                , y = 0
+                , r = 10
+                , a = 0
+                , speedX = 0
+                , speedY = 12
+                , shape = \_ -> laserBlue
+                }
+          }
+        , { counter = 0
+          , interval = 10
+          , bullet =
+                { x = 30
+                , y = 0
+                , r = 10
+                , a = 0
+                , speedX = 0
+                , speedY = 12
+                , shape = \_ -> laserGreen
+                }
+          }
+        ]
+    , shake = 0
     }
 
 
-applyIf : Bool -> (a -> a) -> a -> a
-applyIf bool f world =
-    if bool then
-        f world
 
-    else
-        world
+--addWeapon w=
+
+
+type alias Bullet =
+    { x : Number
+    , y : Number
+    , r : Number
+    , a : Number
+    , speedX : Number
+    , speedY : Number
+    , shape : Time -> Shape
+    }
 
 
 andFold l fn acc =
@@ -308,6 +503,15 @@ fillBackground { screen } acc =
             acc
 
 
+applyIf : Bool -> (a -> a) -> a -> a
+applyIf bool f world =
+    if bool then
+        f world
+
+    else
+        world
+
+
 
 --VEC2 Math
 
@@ -332,8 +536,20 @@ meteor_big =
     image 96 96 "data:image/png;base64,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"
 
 
-laser =
+laserBlue =
     image 13 37 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAlCAYAAACZFGMnAAACQUlEQVR42oXVv2sTYRjA8Rf8B5wEBycHEYltmpyKCE5OnRx0kE4u4iAOijo5OSgqOiioFCyiIlpsxTZ3F5SCDhZSzFCwllqitNIfscnd+16SXt67PL5v4bGP0YcGPoG7+76548lxJwT55Dx1Pu+rkbwfTmxSI05BHRX/+zhFWXKKkebkPHn7rwXm1x46nmxuyQ0HNhb0euGpfFEGaHA+bk3VtEZ2mx7vcWtHRM6Ppsy1r1pnS1Fdpx3odqncDLBx/GhIHPCiRTS5qtdbSQe62f1/Ol+9EuargpTuAId2Iu8Fs6ged4BDOzu5aVRd7wCHduZM8jNaaqXAoZ1wfDWJFhopcGhnLi/4gCpRChza2TO9R3MqBQ7tzJ8rXTQTpsChnRmEeoOmgwQ4tLMjH0blegIc2pnbSD1HpbUEOLQT9gZEn34lwKGdGYR6hD5WE+DQzi66jyZWNHBoZwYh76B3yxo4tDMjj24gb0kDh3Z25NfQ2E8NHNoJx1NX0eiiBg7t7G10BQ0vtIFDO/OAjC6gFz/awKGdHfk59PR7Gzi0E1lXnkFDlTZwaCeyvjyNBufbwKGdcNxoAD34FgOHdqLPUyfRvbkYOLQzz/JGv1OQx62bX5ord2dj6Gb3Y2OJg4XwUM4L+63L5cazW19j6Gb3Y9M3FuTEXq+60zxhjqGL5caT6zMxILtNj9t+43WTMavt224r+97Wezbfaidebtvvyj2OLw+zRtd22e6fV+ju18s7MuO1THY8yCO73fu4sp12vwEgZVqjmZ+rQQAAAC10RVh0U29mdHdhcmUAYnkuYmxvb2RkeS5jcnlwdG8uaW1hZ2UuUE5HMjRFbmNvZGVyqAZ/7gAAAABJRU5ErkJggg=="
+
+
+laserGreen =
+    image 13 37 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAlCAYAAACZFGMnAAACR0lEQVR42oXVz2sTQRTA8QH/AU+CB08eRCS2dncTEcGTp5486EF68qCmJrsBoXry5KVgEcEeWgwUURFarUVRA/VHms1m1WjBKm0qJdW09kdo0xhNWlN5zlNefUYfDXwOs/sdMptMMkqxl+1ZjuObg0469GyDHkc965D63yvmWa9imWBdYqfNrr8mOJ7Vo29UNxNJW22/l5Qyjsd8a4UkCvHaZPl1neCY37dTTQeV4wezTsZaRFfftZfWf9ShUTzXsUJNLGP1Kf22MyS35K+urdegEV6nxvaC/cpJB/OkWq+AhHf4MedI5XsJJLxTep1jpLxWBAnvcNIbsrw6BxLe4SSfFGsFkPBO7wRzhMxX8yDhHe6GJ2T22weQ8A6X94gUvo6DhHf6ewoNkenKGEh4h8sbIFNfRkHCO9x7t8hkOQsS3incgGRixQcJ7/TyQr3kfckFCe9wUjd5u/wcJLxTdsa8TEaXhkHCO5zUSbLFxyDhHU66SF4uPgAJ7/CZLpDMwj2Q8E7ZvnGeuPMDIOGd3nvGWZKcuw0S3ulnMqLk6ecbIOGdinrmKTI82wcS3ulJoRMkMXMNJLzD31MbeVjoAQnv9DO1HCP3P3WDhHcq+qK5Vf+XHUF3pi4tDH28Ao3wOjVIhd3Q/mjaaEXxiXM37053QSO8Tk041WKokyO7t59xzcOkd7zjen++EwiO+X3sfx034VTAwNNuM5HUnqY/p9pRtSXs7t2l13tA0p60dmD3zxF6OrFzWyQZCETcfeYGPY4NNm/l3U9zlssVW/PVxwAAAC10RVh0U29mdHdhcmUAYnkuYmxvb2RkeS5jcnlwdG8uaW1hZ2UuUE5HMjRFbmNvZGVyqAZ/7gAAAABJRU5ErkJggg=="
+
+
+powerUpBlue =
+    image 34 33 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAhCAYAAAC803lsAAAB50lEQVR42mNgQAPijRv9RZs29Ys3b9wPwxItW/6Ti5HNEWveXC9Wu1afAR8AKRBr2nieEktJcZxk9Vp5TFeUr+IXa9r0HqZQecaZ/zorH/zXW/sEjM12fyUbw8wAmQcyF2YHyD6M0AEKrgdJyvYd+G+05Q1FFhPCIPNB9kAcs/E8SpSABCXbd/w32f6Bpo6AYZA9IPtA9oo2bowHOwSUMEEC6vOv0MURMAyyDxpF66HRAkmgtI4SbFEESytgh8ASDz0dAcMwuwePQ4C5duiGSMaZ7//xgTPv/tDHIY1XfuB1CMihdHHIrLu/qBIaNHUIKaFBsUM2P/1NldCg2CEgC6kRGjRxyKdf//6XXPhBX4eALMUFnn77C85VdHEIyDJcAOTI6OPf6FfEg3yNLYpICQ2q1jXIhRsoNw1YpQcrU0DR5bR/AGtfWPSQki5o4hBQ4uy98XNg2yP+h7/9P/Dy98A3jEAlKTnpArkBjeIQWJuV0v4LOf0dlC4FsPE6HySgOucCXR0Csg/aeJ4P7+vC+jX0asmD7IH1a0D2Izre0I42qAdG604WyHxYTw9kL5YOOKTvC3Kp1rI7VHcQyDyQubCQwNr3hXXEKR2CIGU0ANyFwAdAcQbqBiKPDlADg0MAmDBR0gQSAAA0paVDNbQPtAAAAC10RVh0U29mdHdhcmUAYnkuYmxvb2RkeS5jcnlwdG8uaW1hZ2UuUE5HMjRFbmNvZGVyqAZ/7gAAAABJRU5ErkJggg=="
+
+
+powerUpGreen =
+    image 34 33 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAhCAYAAAC803lsAAAB5klEQVR42mNgQAMh3br+od0G/aE9xvthOLzP+D+5GNmckF6D+sAObX0GfACkILTH6DwllpLiOK8WTXkMR7iUK/GH9hq+hylMWGLyP2Ob6f+sXWZgXHjSnGwMMwNkHshcuGOA9mGEDjAk1oMko2ca/889SJnFhDDIfJA9kJAxOo8SJSDBiInG//OP0tYRMAyyB2QfyN7gHoN4SGgAEyZIIGW1KV0cAcMg+6Chsh4WLeAESusowRZFsLQCdggs8dDTETAMs3vQOASUa4duiEy5lvkfH7j98Sx9HLLsbhNeh4AcSheH7HgymyqhQVOHkBIaFDvk5KstVAkNih0CspAaoUETh3z7/en/3Jul9HUIyFJc4O2PZ+BcRReHgCzDBUCO7L4cQ78iHuRrbFFESmhQta5BLtxAuWnAKj1YmQKKrsozzgPnEFj0kJIuaOIQUOJc/6BvYNsjTecD/l96d2DgG0agkpScdIHcgEZxCKzNSmn/hZz+DkqXIqzbaD5IIGm5CV0dArIPZC/IfnhfF9avoVdLHmQPrF8Dsh+ppwfpaIN6YLTuZIHMR/T0jPdjdsChfV+QS9M3mVLdQSDzQObCQgJr3xfeEadwCIKU0QBwFwIfAI+PALuByKMDVLEcaB4oYaKkCSQAAA2XIKv50YBWAAAALXRFWHRTb2Z0d2FyZQBieS5ibG9vZGR5LmNyeXB0by5pbWFnZS5QTkcyNEVuY29kZXKoBn/uAAAAAElFTkSuQmCC"
 
 
 background =
@@ -356,6 +572,10 @@ explosion03 =
     image 96 96 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAABGdBTUEAALGOfPtRkwAAAwBQTFRFAAAAYy8dd00ir2sm0YAj/5UZ//Qj////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeNRfPAAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAALlSURBVGiB7ZjbjqshCIXnQuj7P/HeLSoCgmLbSeZCM5Me8nd9sMTjz79fbj8XcAEXcAEXcAF/EFCo/RqgcPs+ALgdIraApxbgqwFoyHcAL/mq/yK8/pARXwCQPDyo1RwIhA3xMYDceXBDzuQkiSWgRz8Qz38YXZIhLAAq/EaoeVRYLokFAHAGdHn6kCLEAEd/xJ/PIQJQ8c8AckmmsCUEgFICfQXIpOADSpiAAeCW4AKe+lpKipoMdoQA4AY/sd4F1ATSgDXBAZQNoA80njTOAXUI+OPgMSYlBNzPezOAFwA3+mEP6e/npBCwcIc7YABiQgRY2U/vyJtEHXkAiADNOKxjTC0NeUBdJJcJ4GgAu044Aqg+lpW68MgFaIfEJxQ5GEBESAHQvJUe9Sn1BKAHQZd6mCq1gIDgAqaZVEBag2mHcQiYCLozyKyqT1/GhKAPxt5Bl48isHxD5AGAoy0AKEckQhLQ9ougCM7InnoFIQ2ow7NXuiii7wFqBr0rrV/dM1vOLsFbcFr4Kn5UA25koQAewQcgC4jgZcByxuBns4BReyaNqarMwDgHTGkgr3XYHRKzE3gED2DDFPpc+XNiNO6OAP1FjgoH8HgHIIqwhs2SqsAYzJuwNED7whlJ0SopknkD0GYc7QqIQxoou9IAUIAxoykA7VnQAuYJz5kqQHsEYxtGbhMQ275lfH0A0ARoglxXYMniUWdNCCY71ZGCp/VUpujvj7YZ8DBwAuZ3/bkkoPQfYDO9b0O72aq3xT2Mty4HK5r4eT3qcaAyAVFP4f4uOOEo69kk6xyM5w4BNQfT0Zootu/cw96y7x8CqZBmPes5CHi0MwoAxdUTwYJp4eYxOCcLQjsCjNu0qjbre0qLu4qhwEmIY2uRjOUtZHjb0jpCGaTkVYvkF/dFsw2xfiy/upAqHuJUfn1nVwxjSGaU9wB5V52P+AjgEs70t3fXH8qnbt8/UM8BPmsXcAEXcAF/AfAfIBbtTUiE0+IAAAAASUVORK5CYII="
 
 
+lifeIcon =
+    image 32 26 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAaCAYAAADWm14/AAACcElEQVR42r2Wz2sTQRTH8x/4J/gPCN4EQRAvHrz0UPQiouilB6UHtRehRVRQECyUFgRpQGpBEeupFyFSJD2Ixouw1aRbYyWiSIxijCE/xv088obtpiY7a5KBLwwz732/b96+N7OpVMLRbrdXAnwHrVbreb1e358a1QgEZ0xkEMRIxMvl8h5OjWihUBDoaDQah0d2+kqlYjzPEzDvZCE9stMXi0UbgO/7Ngu1Wm3v0AJoNptvEKlWqyI8PXVDwJw1BjbDSn0agT++Z/JPl0z2xbo5dui4gPlWNmOav34M51MEhJNyukBg+9qEnPju3KINgDlrX5Zmw10xOai0n1bS0vQZ8+7BgohdOHvZBsCcNfa+Ld60QeD7X+JcLlp0X+eumM2TB0Qo9zpnxRWssYfNz8yKBIBv4guKalZxCP3xfeb9/FURuX9vuSsA1tjDBtvfb1/aIJw7g3bTiocIQjl97pWIPFp+YmZvLewAa9KWgQ22H04dlILVzoDT6Z7XioeIAPLXz9u+7wds8fk4cdR2BpxO7Ybjp4vjQgS89bXYAWCrfnDEbs9oxSuJy+mjWQAUcN/OCDbG1AgHdQYbmVXnAPAJc0Tac+yf7aYVryhcOuEsrsA3zLVre3Yqfitc8TtOv/o4cQD4Rvm0PdGUztCiC3rVVrxi89yRxOIKOMKcaKBli1JTz5MaTZlcPrenEovrpRT9pPp8o53SwuB9/5x9ZsoP57uwnd9wFsdnNy400NJhM9BvlEql2OLYxhmSAVqCW4qfStCZz4RwxyWIsDi+Ea50WKerHeNcUPz59MLAnuJeQfQbAxcPv5L8eveC6/v/F7hzp+GkEvouAAAALXRFWHRTb2Z0d2FyZQBieS5ibG9vZGR5LmNyeXB0by5pbWFnZS5QTkcyNEVuY29kZXKoBn/uAAAAAElFTkSuQmCC"
+
+
 type alias Animation =
     { current : Shape
     , next : List Shape
@@ -371,3 +591,31 @@ explosion =
     , current = circle white 8
     , next = [ circle white 16, circle white 24, explosion03, explosion04, explosion05, explosion06 ]
     }
+
+
+
+--Random.Extra
+
+
+{-| Create a generator of floats that is normally distributed with
+given mean and standard deviation.
+-}
+normal : Float -> Float -> Random.Generator Float
+normal mean stdDev =
+    Random.map (\u -> u * stdDev + mean) standardNormal
+
+
+{-| A generator that follows a standard normal distribution (as opposed to
+a uniform distribution)
+-}
+standardNormal : Random.Generator Float
+standardNormal =
+    Random.map2
+        (\u theta -> sqrt (-2 * logBase e (1 - max 0 u)) * cos theta)
+        (Random.float 0 1)
+        (Random.float 0 (2 * pi))
+
+
+randomAndMap : Random.Generator a -> Random.Generator (a -> b) -> Random.Generator b
+randomAndMap =
+    Random.map2 (|>)

@@ -31,27 +31,16 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-
-    - name: Set elm-home
-      id: elm-home
-      run: echo "::set-output name=dir::$(echo $HOME/${{ runner.os }}-elm)"
-    - name: Get Elm cache
-      uses: actions/cache@v1.0.3
-      with:
-        path: ${{ steps.elm-home.outputs.dir }}
-        key: ${{ runner.os }}-elm-${{ hashFiles('**/elm.json') }}
-        restore-keys: |
-          ${{ runner.os }}-elm-
-
-    - name: Install Dependencies
-#      if: steps.yarn-cache-exists.outputs.cache-hit != 'true'
-      run: yarn
-
+    - name:
     - name: Test
       env:
         ELM_HOME: ${{ steps.elm-home.outputs.dir }}
       run: elm-test
 
+    - name: Install Dependencies
+        #      if: steps.yarn-cache-exists.outputs.cache-hit != 'true'
+        run: yarn
+        working-directory: examples
     - name: Build
       run: elm make src/Main.elm --optimize --output=./gh-pages/bundle.js
       working-directory: examples

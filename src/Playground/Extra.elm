@@ -1,6 +1,6 @@
 module Playground.Extra exposing
     ( scaleX, scaleY
-    , tile
+    , tile, sprite
     )
 
 {-|
@@ -13,11 +13,12 @@ module Playground.Extra exposing
 
 # Shapes
 
-@docs tile
+@docs tile, sprite
 
 -}
 
 import Math.Vector2 exposing (vec2)
+import Math.Vector4 exposing (Vec4)
 import Playground exposing (Number, Shape)
 import Playground.Advanced exposing (custom, useTexture)
 import Playground.Internal exposing (Form(..), Number, Shape(..))
@@ -28,7 +29,7 @@ import WebGL.Texture
 {-| Make a shape **horizontally** bigger or smaller.
 Also can be used to flip object:
 
-    sprite 20 27 0 "images/mario.png"
+    tile 20 27 0 "character.png" 1
         |> scaleX -1
 
 -}
@@ -40,8 +41,8 @@ scaleX sx (Shape shape) =
 {-| Make a shape **vertically** bigger or smaller.
 Also can be used to flip object:
 
-    sprite 20 27 0 "images/mario.png"
-        |> scaleX -1
+    tile 20 27 0 "character.png" 1
+        |> scaleY -1
 
 -}
 scaleY : Number -> Shape -> Shape
@@ -49,19 +50,38 @@ scaleY sy (Shape shape) =
     Shape { shape | sy = shape.sy * sy }
 
 
-{-| Show a piece of an sprite sheet.
+{-| Show tile from symmetrical tileset.
 
-For example, if your animation is on the first row, it has 7 frames, and you want to loop it
-every 5 seconds you can write:
+All tiles is fixed size and placed in grid, where top left is 0 index, and goes incrementally left down.
 
-    sprite width height (spin (1.0 / 6.0) * 7 // 360) "sprites.png"
+Example: your have 3x3 tileset (each tile 16x24px)
+
+    | 0 1 2 |
+    | 3 4 5 |
+    | 6 7 8 |
+
+to draw tile that is first on second row
+
+    tile 16 24 "sprites.png" 3
 
 -}
-tile : Number -> Number -> Int -> String -> Shape
-tile tileW tileH index atlas =
+tile : Number -> Number -> String -> Int -> Shape
+tile tileW tileH atlas index =
     useTexture atlas <|
         \t ->
             custom tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
+
+
+{-| Show sprite from asymmetrical sprite sheet.
+
+Sprites can be placed anywhere in tileset and each have different size
+
+-}
+sprite : Number -> Number -> String -> Vec4 -> Shape
+sprite tileW tileH atlas uv =
+    useTexture atlas <|
+        \t ->
+            custom tileW tileH <| Render.sprite t (size t) uv
 
 
 size t =

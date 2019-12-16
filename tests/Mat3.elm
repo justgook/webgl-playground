@@ -1,4 +1,4 @@
-module Playground.Mat3 exposing (Mat3, identity, makeRotate, makeScale, makeTranslate, mul, toGL)
+module Mat3 exposing (Mat3, identity, makeRotate, makeScale, makeTranslate, mul, toGL)
 
 import Math.Vector2
 import Math.Vector4
@@ -69,9 +69,11 @@ makeScale sx sy =
 
 {-| Creates a transformation matrix for translating each of the x, y, and z axes by the amount given in the corresponding element of the 3-element vector.
 -}
+makeTranslate : Float -> Float -> Mat3
 makeTranslate tx ty =
     Mat3 1 0 tx 0 1 ty 0 0 1
 
 
-toGL { a11, a12, a13, a21, a22, a23, a31, a32, a33 } =
+toGL : Mat3 -> ( Math.Vector4.Vec4, Math.Vector2.Vec2 )
+toGL { a11, a12, a13, a21, a22, a23 } =
     ( Math.Vector4.fromRecord { x = a11, y = a12, z = a21, w = a22 }, Math.Vector2.fromRecord { x = a13, y = a23 } )

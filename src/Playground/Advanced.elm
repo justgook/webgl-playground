@@ -7,7 +7,7 @@ module Playground.Advanced exposing (custom, useTexture)
 -}
 
 import Playground.Internal exposing (Form(..), Number, Shape(..))
-import Playground.Render exposing (Render)
+import Playground.Render exposing (Opacity, Render)
 import WebGL.Texture as Texture exposing (Texture)
 
 

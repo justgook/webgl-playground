@@ -160,7 +160,7 @@ vertTile =
 
 
 {-| -}
-fragImage : Shader a { b | uImg : Texture, uImgSize : Vec2 } { uv : Vec2 }
+fragImage : Shader a { b | uImg : Texture, uImgSize : Vec2, uA : Float } { uv : Vec2 }
 fragImage =
     --(2i + 1)/(2N) Pixel perfect center
     [glsl|
@@ -168,10 +168,12 @@ fragImage =
         varying vec2 uv;
         uniform vec2 uImgSize;
         uniform sampler2D uImg;
+        uniform float uA;
 
         void main () {
             vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
             gl_FragColor = texture2D(uImg, pixel);
+            gl_FragColor.a *= uA;
         }
     |]
 
@@ -347,3 +349,7 @@ vec3 czm_hue(vec3 rgb, float adjustment)
     return toRGB * color;
 }
     |]
+
+
+snow =
+    "https://www.patreon.com/posts/tutorial-23614114"

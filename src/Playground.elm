@@ -107,9 +107,9 @@ import Math.Vector3
 import Math.Vector4 exposing (vec4)
 import Playground.Font.GoodNeighbors as Font
 import Playground.Internal exposing (Form(..), Number, Shape(..))
-import Playground.Mat3 as Mat3
 import Playground.Polygon exposing (signedArea, triangulate)
 import Playground.Render as Render
+import Playground.Transformation as Trans exposing (Transformation)
 import Set exposing (Set)
 import Task exposing (Task)
 import Time
@@ -914,13 +914,9 @@ requestTexture missing textures =
     missing
         |> List.foldl
             (\url ( acc1, acc2 ) ->
-                let
-                    textureName =
-                        stripTextureUrl url
-                in
-                ( Dict.insert textureName Loading acc1
-                , (Texture.loadWith textureOption textureName
-                    |> Task.map (Tuple.pair textureName)
+                ( Dict.insert url Loading acc1
+                , (Texture.loadWith textureOption url
+                    |> Task.map (Tuple.pair url)
                   )
                     :: acc2
                 )
@@ -948,15 +944,6 @@ gotTextures r textures =
 
         Err _ ->
             textures
-
-
-stripTextureUrl a =
-    a
-
-
-setIfNotExists : String -> TextureManager -> TextureManager
-setIfNotExists a =
-    Dict.update a (Maybe.withDefault Loading >> Just)
 
 
 
@@ -1276,7 +1263,7 @@ octagon color radius =
 
     main =
         picture
-            [ polygon [ ( -10, -20 ), ( 0, 100 ), ( 10, -20 ) ]
+            [ polygon red [ ( -10, -20 ), ( 0, 100 ), ( 10, -20 ) ]
             ]
 
 **Note:** If you [`rotate`](#rotate) a polygon, it will always rotate around
@@ -1318,7 +1305,7 @@ polygonTriangle color data =
 
     main =
         picture
-            [ image 96 96 "https://elm-lang.org/assets/turtle.gif"
+            [ image 96 96 "https://elm-lang.org/images/turtle.gif"
             ]
 
 You provide the width, height, and then the URL of the image you want to show.
@@ -1633,7 +1620,7 @@ The degrees go **counter-clockwise** to match the direction of the
 -}
 rotate : Number -> Shape -> Shape
 rotate da (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | a = a + da }
+    Shape { shape | a = degrees (a + da) }
 
 
 {-| Fade a shape. This lets you make shapes see-through or even completely
@@ -1927,7 +1914,7 @@ viewWrap screen =
 
 render : Screen -> TextureManager -> List Shape -> ( List Entity, List String )
 render screen textures shapes =
-    List.foldr (renderShape screen textures Mat3.identity) ( [], Set.empty ) shapes
+    List.foldr (renderShape screen textures Trans.identity 1) ( [], Set.empty ) shapes
         |> Tuple.mapSecond Set.toList
 
 
@@ -1949,73 +1936,30 @@ textureOption =
     }
 
 
-roundAngle a =
+renderShape : Screen -> TextureManager -> Transformation -> Float -> Shape -> ( List Entity, Set String ) -> ( List Entity, Set String )
+renderShape screen textures parent parentOpacity (Shape { x, y, a, sx, sy, o, form }) (( entities, missing ) as acc) =
     let
-        --fmod a b =
-        --    a - b * toFloat (floor (a / b))
-        trigPrecision =
-            1000000000
-    in
-    (round a * trigPrecision |> toFloat) / trigPrecision
+        createTrans tx ty sx_ sy_ a_ =
+            Trans.transform tx ty sx_ sy_ a_
+                |> Trans.apply parent
 
-
-createMat3_ tx ty sx sy a_ =
-    let
-        t =
-            Mat3.makeTranslate tx ty
-
-        a =
-            a_ * pi / 180
-
-        r =
-            Mat3.makeRotate a
-
-        s_ =
-            Mat3.makeScale sx sy
-    in
-    Mat3.mul t (Mat3.mul r s_)
-
-
-setAlpha c =
-    c |> Math.Vector3.toRecord |> (\c1 -> vec4 c1.x c1.y c1.z)
-
-
-renderShape : Screen -> TextureManager -> Mat3.Mat3 -> Shape -> ( List Entity, Set String ) -> ( List Entity, Set String )
-renderShape screen textures parent (Shape { x, y, a, sx, sy, o, form }) (( entities, missing ) as acc) =
-    let
-        createMat3 tx ty sx_ sy_ a_ =
-            createMat3_ tx ty sx_ sy_ a_
-                |> Mat3.mul parent
-
-        newWay tx ty sx_ sy_ a_ =
-            createMat3 tx ty sx_ sy_ a_
-                |> Mat3.mul (Mat3.makeScale (1 / screen.width) (1 / screen.height))
-                |> Mat3.toGL
+        opacity =
+            o * parentOpacity
     in
     case form of
         Form width height fn ->
             let
                 ( t1, t2 ) =
-                    newWay
-                        (x * 2)
-                        (y * 2)
-                        (width * sx)
-                        (height * sy)
-                        a
+                    createTrans (x * 2) (y * 2) (width * sx) (height * sy) a
+                        |> Trans.scale (1 / screen.width) (1 / screen.height)
+                        |> Trans.toGL
             in
-            ( fn t2 t1 o
-                :: entities
-            , missing
-            )
+            ( fn t2 t1 opacity :: entities, missing )
 
         Textured src fn ->
-            let
-                name =
-                    stripTextureUrl src
-            in
-            case ( Set.member name missing, Dict.get name textures ) of
+            case ( Set.member src missing, Dict.get src textures ) of
                 ( _, Just (Success { texture, size }) ) ->
-                    renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a) (fn texture) acc
+                    renderShape screen textures (createTrans (x * 2) (y * 2) sx sy a) opacity (fn texture) acc
 
                 ( False, Nothing ) ->
                     ( entities, Set.insert src missing )
@@ -2025,7 +1969,7 @@ renderShape screen textures parent (Shape { x, y, a, sx, sy, o, form }) (( entit
 
         Group shapes ->
             shapes
-                |> List.foldr (renderShape screen textures (createMat3 (x * 2) (y * 2) sx sy a)) acc
+                |> List.foldr (renderShape screen textures (createTrans (x * 2) (y * 2) sx sy a) opacity) acc
 
 
 hexColor2Vec3 : String -> Maybe Math.Vector3.Vec3

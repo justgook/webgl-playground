@@ -13,6 +13,8 @@ examples/bundle.js
 # Yarn Integrity file
 .yarn-integrity
 
+#Generated tests
+tests/VerifyExamples
 
 #OS stuff
 .DS_Store

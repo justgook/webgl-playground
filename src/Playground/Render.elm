@@ -159,6 +159,7 @@ image image_ imageSize uP uT opacity =
         , uT = uT
         , uImg = image_
         , uImgSize = imageSize
+        , uA = opacity
         }
 
 
@@ -197,6 +198,7 @@ sprite image_ imageSize uv translate scaleRotateSkew opacity =
         Shader.mesh
         { uP = translate
         , uT = scaleRotateSkew
+        , uA = opacity
         , uImg = image_
         , uImgSize = imageSize
         , uUV = uv
@@ -221,6 +223,7 @@ tile spriteSheet spriteSize imageSize index translate scaleRotateSkew opacity =
         , spriteSize = spriteSize
         , uImg = spriteSheet
         , uImgSize = imageSize
+        , uA = opacity
         }
 
 
