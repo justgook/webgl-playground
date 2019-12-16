@@ -70,6 +70,7 @@ jobs:
       env:
         NODE_ENV: production
       working-directory: examples
+      run: |
         posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
 
     - name: Deploy to GitHub Pages
