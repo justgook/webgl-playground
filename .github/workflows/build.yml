@@ -35,6 +35,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-yarn-
 
+    - name: Install elm-test
+      run: yarn global add elm-test
+
     - name: Test
       env:
         ELM_HOME: ${{ steps.elm-home.outputs.dir }}
