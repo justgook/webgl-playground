@@ -63,25 +63,16 @@ module.exports = function (file, api, options) {
         });
 
     //Add Prepack __optimize
-    const entryPoint = tree.find(j.VariableDeclarator)
-        .filter(path => path.node.id.name === "$author$project$Main$main")
-        .at(0).get().node.init.name;
-
-    const appParts = tree.find(j.VariableDeclarator)
-        .filter(path => path.node.id.name === entryPoint)
-        .at(0).get().node.init.arguments.map((a) => a.name);
-
     tree.find(j.ExpressionStatement)
         .filter(path => path.node.expression.callee && path.node.expression.callee.name === "_Platform_export")
         .replaceWith((path) => {
-            // console.log(path.node.expression.arguments[0].properties[0].value.properties[0].value.loc);
-            // path.insertBefore(`__optimize(${path.node.expression.arguments[0].properties[0].value.properties[0].value.callee.callee.name}($elm$json$Json$Decode$succeed(0)));`)
-            path.insertBefore(`__optimize(${appParts[0]});`);
-            path.insertBefore(`__optimize(${appParts[1]});`);
-            path.insertBefore(`__optimize(${appParts[2]});`);
-            path.insertBefore(`__optimize($author$project$Main$main($elm$json$Json$Decode$succeed(0)));`);
-
-
+            const $author$project$Main$main = path.node.expression.arguments[0].properties[0].value.properties[0].value.callee.callee.name
+            const viewUpdate = tree.find(j.VariableDeclarator)
+                .filter(path => path.node.id.name === $author$project$Main$main)
+                .at(0).get().node.init.arguments.map((a) => a.name);
+            path.insertBefore(`__optimize(${viewUpdate[1]});`);
+            path.insertBefore(`__optimize(${viewUpdate[2]});`);
+            path.insertBefore(`__optimize(${$author$project$Main$main}($elm$json$Json$Decode$succeed(0)));`)
             return (path.node);
         });
     //===============================PREPACK MAGIC End ===============================
