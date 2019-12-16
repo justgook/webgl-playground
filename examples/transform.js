@@ -37,9 +37,31 @@ module.exports = function (file, api, options) {
         }
     });
 
+    //Optimize glsl string
+    tree.find(j.Literal)
+        .filter((path) => path.value && path.value.value && path.value.value.length > 100)
+        .replaceWith(nodePath => {
+            const { node } = nodePath;
+
+            const newValue = glslx(node.value, { renaming: 'none', format: "json", });
+            if (newValue.log === "") {
+                node.value = JSON.parse(newValue.output).shaders[0].contents;
+            }
+
+            return node;
+        });
+    // Fix Prepack "FatalError PP0001: This operation is not yet supported on document at hidden (https://github.com/facebook/prepack/wiki/PP0001)"
+    tree.find(j.FunctionDeclaration)
+        .filter((path) => (path.node.id.name) === "_Browser_visibilityInfo")
+        .replaceWith(nodePath => {
+            const { node } = nodePath;
+
+            node.body = "{return { b4: 'hidden', b0: 'visibilitychange' }}";
+            return node
+        });
+
     // Transform the A1..n calls
-    return tree
-        .find(j.CallExpression)
+    tree.find(j.CallExpression)
         .forEach(path => {
             if (
                 path.node.callee.type === "Identifier" &&
@@ -64,18 +86,6 @@ module.exports = function (file, api, options) {
                 };
                 path.node.arguments.shift();
             }
-        })
-        .find(j.Literal)
-        .filter((path) => path.value && path.value.value && path.value.value.length > 100)
-        .replaceWith(nodePath => {
-            const { node } = nodePath;
-
-            const newValue = glslx(node.value, { renaming: 'none', format: "json", });
-            if (newValue.log === "") {
-                node.value = JSON.parse(newValue.output).shaders[0].contents;
-            }
-
-            return node;
-        })
-        .toSource();
+        });
+    return tree.toSource();
 };
