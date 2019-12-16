@@ -38,9 +38,10 @@ jobs:
       run: elm-test
 
     - name: Install Dependencies
-        #      if: steps.yarn-cache-exists.outputs.cache-hit != 'true'
-        run: yarn
-        working-directory: examples
+      #if: steps.yarn-cache-exists.outputs.cache-hit != 'true'
+      run: yarn
+      working-directory: examples
+
     - name: Build
       run: elm make src/Main.elm --optimize --output=./gh-pages/bundle.js
       working-directory: examples
