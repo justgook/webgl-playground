@@ -36,7 +36,7 @@ jobs:
           ${{ runner.os }}-yarn-
 
     - name: Install elm-test
-      run: yarn global add elm-test
+      run: yarn global add elm-test@0.19.1-revision2
 
     - name: Test
       env:
