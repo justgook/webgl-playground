@@ -109,7 +109,7 @@ module.exports = {
                     ],
 
                     "script": [
-                        { "src": `bundle.min.js` }
+                        { "src": `bundle.js` }
                     ]
                 }
 
