@@ -79,15 +79,3 @@ module.exports = function (file, api, options) {
         })
         .toSource();
 };
-
-
-Array.from(xmlDoc.childNodes[0].getElementsByTagName("SubTexture"))
-    .map((a,i)=>
-{
-    x = a.getAttribute("x");
-
-    w = a.getAttribute("width");
-    h = a.getAttribute("height");
-    y = 115 - h - a.getAttribute("y");
-    return `(${s[i]},{ w = ${w}, h = ${h}, x = ${x}, y = ${y} })`
-})
