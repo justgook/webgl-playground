@@ -25,6 +25,7 @@ jobs:
       run: |
         echo "::set-output name=dir::$(yarn cache dir)"
         echo "::add-path::$(yarn bin)"
+        echo "::add-path::$(yarn global bin)"
 
     - name: Get Yarn cache
       uses: actions/cache@v1.0.3
