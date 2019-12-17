@@ -54,13 +54,6 @@ module.exports = function (file, api, options) {
 
 
     //===============================PREPACK MAGIC Start ===============================
-    // Fix Prepack "FatalError PP0001: This operation is not yet supported on document at hidden (https://github.com/facebook/prepack/wiki/PP0001)"
-    tree.find(j.FunctionDeclaration)
-        .filter((path) => (path.node.id.name) === "_Browser_visibilityInfo")
-        .replaceWith(({ node }) => {
-            node.body = "{return { b4: 'hidden', b0: 'visibilitychange' }}";
-            return node
-        });
 
     //Add Prepack __optimize
     tree.find(j.ExpressionStatement)
@@ -75,6 +68,17 @@ module.exports = function (file, api, options) {
             path.insertBefore(`__optimize(${$author$project$Main$main}($elm$json$Json$Decode$succeed(0)));`)
             return (path.node);
         });
+    // Add global declarations unknown by prepack
+    tree.find(j.Declaration).at(0).get()
+        .insertBefore(`
+            __assumeDataProperty(global, "requestAnimationFrame", __abstractOrUndefined("function"));
+            __assumeDataProperty(global, "cancelAnimationFrame", __abstractOrUndefined("function"));
+            __assumeDataProperty(global, "document", __abstract({
+                hidden: __abstractOrUndefined("boolean"),
+                mozHidden: __abstractOrUndefined("boolean"),
+                msHidden: __abstractOrUndefined("boolean"),
+                webkitHidden: __abstractOrUndefined("boolean"),
+            }));`);
     //===============================PREPACK MAGIC End ===============================
 
 
