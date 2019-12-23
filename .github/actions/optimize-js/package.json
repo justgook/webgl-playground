@@ -1,0 +1,14 @@
+{
+  "name": "optimize",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Romāns Potašovs <justgook@gmail.com>",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "@actions/core": "1.2.0"
+  }
+}

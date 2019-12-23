@@ -1,0 +1,11 @@
+name: 'Optimize Javascript'
+description: 'Optimize Javascript jscodeshift + uglifyjs + prepack '
+inputs:
+  file:
+    description: 'file to optimize'
+    required: true
+    default: index.js
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
+
