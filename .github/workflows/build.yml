@@ -88,9 +88,9 @@ jobs:
         NODE_ENV: production
         BUNDLE_JS: jump.js
       working-directory: examples
-      run: |
+      run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
 #        posthtml ./gh-pages/index.html -o ./gh-pages/jump.html -c posthtml.fast.js
-        posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
+
 
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@3.0.5
