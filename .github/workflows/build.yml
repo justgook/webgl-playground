@@ -79,9 +79,8 @@ jobs:
 
     - name: Optimize Javascript Jump
       uses: ./.github/actions/optimize-js
-      working-directory: examples
       with:
-        file: ./gh-pages/jump.js
+        file: ./examples/gh-pages/jump.js
 
     - name: Building HTML
       env:
