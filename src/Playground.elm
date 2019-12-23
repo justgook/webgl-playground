@@ -1620,7 +1620,7 @@ The degrees go **counter-clockwise** to match the direction of the
 -}
 rotate : Number -> Shape -> Shape
 rotate da (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | a = degrees (a + da) }
+    Shape { shape | a = a + degrees da }
 
 
 {-| Fade a shape. This lets you make shapes see-through or even completely
@@ -1933,6 +1933,9 @@ textureOption =
     { nonPowerOfTwoOptions
         | magnify = Texture.linear
         , minify = Texture.linear
+
+        --, horizontalWrap = Texture.mirroredRepeat
+        --, verticalWrap = Texture.mirroredRepeat
     }
 
 

@@ -1,4 +1,4 @@
-module Main exposing (main)
+module MulticolorPolygon exposing (main)
 
 import Array
 import Math.Vector2 exposing (vec2)

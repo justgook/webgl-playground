@@ -232,12 +232,13 @@ fragNgon =
         uniform vec4 color;
         uniform float n;
         varying vec2 uv;
-
+        float Pi = 3.1415926535897932384626433832795;
         void main () {
-            float angle = 0.523599;
+            float angle = Pi;
             float a = atan(uv.x,uv.y) + angle;
             float b = 6.28319 / n;
-            float f = smoothstep(0.859,.86,cos(floor(.5 + a/b)*b-a)*length(uv));
+            float f = smoothstep(0.5,.5,cos(floor(.5 + a/b)*b-a)*length(uv));
+
             gl_FragColor = color;
             gl_FragColor.a -= f;
         }

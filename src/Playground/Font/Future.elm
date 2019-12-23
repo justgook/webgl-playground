@@ -8,6 +8,10 @@ font =
     ""
 
 
+
+--https://github.com/soimy/msdf-bmfont-xml
+
+
 fragMSDF =
     --https://css-tricks.com/techniques-for-rendering-text-with-webgl/
     --Generate `npm install msdf-bmfont-xml -g`
