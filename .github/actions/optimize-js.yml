@@ -1,0 +1,11 @@
+name: 'Optimize Javascript'
+description: 'Optimize Javascript jscodeshift + uglifyjs + prepack '
+inputs:
+  file:
+    description: 'file to optimize'
+    required: true
+run: |
+  jscodeshift -t transform.js ${{ input.file }}
+  uglifyjs ${{ input.file }} --compress "pure_funcs=[F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9],pure_getters" --output=${{ input.file }}
+  prepack ${{ input.file }} --inlineExpressions --out ${{ input.file }} --maxStackDepth  10000
+  uglifyjs ${{ input.file }} --compress 'keep_fargs=false,unsafe_comps,unsafe' --mangle --output=${{ input.file }}
