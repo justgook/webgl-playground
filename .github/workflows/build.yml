@@ -63,7 +63,7 @@ jobs:
     - name: Build
       run: |
         elm make src/Shmup.elm --optimize --output=./gh-pages/bundle.js
-        elm make src/Extra/Jump.elm --optimize --output=./gh-pages/jump.js
+        elm make src/Extra/Jump.elm --optimize --output=./gh-pages/jump.html
       working-directory: examples
 
 
@@ -77,11 +77,11 @@ jobs:
         prepack ./gh-pages/bundle.js --inlineExpressions --out ./gh-pages/bundle.js --maxStackDepth  10000
         uglifyjs ./gh-pages/bundle.js --compress 'keep_fargs=false,unsafe_comps,unsafe' --mangle --output=./gh-pages/bundle.js
 
-    - name: Optimize Javascript Jump
-      uses: ./.github/actions/optimize-js
-      with:
-        file: ./examples/gh-pages/jump.js
-        transform: ./examples/transform.js
+#    - name: Optimize Javascript Jump
+#      uses: ./.github/actions/optimize-js
+#      with:
+#        file: ./examples/gh-pages/jump.js
+#        transform: ./examples/transform.js
 
     - name: Building HTML
       env:
@@ -89,8 +89,8 @@ jobs:
         BUNDLE_JS: jump.js
       working-directory: examples
       run: |
+#        posthtml ./gh-pages/index.html -o ./gh-pages/jump.html -c posthtml.fast.js
         posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
-        posthtml ./gh-pages/index.html -o ./gh-pages/jump.html -c posthtml.fast.js
 
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@3.0.5

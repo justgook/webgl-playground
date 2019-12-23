@@ -72,7 +72,7 @@ module.exports = {
         //     start: (str) => str.replace(/#GAME_URL#/g, `${process.env.GAME}.age.bin`)
         // },
         "posthtml-style-to-file": {
-            path: `${root}/app.css`,
+            path: `${root}/${process.env.BUNDLE_JS}.css`,
             removeStyle: "all",
         },
         "posthtml-head-elements": {
@@ -101,7 +101,7 @@ module.exports = {
                     "base": [{ "href": "/" }],
                     "link": [
                         // { "rel": "icon", "href": info.favicon },
-                        { "rel": "stylesheet", href: "app.css" }
+                        { "rel": "stylesheet", href: `${process.env.BUNDLE_JS}.css` }
                     ],
 
                     "script": [
