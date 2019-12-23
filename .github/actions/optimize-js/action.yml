@@ -5,6 +5,11 @@ inputs:
     description: 'file to optimize'
     required: true
     default: index.js
+  transform:
+    description: 'jscodeshift file'
+    required: true
+    default: transform.js
+
 runs:
   using: 'node12'
   main: 'dist/index.js'
