@@ -70,7 +70,8 @@ jobs:
 
     - name: Optimize Javascript 2
       uses: ./.github/actions/optimize-js
-      file: ./gh-pages/jump.js
+      with:
+        file: ./gh-pages/jump.js
 
     - name: Building HTML
       env:
