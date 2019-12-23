@@ -77,8 +77,9 @@ jobs:
         prepack ./gh-pages/bundle.js --inlineExpressions --out ./gh-pages/bundle.js --maxStackDepth  10000
         uglifyjs ./gh-pages/bundle.js --compress 'keep_fargs=false,unsafe_comps,unsafe' --mangle --output=./gh-pages/bundle.js
 
-    - name: Optimize Javascript 2
+    - name: Optimize Javascript Jump
       uses: ./.github/actions/optimize-js
+      working-directory: examples
       with:
         file: ./gh-pages/jump.js
 
