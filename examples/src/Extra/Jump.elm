@@ -28,12 +28,12 @@ view computer m =
     case m of
         Play ({ player } as memory) ->
             [ sheet.f4
-                --|> move (pxSnap player.p.x) (pxSnap player.p.y)
                 |> move (pxSnap player.p.x) (pxSnap player.p.y)
                 |> applyIf (player.v.x < 0) (scaleX -1)
             , debug computer memory
             ]
                 |> group
+                |> move (-player.p.x * config.viewScale) (-50 * config.viewScale)
                 |> scale config.viewScale
                 |> List.singleton
 
@@ -117,13 +117,7 @@ simulate computer ({ player } as memory) =
 
         newPlayer =
             List.foldl
-                (\wall ->
-                    if wall.p1.x == wall.p2.x then
-                        playerVsVerticalWall wall
-
-                    else
-                        playerVsHorizontalWall wall
-                )
+                (\wall -> playerVsHorizontalWall wall)
                 forceApplied
                 memory.static
     in
@@ -142,110 +136,44 @@ intersectionVec2 p1 p2 p3 p4 =
     Collision.intersection p1.x p1.y p2.x p2.y p3.x p3.y p4.x p4.y
 
 
-playerVsVerticalWall wall player =
-    let
-        pTop =
-            Vec2.add player.p (vec2 (player.hurt + slopeFix) 0)
-
-        pBottom =
-            Vec2.add player.p (vec2 (-player.hurt - slopeFix) 0)
-
-        hitTop =
-            intersectionVec2 pTop (Vec2.add pTop player.v) wall.p1 wall.p2
-
-        hitBottom =
-            intersectionVec2 pBottom (Vec2.add pBottom player.v) wall.p1 wall.p2
-    in
-    getTU hitTop hitBottom
-        |> Maybe.map
-            (\( t, u ) ->
-                let
-                    restV =
-                        Vec2.scale (1 - t) player.v
-
-                    zeroedWall =
-                        Vec2.sub wall.p2 wall.p1
-
-                    onLeftSide =
-                        isLeft zeroedWall zero restV
-
-                    calcRest =
-                        if onLeftSide then
-                            scalarProjection restV zeroedWall
-
-                        else
-                            restV
-                in
-                { player
-                    | v =
-                        player.v
-                            |> Vec2.scale t
-                            |> Vec2.add calcRest
-                            |> Vec2.add
-                                (if hitBottom /= Nothing then
-                                    vec2 slopeFix 0
-
-                                 else
-                                    vec2 -slopeFix 0
-                                )
-                    , contact = applyIf onLeftSide (Vec2.add (getLeftNormal zeroedWall)) player.contact
-                }
-            )
-        |> Maybe.withDefault player
-
-
 slopeFix =
-    0.5
+    1 / 32
 
 
 playerVsHorizontalWall wall player =
     let
+        zeroedWall =
+            Vec2.sub wall.p2 wall.p1
+
+        normal =
+            getLeftNormal zeroedWall
+
         pTop =
-            Vec2.add player.p (vec2 0 (player.hurt + slopeFix))
+            normal
+                |> Vec2.scale (player.r + slopeFix)
+                |> Vec2.add player.p
 
-        pBottom =
-            Vec2.add player.p (vec2 0 (-player.hurt - slopeFix))
-
-        hitTop =
+        hit =
             intersectionVec2 pTop (Vec2.add pTop player.v) wall.p1 wall.p2
-
-        hitBottom =
-            intersectionVec2 pBottom (Vec2.add pBottom player.v) wall.p1 wall.p2
     in
-    if isLeft wall.p1 wall.p2 player.p && isLeft wall.p1 wall.p2 pTop && isLeft wall.p1 wall.p2 pBottom then
-        (getTU hitTop hitBottom
+    if isLeft wall.p1 wall.p2 pTop then
+        (hit
             |> Maybe.map
                 (\( t, u ) ->
                     let
                         restV =
                             Vec2.scale (1 - t) player.v
 
-                        zeroedWall =
-                            Vec2.sub wall.p2 wall.p1
-
-                        isVelocityLeft =
-                            isLeft zeroedWall zero restV
-
                         calcRest =
-                            if isVelocityLeft then
-                                scalarProjection restV zeroedWall
-
-                            else
-                                restV
+                            scalarProjection restV zeroedWall
                     in
                     { player
                         | v =
                             player.v
                                 |> Vec2.scale t
                                 |> Vec2.add calcRest
-                                |> Vec2.add
-                                    (if hitBottom /= Nothing then
-                                        vec2 0 slopeFix
-
-                                     else
-                                        vec2 0 -slopeFix
-                                    )
-                        , contact = applyIf isVelocityLeft (Vec2.add (getLeftNormal zeroedWall)) player.contact
+                                |> Vec2.add (normal |> Vec2.scale -slopeFix)
+                        , contact = Vec2.add normal player.contact
                     }
                 )
             |> Maybe.withDefault player
@@ -284,21 +212,6 @@ isLeft a b c =
     (b.x - a.x) * (c.y - a.y) < (b.y - a.y) * (c.x - a.x)
 
 
-getTU a b =
-    case ( a, b ) of
-        ( Nothing, Nothing ) ->
-            Nothing
-
-        ( Just a_, Nothing ) ->
-            Just a_
-
-        ( Nothing, Just b_ ) ->
-            Just b_
-
-        ( Just a_, Just b_ ) ->
-            Just (min a_ b_)
-
-
 type Phase
     = Init
     | Play
@@ -316,44 +229,19 @@ zero =
 
 
 initGame { screen } =
-    let
-        half =
-            screen.height / config.viewScale * -0.5
-
-        stairs =
-            List.range 1 (screen.height / config.viewScale / 20 |> round)
-                |> List.foldl
-                    (\i acc ->
-                        let
-                            y =
-                                toFloat i * 20 + half
-                        in
-                        if y > 50 || y < -50 then
-                            { p1 = { x = 20, y = y }, p2 = { x = -20, y = y } } :: acc
-
-                        else
-                            acc
-                    )
-                    []
-    in
     { player = initPlayer -100 -32
     , static =
-        [ { p1 = { x = 70, y = -40 }, p2 = { x = screen.left / config.viewScale, y = -40 } }
+        [ { p1 = { x = 91, y = -40 }, p2 = { x = 91, y = 140 } }
+        , { p1 = { x = 50, y = -40 }, p2 = { x = 50, y = 140 } }
         , { p1 = { x = -50, y = -10 }, p2 = { x = -120, y = -10 } }
         , { p1 = { x = -120, y = 10 }, p2 = { x = -90, y = 10 } }
-        , { p1 = { x = -120, y = 10 }, p2 = { x = screen.left / config.viewScale, y = 10 } }
-        , { p1 = { x = 19.5, y = 10 }, p2 = { x = -90, y = 10 } }
-        , { p1 = { x = 22, y = 10 }, p2 = { x = -20, y = -40 } }
+        , { p1 = { x = 120, y = -40 }, p2 = { x = -300, y = -40 } }
+        , { p1 = { x = 15, y = 10 }, p2 = { x = -90, y = 10 } }
+        , { p1 = { x = 25, y = 10 }, p2 = { x = -20, y = -40 } }
         , { p1 = { x = 120, y = 10 }, p2 = { x = 20, y = 10 } }
-        , { p1 = { x = 200, y = 50 }, p2 = { x = 100, y = 10 } }
-        , { p1 = { x = screen.right / config.viewScale + 1, y = 50 }, p2 = { x = 200, y = 50 } }
-        , { p1 = { x = 20, y = 50 }, p2 = { x = screen.left / config.viewScale - 1, y = 50 } }
-
-        ---
-        , { p1 = { x = 20, y = screen.bottom / config.viewScale }, p2 = { x = -20, y = screen.bottom / config.viewScale } }
+        , { p1 = { x = 204, y = 52 }, p2 = { x = 100, y = 10 } }
         , { p1 = { x = 160, y = -80 }, p2 = { x = 120, y = -80 } }
         ]
-            ++ stairs
     }
 
 
@@ -362,7 +250,7 @@ initPlayer x y =
     { p = vec2 x y
     , v = zero
     , acc = { x = 0, y = 0 }
-    , hurt = 7
+    , r = 7
     , contact = { x = 0, y = 0 }
     , debug = [ { p1 = zero, p2 = zero } ]
     }
@@ -372,7 +260,7 @@ type alias Player =
     { p : Vec2
     , v : Vec2
     , acc : Vec2
-    , hurt : Number
+    , r : Number
     , contact : Vec2
     , debug : List { p1 : Vec2, p2 : Vec2 }
     }
@@ -401,7 +289,7 @@ applyIf bool f world =
 
 
 debug computer ({ player, static } as memory) =
-    --([ words green "HurtBox"
+    --([ words green "rBox"
     --    |> moveY -10
     -- , words yellow "PushBox"
     --    |> moveY -24

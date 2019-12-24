@@ -43,12 +43,14 @@ module.exports = function (file, api, options) {
         .filter((path) => path.value && path.value.value && path.value.value.length > 100)
         .replaceWith(nodePath => {
             const { node } = nodePath;
-
-            const newValue = glslx(node.value, { renaming: 'none', format: "json", });
-            if (newValue.log === "") {
-                node.value = JSON.parse(newValue.output).shaders[0].contents;
+            try {
+                const newValue = glslx(node.value, { renaming: 'none', format: "json", });
+                if (newValue.log === "") {
+                    node.value = JSON.parse(newValue.output).shaders[0].contents;
+                }
+            } catch (e) {
+                console.log("glslx:fail", node.value, e);
             }
-
             return node;
         });
 
@@ -59,7 +61,10 @@ module.exports = function (file, api, options) {
     tree.find(j.ExpressionStatement)
         .filter(path => path.node.expression.callee && path.node.expression.callee.name === "_Platform_export")
         .replaceWith((path) => {
-            const $author$project$Main$main = path.node.expression.arguments[0].properties[0].value.properties[0].value.callee.callee.name;
+            let $author$project$Main$main = path.node.expression.arguments[0].properties[0].value.properties[0].value;
+            $author$project$Main$main = $author$project$Main$main.callee
+                ? $author$project$Main$main.callee.callee.name
+                : $author$project$Main$main.properties[0].value.callee.callee.name
             const viewUpdate = tree.find(j.VariableDeclarator)
                 .filter(path => path.node.id.name === $author$project$Main$main)
                 .at(0).get().node.init.arguments.map((a) => a.name);
