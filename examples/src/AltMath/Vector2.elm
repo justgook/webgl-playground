@@ -4,6 +4,7 @@ module AltMath.Vector2 exposing
     , add, sub, negate, scale, dot, normalize, direction, mul
     , length, lengthSquared, distance, distanceSquared
     , toRecord, fromRecord
+    , max, scalarProjection
     )
 
 {-|
@@ -150,6 +151,21 @@ distance a b =
 distanceSquared : Vec2 -> Vec2 -> Float
 distanceSquared a b =
     lengthSquared (sub a b)
+
+
+{-| Get longest vector of two
+-}
+max a b =
+    if lengthSquared a > lengthSquared b then
+        a
+
+    else
+        b
+
+
+scalarProjection : Vec2 -> Vec2 -> Vec2
+scalarProjection a b =
+    scale (dot a b / lengthSquared b) b
 
 
 {-| A unit vector with the same direction as the given vector: a / |a|

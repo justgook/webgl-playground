@@ -47,7 +47,7 @@ view computer phase =
 
         Intro state ->
             [ group
-                [ words white "SHUMP"
+                [ words white "SHMUP"
                     |> scale 2
                     |> moveY (wave 3 7 3 computer.time)
                 , words white "> Press SPACE <"
@@ -147,24 +147,20 @@ breedMobs computer seed =
 
 
 updateExplosions computer state =
-    if spin 0.01 computer.time < 125 then
-        { state
-            | explosions =
-                List.foldr
-                    (\e acc ->
-                        case e.next of
-                            shape :: next ->
-                                { e | current = shape, next = next } :: acc
+    { state
+        | explosions =
+            List.foldr
+                (\e acc ->
+                    case e.next of
+                        shape :: next ->
+                            { e | current = shape, next = next } :: acc
 
-                            [] ->
-                                acc
-                    )
-                    []
-                    state.explosions
-        }
-
-    else
-        state
+                        [] ->
+                            acc
+                )
+                []
+                state.explosions
+    }
 
 
 updateShoot computer state =
@@ -589,7 +585,16 @@ explosion =
     { x = 0
     , y = 0
     , current = circle white 8
-    , next = [ circle white 16, circle white 24, explosion03, explosion04, explosion05, explosion06 ]
+    , next =
+        [ circle white 8
+        , circle white 16
+        , circle white 24
+        , explosion03
+        , explosion04
+        , explosion05
+        , explosion06
+        ]
+            |> List.concatMap (List.repeat 4)
     }
 
 

@@ -1,7 +1,103 @@
-module Extra.Jump.Sprite exposing (sheet)
+module Extra.Jump.Sprite exposing (idle, run, sheet)
 
+import Extra.Jump.Direction as Direction exposing (Direction(..))
 import Math.Vector4 exposing (vec4)
-import Playground.Extra exposing (sprite)
+import Playground exposing (moveX, moveY)
+import Playground.Extra exposing (scaleX, sprite)
+
+
+run dir frame_ =
+    let
+        frame =
+            round (frame_ / 5)
+    in
+    case dir of
+        North ->
+            [ sheet.u0, sheet.u1, sheet.u2, sheet.u3, sheet.u4, sheet.u5, sheet.u6, sheet.u7 ]
+                |> getAt (modBy 8 frame)
+                |> Maybe.withDefault sheet.u10
+
+        NorthEast ->
+            [ sheet.fu0, sheet.fu1, sheet.fu2, sheet.fu3, sheet.fu4, sheet.fu5, sheet.fu6, sheet.fu7 ]
+                |> getAt (modBy 8 frame)
+                |> Maybe.withDefault sheet.fu0
+
+        East ->
+            [ sheet.f0, sheet.f1, sheet.f2, sheet.f3, sheet.f4, sheet.f5, sheet.f6, sheet.f7 ]
+                |> getAt (modBy 8 frame)
+                |> Maybe.withDefault sheet.f7
+
+        SouthEast ->
+            sheet.fd9
+
+        South ->
+            sheet.d
+
+        SouthWest ->
+            sheet.fd9
+                |> scaleX -1
+
+        West ->
+            [ sheet.f0, sheet.f1, sheet.f2, sheet.f3, sheet.f4, sheet.f5, sheet.f6, sheet.f7 ]
+                |> getAt (modBy 8 frame)
+                |> Maybe.withDefault sheet.f10
+                |> scaleX -1
+
+        NorthWest ->
+            [ sheet.fu0, sheet.fu1, sheet.fu2, sheet.fu3, sheet.fu4, sheet.fu5, sheet.fu6, sheet.fu7 ]
+                |> getAt (modBy 8 frame)
+                |> Maybe.withDefault sheet.fu10
+                |> scaleX -1
+
+        Neither ->
+            sheet.u1
+
+
+idle dir frame_ =
+    let
+        get =
+            getAt (modBy 20 (round (frame_ / 5)))
+    in
+    case dir of
+        North ->
+            [ sheet.u9, sheet.u10, sheet.u11, sheet.u12, sheet.u13 ]
+                |> get
+                |> Maybe.withDefault sheet.u10
+
+        NorthEast ->
+            [ sheet.fu10, sheet.fu13 ]
+                |> get
+                |> Maybe.withDefault sheet.fu9
+
+        East ->
+            [ sheet.f10, sheet.f13 ]
+                |> get
+                |> Maybe.withDefault sheet.f9
+
+        SouthEast ->
+            sheet.fd9
+
+        South ->
+            sheet.d
+
+        SouthWest ->
+            sheet.fd9
+                |> scaleX -1
+
+        West ->
+            [ sheet.f10, sheet.f13 ]
+                |> get
+                |> Maybe.withDefault sheet.f9
+                |> scaleX -1
+
+        NorthWest ->
+            [ sheet.fu10, sheet.fu13 ]
+                |> get
+                |> Maybe.withDefault sheet.fu9
+                |> scaleX -1
+
+        Neither ->
+            sheet.u1
 
 
 sheet =
@@ -14,11 +110,11 @@ sheet =
     , u6 = sprite 14 16 image <| vec4 0.41739130434782606 0.7763157894736842 0.06086956521739131 0.21052631578947367
     , u7 = sprite 15 16 image <| vec4 0.48695652173913045 0.7763157894736842 0.06521739130434782 0.21052631578947367
     , u8 = sprite 15 16 image <| vec4 0.5608695652173913 0.7763157894736842 0.06521739130434782 0.21052631578947367
-    , u9 = sprite 15 16 image <| vec4 0.6347826086956522 0.7763157894736842 0.06521739130434782 0.21052631578947367
-    , u10 = sprite 15 16 image <| vec4 0.7086956521739131 0.7763157894736842 0.06521739130434782 0.21052631578947367
-    , u11 = sprite 15 16 image <| vec4 0.782608695652174 0.7763157894736842 0.06521739130434782 0.21052631578947367
-    , u12 = sprite 15 16 image <| vec4 0.8565217391304348 0.7763157894736842 0.06521739130434782 0.21052631578947367
-    , u13 = sprite 15 17 image <| vec4 0.9304347826086956 0.763157894736842 0.06521739130434782 0.2236842105263158
+    , u9 = moveX 1 <| sprite 15 16 image <| vec4 0.6347826086956522 0.7763157894736842 0.06521739130434782 0.21052631578947367
+    , u10 = moveX 1 <| sprite 15 16 image <| vec4 0.7086956521739131 0.7763157894736842 0.06521739130434782 0.21052631578947367
+    , u11 = moveX 1 <| sprite 15 16 image <| vec4 0.782608695652174 0.7763157894736842 0.06521739130434782 0.21052631578947367
+    , u12 = moveX 1 <| sprite 15 16 image <| vec4 0.8565217391304348 0.7763157894736842 0.06521739130434782 0.21052631578947367
+    , u13 = moveX 1 <| moveY 0.5 <| sprite 15 17 image <| vec4 0.9304347826086956 0.763157894736842 0.06521739130434782 0.2236842105263158
     , fu0 = sprite 14 16 image <| vec4 0.004347826086956522 0.5263157894736843 0.06086956521739131 0.21052631578947367
     , fu1 = sprite 14 15 image <| vec4 0.07391304347826087 0.5394736842105263 0.06086956521739131 0.19736842105263158
     , fu2 = sprite 14 16 image <| vec4 0.14347826086956522 0.5263157894736843 0.06086956521739131 0.21052631578947367
@@ -28,28 +124,37 @@ sheet =
     , fu6 = sprite 14 16 image <| vec4 0.4217391304347826 0.5263157894736843 0.06086956521739131 0.21052631578947367
     , fu7 = sprite 15 16 image <| vec4 0.49130434782608695 0.5263157894736843 0.06521739130434782 0.21052631578947367
     , fu8 = sprite 14 16 image <| vec4 0.5652173913043478 0.5263157894736843 0.06086956521739131 0.21052631578947367
-    , fu9 = sprite 14 16 image <| vec4 0.6347826086956522 0.5263157894736843 0.06086956521739131 0.21052631578947367
-    , fu10 = sprite 14 16 image <| vec4 0.7043478260869566 0.5263157894736843 0.06086956521739131 0.21052631578947367
-    , fu11 = sprite 14 16 image <| vec4 0.7739130434782608 0.5263157894736843 0.06086956521739131 0.21052631578947367
-    , fu12 = sprite 14 16 image <| vec4 0.8434782608695652 0.5263157894736843 0.06086956521739131 0.21052631578947367
-    , fu13 = sprite 14 17 image <| vec4 0.9130434782608695 0.513157894736842 0.06086956521739131 0.2236842105263158
-    , f0 = sprite 13 16 image <| vec4 0.004347826086956522 0.2763157894736842 0.05652173913043478 0.21052631578947367
-    , f1 = sprite 13 15 image <| vec4 0.06956521739130435 0.2894736842105262 0.05652173913043478 0.19736842105263158
+    , fu9 = moveX 0.5 <| sprite 14 16 image <| vec4 0.6347826086956522 0.5263157894736843 0.06086956521739131 0.21052631578947367
+    , fu10 = moveX 0.5 <| sprite 14 16 image <| vec4 0.7043478260869566 0.5263157894736843 0.06086956521739131 0.21052631578947367
+    , fu11 = moveX 0.5 <| sprite 14 16 image <| vec4 0.7739130434782608 0.5263157894736843 0.06086956521739131 0.21052631578947367
+    , fu12 = moveX 0.5 <| sprite 14 16 image <| vec4 0.8434782608695652 0.5263157894736843 0.06086956521739131 0.21052631578947367
+    , fu13 = moveX 0.5 <| moveY 0.5 <| sprite 14 17 image <| vec4 0.9130434782608695 0.513157894736842 0.06086956521739131 0.2236842105263158
+    , f0 = moveY 1 <| sprite 13 16 image <| vec4 0.004347826086956522 0.2763157894736842 0.05652173913043478 0.21052631578947367
+    , f1 = moveY 1.5 <| sprite 13 15 image <| vec4 0.06956521739130435 0.2894736842105262 0.05652173913043478 0.19736842105263158
     , f2 = sprite 13 16 image <| vec4 0.13478260869565217 0.2763157894736842 0.05652173913043478 0.21052631578947367
-    , f3 = sprite 12 15 image <| vec4 0.2 0.2894736842105262 0.05217391304347826 0.19736842105263158
-    , f4 = sprite 13 16 image <| vec4 0.2608695652173913 0.2763157894736842 0.05652173913043478 0.21052631578947367
-    , f5 = sprite 13 16 image <| vec4 0.32608695652173914 0.2763157894736842 0.05652173913043478 0.21052631578947367
-    , f6 = sprite 13 16 image <| vec4 0.391304347826087 0.2763157894736842 0.05652173913043478 0.21052631578947367
-    , f7 = sprite 14 16 image <| vec4 0.45652173913043476 0.2763157894736842 0.06086956521739131 0.21052631578947367
+    , f3 = moveX 0.5 <| moveY -0.5 <| sprite 12 15 image <| vec4 0.2 0.2894736842105262 0.05217391304347826 0.19736842105263158
+    , f4 = moveX 1 <| sprite 13 16 image <| vec4 0.2608695652173913 0.2763157894736842 0.05652173913043478 0.21052631578947367
+    , f5 = moveX 1 <| sprite 13 16 image <| vec4 0.32608695652173914 0.2763157894736842 0.05652173913043478 0.21052631578947367
+    , f6 = moveX 1 <| sprite 13 16 image <| vec4 0.391304347826087 0.2763157894736842 0.05652173913043478 0.21052631578947367
+    , f7 = moveX 0.5 <| sprite 14 16 image <| vec4 0.45652173913043476 0.2763157894736842 0.06086956521739131 0.21052631578947367
     , f8 = sprite 13 17 image <| vec4 0.5260869565217391 0.26315789473684204 0.05652173913043478 0.2236842105263158
-    , f9 = sprite 13 17 image <| vec4 0.591304347826087 0.26315789473684204 0.05652173913043478 0.2236842105263158
+    , f9 = moveY -0.5 <| sprite 13 17 image <| vec4 0.5913 0.2632 0.05652 0.2237
     , f10 = sprite 13 16 image <| vec4 0.6565217391304348 0.2763157894736842 0.05652173913043478 0.21052631578947367
     , f11 = sprite 13 16 image <| vec4 0.7217391304347827 0.2763157894736842 0.05652173913043478 0.21052631578947367
     , f12 = sprite 13 16 image <| vec4 0.7869565217391304 0.2763157894736842 0.05652173913043478 0.21052631578947367
-    , f13 = sprite 13 17 image <| vec4 0.8521739130434782 0.26315789473684204 0.05652173913043478 0.2236842105263158
+    , f13 = moveY 0.5 <| sprite 13 17 image <| vec4 0.8521739130434782 0.26315789473684204 0.05652173913043478 0.2236842105263158
     , fd9 = sprite 14 16 image <| vec4 0.004347826086956522 0.02631578947368418 0.06086956521739131 0.21052631578947367
     , d = sprite 12 18 image <| vec4 0.07391304347826087 0 0.05217391304347826 0.23684210526315788
     }
+
+
+getAt : Int -> List a -> Maybe a
+getAt idx xs =
+    if idx < 0 then
+        Nothing
+
+    else
+        List.head <| List.drop idx xs
 
 
 image =

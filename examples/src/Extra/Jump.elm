@@ -2,9 +2,9 @@ module Extra.Jump exposing (main)
 
 import AltMath.Vector2 as Vec2 exposing (Vec2, vec2)
 import Extra.Jump.Collision as Collision
-import Extra.Jump.Sprite exposing (sheet)
+import Extra.Jump.Direction as Direction exposing (Direction)
+import Extra.Jump.Sprite as Sprite
 import Playground exposing (..)
-import Playground.Extra exposing (scaleX)
 
 
 config =
@@ -27,13 +27,17 @@ pxSnap =
 view computer m =
     case m of
         Play ({ player } as memory) ->
-            [ sheet.f4
+            [ (if player.v.x > 0.5 || player.v.x < -0.5 then
+                Sprite.run player.dir player.frame
+
+               else
+                Sprite.idle player.dir player.frame
+              )
                 |> move (pxSnap player.p.x) (pxSnap player.p.y)
-                |> applyIf (player.v.x < 0) (scaleX -1)
             , debug computer memory
             ]
                 |> group
-                |> move (-player.p.x * config.viewScale) (-50 * config.viewScale)
+                |> move (-player.p.x * config.viewScale) (-16 * config.viewScale)
                 |> scale config.viewScale
                 |> List.singleton
 
@@ -48,10 +52,26 @@ update computer memory =
                 |> updateMovement computer
                 |> simulate computer
                 |> crossScreen computer
+                |> animatePlayer computer
                 |> Play
 
         Init ->
             Play (initGame computer)
+
+
+animatePlayer computer ({ player } as memory) =
+    let
+        ( x, y ) =
+            toXY computer.keyboard
+
+        dir =
+            Direction.fromRecord { x = x, y = y }
+    in
+    if dir /= Direction.Neither && dir /= player.dir then
+        { memory | player = { player | frame = 0, dir = dir } }
+
+    else
+        { memory | player = { player | frame = player.frame + 1 } }
 
 
 crossScreen { screen } ({ player } as memory) =
@@ -91,14 +111,14 @@ updateMovement { keyboard } ({ player } as memory) =
             else
                 0
 
-        acc =
-            if keyboard.space && (player.contact.y < 0) then
-                vec2 x config.jump
+        ( acc, v ) =
+            if keyboard.space && (player.contact.y < -0.5) then
+                ( vec2 x config.jump, Vec2.setY 0 player.v )
 
             else
-                vec2 x 0
+                ( vec2 x 0, player.v )
     in
-    { memory | player = { player | acc = acc } }
+    { memory | player = { player | acc = acc, v = v } }
 
 
 simulate computer ({ player } as memory) =
@@ -116,10 +136,7 @@ simulate computer ({ player } as memory) =
             }
 
         newPlayer =
-            List.foldl
-                (\wall -> playerVsHorizontalWall wall)
-                forceApplied
-                memory.static
+            List.foldl Collision.lineCircle forceApplied memory.static
     in
     { memory
         | player =
@@ -130,86 +147,6 @@ simulate computer ({ player } as memory) =
                         |> roundVec
             }
     }
-
-
-intersectionVec2 p1 p2 p3 p4 =
-    Collision.intersection p1.x p1.y p2.x p2.y p3.x p3.y p4.x p4.y
-
-
-slopeFix =
-    1 / 32
-
-
-playerVsHorizontalWall wall player =
-    let
-        zeroedWall =
-            Vec2.sub wall.p2 wall.p1
-
-        normal =
-            getLeftNormal zeroedWall
-
-        pTop =
-            normal
-                |> Vec2.scale (player.r + slopeFix)
-                |> Vec2.add player.p
-
-        hit =
-            intersectionVec2 pTop (Vec2.add pTop player.v) wall.p1 wall.p2
-    in
-    if isLeft wall.p1 wall.p2 pTop then
-        (hit
-            |> Maybe.map
-                (\( t, u ) ->
-                    let
-                        restV =
-                            Vec2.scale (1 - t) player.v
-
-                        calcRest =
-                            scalarProjection restV zeroedWall
-                    in
-                    { player
-                        | v =
-                            player.v
-                                |> Vec2.scale t
-                                |> Vec2.add calcRest
-                                |> Vec2.add (normal |> Vec2.scale -slopeFix)
-                        , contact = Vec2.add normal player.contact
-                    }
-                )
-            |> Maybe.withDefault player
-        )
-            |> (\p ->
-                    { p
-                        | debug =
-                            [ { p1 = player.p
-                              , p2 = Vec2.add player.p (player.v |> Vec2.scale debugFactor)
-                              }
-                            , { p1 = p.p
-                              , p2 = Vec2.add p.p (p.v |> Vec2.scale debugFactor)
-                              }
-                            ]
-                    }
-               )
-
-    else
-        player
-
-
-debugFactor =
-    5
-
-
-getLeftNormal vec =
-    let
-        { x, y } =
-            vec
-                |> Vec2.normalize
-    in
-    vec2 -y x
-
-
-isLeft a b c =
-    (b.x - a.x) * (c.y - a.y) < (b.y - a.y) * (c.x - a.x)
 
 
 type Phase
@@ -229,9 +166,9 @@ zero =
 
 
 initGame { screen } =
-    { player = initPlayer -100 -32
+    { player = initPlayer -10 90
     , static =
-        [ { p1 = { x = 91, y = -40 }, p2 = { x = 91, y = 140 } }
+        [ { p1 = { x = 98, y = -40 }, p2 = { x = 91, y = 140 } }
         , { p1 = { x = 50, y = -40 }, p2 = { x = 50, y = 140 } }
         , { p1 = { x = -50, y = -10 }, p2 = { x = -120, y = -10 } }
         , { p1 = { x = -120, y = 10 }, p2 = { x = -90, y = 10 } }
@@ -241,6 +178,9 @@ initGame { screen } =
         , { p1 = { x = 120, y = 10 }, p2 = { x = 20, y = 10 } }
         , { p1 = { x = 204, y = 52 }, p2 = { x = 100, y = 10 } }
         , { p1 = { x = 160, y = -80 }, p2 = { x = 120, y = -80 } }
+
+        --{ p1 = { x = -90, y = 50 }, p2 = { x = -160, y = 72 } }
+        --, { p1 = { x = -90, y = 72 }, p2 = { x = -160, y = 50 } }
         ]
     }
 
@@ -250,7 +190,9 @@ initPlayer x y =
     { p = vec2 x y
     , v = zero
     , acc = { x = 0, y = 0 }
-    , r = 7
+    , r = 9
+    , dir = Direction.East
+    , frame = 0
     , contact = { x = 0, y = 0 }
     , debug = [ { p1 = zero, p2 = zero } ]
     }
@@ -261,14 +203,11 @@ type alias Player =
     , v : Vec2
     , acc : Vec2
     , r : Number
+    , dir : Direction
+    , frame : Number
     , contact : Vec2
     , debug : List { p1 : Vec2, p2 : Vec2 }
     }
-
-
-scalarProjection : Vec2 -> Vec2 -> Vec2
-scalarProjection a b =
-    Vec2.scale (Vec2.dot a b / Vec2.lengthSquared b) b
 
 
 roundVec { x, y } =
@@ -289,20 +228,6 @@ applyIf bool f world =
 
 
 debug computer ({ player, static } as memory) =
-    --([ words green "rBox"
-    --    |> moveY -10
-    -- , words yellow "PushBox"
-    --    |> moveY -24
-    -- , words red "HitBox"
-    --    |> moveY -38
-    -- , words purple "GrabBox"
-    --    |> moveY -52
-    -- ]
-    --    |> group
-    --    |> moveY (computer.screen.top * 0.2)
-    --    |> scale 0.4
-    --)
-    --    ::
     List.foldl
         (\{ p1, p2 } acc ->
             let
@@ -323,10 +248,7 @@ debug computer ({ player, static } as memory) =
             )
                 :: acc
         )
-        ([-- drawSegment { p1 = player.p, p2 = Vec2.add player.p originalV } green green green
-         ]
-            ++ List.indexedMap (\i a -> drawSegment a (randomColor i) (randomColor i) (randomColor i)) player.debug
-        )
+        (List.indexedMap (\i a -> drawSegment a (randomColor i) (randomColor i) (randomColor i)) player.debug)
         static
         |> group
 

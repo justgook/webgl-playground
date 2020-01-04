@@ -56,6 +56,7 @@ c1 radius color =
     group
         [ circle color 30
             |> moveUp radius
-        , image 70 70 "images/mario/stand/left.gif"
-            |> moveUp radius
+
+        --, image 70 70 "images/mario/stand/left.gif"
+        --    |> moveUp radius
         ]

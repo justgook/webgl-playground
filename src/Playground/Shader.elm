@@ -71,7 +71,7 @@ vertSprite =
             uniform vec4 uUV;
             void main () {
                 vec2 aP_ = aP * .5 + 0.5;
-                uv =  uUV.xy + (aP_ * uUV.zw);
+                uv = uUV.xy + (aP_ * uUV.zw);
                 gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
             }
         |]
@@ -169,7 +169,6 @@ fragImage =
         uniform vec2 uImgSize;
         uniform sampler2D uImg;
         uniform float uA;
-
         void main () {
             vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
             gl_FragColor = texture2D(uImg, pixel);

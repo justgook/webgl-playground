@@ -68,9 +68,9 @@ module.exports = function (file, api, options) {
             const viewUpdate = tree.find(j.VariableDeclarator)
                 .filter(path => path.node.id.name === $author$project$Main$main)
                 .at(0).get().node.init.arguments.map((a) => a.name);
-            path.insertBefore(`__optimize(${viewUpdate[1]});`);
-            path.insertBefore(`__optimize(${viewUpdate[2]});`);
-            path.insertBefore(`__optimize(${$author$project$Main$main}($elm$json$Json$Decode$succeed(0)));`);
+            path.insertBefore(`__evaluatePureFunction(${viewUpdate[1]});`);
+            path.insertBefore(`__evaluatePureFunction(${viewUpdate[2]});`);
+            path.insertBefore(`__evaluatePureFunction(${$author$project$Main$main}($elm$json$Json$Decode$succeed(0)));`);
             return (path.node);
         });
     // Add global declarations unknown by prepack

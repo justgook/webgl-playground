@@ -20,9 +20,9 @@ module Playground.Extra exposing
 import Math.Vector2 exposing (vec2)
 import Math.Vector4 exposing (Vec4)
 import Playground exposing (Number, Shape)
-import Playground.Advanced exposing (custom, useTexture)
+import Playground.Advanced exposing (Render, custom, useTexture)
 import Playground.Internal exposing (Form(..), Number, Shape(..))
-import Playground.Render as Render exposing (Render)
+import Playground.Render as Render
 import WebGL.Texture
 
 

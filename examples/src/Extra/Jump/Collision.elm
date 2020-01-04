@@ -1,4 +1,6 @@
-module Extra.Jump.Collision exposing (intersection)
+module Extra.Jump.Collision exposing (intersection, lineCircle)
+
+import AltMath.Vector2 as Vec2 exposing (vec2)
 
 
 intersection : Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> Maybe ( Float, Float )
@@ -23,6 +25,84 @@ intersection x1 y1 x2 y2 x3 y3 x4 y4 =
 
         else
             Nothing
+
+
+lineCircle wall player =
+    let
+        zeroedWall =
+            Vec2.sub wall.p2 wall.p1
+
+        normal =
+            leftNormal zeroedWall
+
+        point =
+            normal
+                |> Vec2.scale (player.r + slopeFix)
+                |> Vec2.add player.p
+    in
+    if isLeft wall.p1 wall.p2 point then
+        intersectionVec2 point (Vec2.add point player.v) wall.p1 wall.p2
+            |> Maybe.map
+                (\( t, u ) ->
+                    let
+                        restV =
+                            Vec2.scale (1 - t) player.v
+
+                        calcRest =
+                            Vec2.scalarProjection restV zeroedWall
+                    in
+                    { player
+                        | v =
+                            player.v
+                                |> Vec2.scale t
+                                |> Vec2.add calcRest
+                                |> Vec2.add (normal |> Vec2.scale -slopeFix)
+                        , contact = Vec2.max normal player.contact
+                    }
+                )
+            |> Maybe.withDefault player
+
+    else if isLeft wall.p1 wall.p2 player.p then
+        --TODO find better solution for check of overlap fix
+        intersectionVec2 player.p point wall.p1 wall.p2
+            |> Maybe.map
+                (\( t, u ) ->
+                    { player
+                        | v =
+                            player.v
+                                |> Vec2.scale 0.4
+                                |> Vec2.add
+                                    (Vec2.scale t (normal |> Vec2.scale player.r)
+                                        |> Vec2.add (Vec2.scale -player.r normal)
+                                    )
+                        , contact = Vec2.max normal player.contact
+                    }
+                )
+            |> Maybe.withDefault player
+
+    else
+        player
+
+
+intersectionVec2 p1 p2 p3 p4 =
+    intersection p1.x p1.y p2.x p2.y p3.x p3.y p4.x p4.y
+
+
+slopeFix =
+    1 / 32
+
+
+leftNormal vec =
+    let
+        { x, y } =
+            vec
+                |> Vec2.normalize
+    in
+    vec2 -y x
+
+
+isLeft a b c =
+    (b.x - a.x) * (c.y - a.y) < (b.y - a.y) * (c.x - a.x)
 
 
 

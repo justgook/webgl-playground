@@ -1,6 +1,5 @@
 module Playground.Render exposing
-    ( Render, Opacity, ScaleRotateSkew, Translate
-    , triangle, rect, circle, image, ngon, tile, sprite, spriteWithColor
+    ( triangle, rect, circle, image, ngon, tile, sprite, spriteWithColor
     , defaultEntitySettings
     )
 
@@ -26,60 +25,12 @@ module Playground.Render exposing
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (Vec3)
 import Math.Vector4 exposing (Vec4, vec4)
+import Playground.Advanced exposing (Render)
 import Playground.Shader as Shader
 import WebGL exposing (Mesh, Shader)
 import WebGL.Settings as WebGL exposing (Setting)
 import WebGL.Settings.Blend as Blend
 import WebGL.Texture exposing (Texture)
-
-
-{-| Create Your own Render and use it in [`Advanced.custom`](Playground-Advanced#custom) to create [`Shape`](Playground#Shape)
-
-    redRect : Render
-    redRect uP uT opacity =
-        WebGL.entityWith
-            defaultEntitySettings
-            vertNone
-            fragFill
-            mesh
-            { color = setAlpha color opacity
-            , uP = uP
-            , uT = uT
-            }
-
--}
-type alias Render =
-    Translate
-    -> ScaleRotateSkew
-    -> Opacity
-    -> WebGL.Entity
-
-
-{-| Vec2 representing part of transform matrix for [`Advanced.custom`](Playground-Advanced#custom)
-
-    | 1 0 x |
-    | 0 1 y |
-    | 0 0 1 |
-
--}
-type alias Translate =
-    Vec2
-
-
-{-| Vec4 representing part of transform matrix for [`Advanced.custom`](Playground-Advanced#custom)
-
-    | x y 0 |
-    | z w 0 |
-    | 0 0 1 |
-
--}
-type alias ScaleRotateSkew =
-    Vec4
-
-
-{-| -}
-type alias Opacity =
-    Float
 
 
 {-| Rectangle render
