@@ -33,4 +33,5 @@ examples/gh-pages/*
 !examples/gh-pages/app.css
 !examples/gh-pages/favicon.png
 !examples/gh-pages/screenshot.png
+!examples/gh-pages/script.js
 !examples/gh-pages/CNAME
