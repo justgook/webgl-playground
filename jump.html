@@ -798,11 +798,11 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 
 function _Debug_regionToString(region)
 {
-	if (region.a7.ac === region.bj.ac)
+	if (region.bd.ad === region.bp.ad)
 	{
-		return 'on line ' + region.a7.ac;
+		return 'on line ' + region.bd.ad;
 	}
-	return 'on lines ' + region.a7.ac + ' through ' + region.bj.ac;
+	return 'on lines ' + region.bd.ad + ' through ' + region.bp.ad;
 }
 
 
@@ -1871,9 +1871,9 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.br,
-		impl.ch,
-		impl.b$,
+		impl.bv,
+		impl.cl,
+		impl.b1,
 		function() { return function() {} }
 	);
 });
@@ -2673,9 +2673,9 @@ var _VirtualDom_mapEventTuple = F2(function(func, tuple)
 var _VirtualDom_mapEventRecord = F2(function(func, record)
 {
 	return {
-		K: func(record.K),
-		a9: record.a9,
-		a3: record.a3
+		J: func(record.J),
+		bf: record.bf,
+		a9: record.a9
 	}
 });
 
@@ -2943,11 +2943,11 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 		// 3 = Custom
 
 		var value = result.a;
-		var message = !tag ? value : tag < 3 ? value.a : value.K;
-		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.a9;
+		var message = !tag ? value : tag < 3 ? value.a : value.J;
+		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.bf;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
-			(tag == 2 ? value.b : tag == 3 && value.a3) && event.preventDefault(),
+			(tag == 2 ? value.b : tag == 3 && value.a9) && event.preventDefault(),
 			eventNode
 		);
 		var tagger;
@@ -3897,11 +3897,11 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.br,
-		impl.ch,
-		impl.b$,
+		impl.bv,
+		impl.cl,
+		impl.b1,
 		function(sendToApp, initialModel) {
-			var view = impl.ci;
+			var view = impl.cm;
 			/**/
 			var domNode = args['node'];
 			//*/
@@ -3933,12 +3933,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.br,
-		impl.ch,
-		impl.b$,
+		impl.bv,
+		impl.cl,
+		impl.b1,
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.a6 && impl.a6(sendToApp)
-			var view = impl.ci;
+			var divertHrefToApp = impl.bb && impl.bb(sendToApp)
+			var view = impl.cm;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
 			var currNode = _VirtualDom_virtualize(bodyNode);
@@ -3946,12 +3946,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.be);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.bl);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
 				_VirtualDom_divertHrefToApp = 0;
-				(title !== doc.b2) && (_VirtualDom_doc.title = title = doc.b2);
+				(title !== doc.b4) && (_VirtualDom_doc.title = title = doc.b4);
 			});
 		}
 	);
@@ -4007,12 +4007,12 @@ function _Browser_makeAnimator(model, draw)
 
 function _Browser_application(impl)
 {
-	var onUrlChange = impl.cL;
-	var onUrlRequest = impl.cM;
+	var onUrlChange = impl.cS;
+	var onUrlRequest = impl.cT;
 	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
 
 	return _Browser_document({
-		a6: function(sendToApp)
+		bb: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -4028,9 +4028,9 @@ function _Browser_application(impl)
 					var next = $elm$url$Url$fromString(href).a;
 					sendToApp(onUrlRequest(
 						(next
-							&& curr.bT === next.bT
-							&& curr.bp === next.bp
-							&& curr.bQ.a === next.bQ.a
+							&& curr.bX === next.bX
+							&& curr.bt === next.bt
+							&& curr.bU.a === next.bU.a
 						)
 							? $elm$browser$Browser$Internal(next)
 							: $elm$browser$Browser$External(href)
@@ -4038,13 +4038,13 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		br: function(flags)
+		bv: function(flags)
 		{
-			return A3(impl.br, flags, _Browser_getUrl(), key);
+			return A3(impl.bv, flags, _Browser_getUrl(), key);
 		},
-		ci: impl.ci,
-		ch: impl.ch,
-		b$: impl.b$
+		cm: impl.cm,
+		cl: impl.cl,
+		b1: impl.b1
 	});
 }
 
@@ -4110,17 +4110,17 @@ var _Browser_decodeEvent = F2(function(decoder, event)
 function _Browser_visibilityInfo()
 {
 	return (typeof _VirtualDom_doc.hidden !== 'undefined')
-		? { cA: 'hidden', cm: 'visibilitychange' }
+		? { cH: 'hidden', cq: 'visibilitychange' }
 		:
 	(typeof _VirtualDom_doc.mozHidden !== 'undefined')
-		? { cA: 'mozHidden', cm: 'mozvisibilitychange' }
+		? { cH: 'mozHidden', cq: 'mozvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.msHidden !== 'undefined')
-		? { cA: 'msHidden', cm: 'msvisibilitychange' }
+		? { cH: 'msHidden', cq: 'msvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.webkitHidden !== 'undefined')
-		? { cA: 'webkitHidden', cm: 'webkitvisibilitychange' }
-		: { cA: 'hidden', cm: 'visibilitychange' };
+		? { cH: 'webkitHidden', cq: 'webkitvisibilitychange' }
+		: { cH: 'hidden', cq: 'visibilitychange' };
 }
 
 
@@ -4201,12 +4201,12 @@ var _Browser_call = F2(function(functionName, id)
 function _Browser_getViewport()
 {
 	return {
-		cP: _Browser_getScene(),
-		cZ: {
-			f: _Browser_window.pageXOffset,
-			g: _Browser_window.pageYOffset,
-			bb: _Browser_doc.documentElement.clientWidth,
-			aZ: _Browser_doc.documentElement.clientHeight
+		cW: _Browser_getScene(),
+		c8: {
+			g: _Browser_window.pageXOffset,
+			h: _Browser_window.pageYOffset,
+			bi: _Browser_doc.documentElement.clientWidth,
+			a3: _Browser_doc.documentElement.clientHeight
 		}
 	};
 }
@@ -4216,8 +4216,8 @@ function _Browser_getScene()
 	var body = _Browser_doc.body;
 	var elem = _Browser_doc.documentElement;
 	return {
-		bb: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
-		aZ: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
+		bi: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
+		a3: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
 	};
 }
 
@@ -4240,15 +4240,15 @@ function _Browser_getViewportOf(id)
 	return _Browser_withNode(id, function(node)
 	{
 		return {
-			cP: {
-				bb: node.scrollWidth,
-				aZ: node.scrollHeight
+			cW: {
+				bi: node.scrollWidth,
+				a3: node.scrollHeight
 			},
-			cZ: {
-				f: node.scrollLeft,
-				g: node.scrollTop,
-				bb: node.clientWidth,
-				aZ: node.clientHeight
+			c8: {
+				g: node.scrollLeft,
+				h: node.scrollTop,
+				bi: node.clientWidth,
+				a3: node.clientHeight
 			}
 		};
 	});
@@ -4278,18 +4278,18 @@ function _Browser_getElement(id)
 		var x = _Browser_window.pageXOffset;
 		var y = _Browser_window.pageYOffset;
 		return {
-			cP: _Browser_getScene(),
-			cZ: {
-				f: x,
-				g: y,
-				bb: _Browser_doc.documentElement.clientWidth,
-				aZ: _Browser_doc.documentElement.clientHeight
+			cW: _Browser_getScene(),
+			c8: {
+				g: x,
+				h: y,
+				bi: _Browser_doc.documentElement.clientWidth,
+				a3: _Browser_doc.documentElement.clientHeight
 			},
-			cq: {
-				f: x + rect.left,
-				g: y + rect.top,
-				bb: rect.width,
-				aZ: rect.height
+			cv: {
+				g: x + rect.left,
+				h: y + rect.top,
+				bi: rect.width,
+				a3: rect.height
 			}
 		};
 	});
@@ -4359,7 +4359,7 @@ var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap
       if (isSizeValid) {
         callback(_Scheduler_succeed({
           $: 0,
-          cp: createTexture,
+          cu: createTexture,
           a: width,
           b: height
         }));
@@ -4438,11 +4438,11 @@ var _MJS_v2setY = F2(function(y, a) {
 });
 
 var _MJS_v2toRecord = function(a) {
-    return { f: a[0], g: a[1] };
+    return { g: a[0], h: a[1] };
 };
 
 var _MJS_v2fromRecord = function(r) {
-    return new Float64Array([r.f, r.g]);
+    return new Float64Array([r.g, r.h]);
 };
 
 var _MJS_v2add = F2(function(a, b) {
@@ -4551,11 +4551,11 @@ var _MJS_v3setZ = F2(function(z, a) {
 });
 
 var _MJS_v3toRecord = function(a) {
-    return { f: a[0], g: a[1], c$: a[2] };
+    return { g: a[0], h: a[1], da: a[2] };
 };
 
 var _MJS_v3fromRecord = function(r) {
-    return new Float64Array([r.f, r.g, r.c$]);
+    return new Float64Array([r.g, r.h, r.da]);
 };
 
 var _MJS_v3add = F2(function(a, b) {
@@ -4711,11 +4711,11 @@ var _MJS_v4setW = F2(function(w, a) {
 });
 
 var _MJS_v4toRecord = function(a) {
-    return { f: a[0], g: a[1], c$: a[2], aD: a[3] };
+    return { g: a[0], h: a[1], da: a[2], aI: a[3] };
 };
 
 var _MJS_v4fromRecord = function(r) {
-    return new Float64Array([r.f, r.g, r.c$, r.aD]);
+    return new Float64Array([r.g, r.h, r.da, r.aI]);
 };
 
 var _MJS_v4add = F2(function(a, b) {
@@ -4821,31 +4821,31 @@ var _MJS_m4x4identity = new Float64Array([
 
 var _MJS_m4x4fromRecord = function(r) {
     var m = new Float64Array(16);
-    m[0] = r.bv;
-    m[1] = r.bz;
-    m[2] = r.bD;
-    m[3] = r.bH;
-    m[4] = r.bw;
-    m[5] = r.bA;
-    m[6] = r.bE;
-    m[7] = r.bI;
-    m[8] = r.bx;
-    m[9] = r.bB;
-    m[10] = r.bF;
-    m[11] = r.bJ;
-    m[12] = r.by;
-    m[13] = r.bC;
-    m[14] = r.bG;
-    m[15] = r.bK;
+    m[0] = r.bz;
+    m[1] = r.bD;
+    m[2] = r.bH;
+    m[3] = r.bL;
+    m[4] = r.bA;
+    m[5] = r.bE;
+    m[6] = r.bI;
+    m[7] = r.bM;
+    m[8] = r.bB;
+    m[9] = r.bF;
+    m[10] = r.bJ;
+    m[11] = r.bN;
+    m[12] = r.bC;
+    m[13] = r.bG;
+    m[14] = r.bK;
+    m[15] = r.bO;
     return m;
 };
 
 var _MJS_m4x4toRecord = function(m) {
     return {
-        bv: m[0], bz: m[1], bD: m[2], bH: m[3],
-        bw: m[4], bA: m[5], bE: m[6], bI: m[7],
-        bx: m[8], bB: m[9], bF: m[10], bJ: m[11],
-        by: m[12], bC: m[13], bG: m[14], bK: m[15]
+        bz: m[0], bD: m[1], bH: m[2], bL: m[3],
+        bA: m[4], bE: m[5], bI: m[6], bM: m[7],
+        bB: m[8], bF: m[9], bJ: m[10], bN: m[11],
+        bC: m[12], bG: m[13], bK: m[14], bO: m[15]
     };
 };
 
@@ -5614,7 +5614,7 @@ function _WebGL_doBindAttribute(gl, attribute, mesh, attributes) {
   // The length of the number of vertices that
   // complete one 'thing' based on the drawing mode.
   // ie, 2 for Lines, 3 for Triangles, etc.
-  var elemSize = mesh.a.bi;
+  var elemSize = mesh.a.bo;
 
   var idxKeys = [];
   for (var i = 0; i < elemSize; i++) {
@@ -5677,10 +5677,10 @@ function _WebGL_doBindAttribute(gl, attribute, mesh, attributes) {
  *  @return {Object} buffer.buffers - will be used to buffer attributes
  */
 function _WebGL_doBindSetup(gl, mesh) {
-  if (mesh.a.bq > 0) {
+  if (mesh.a.bu > 0) {
     _WebGL_log('Created index buffer');
     var indexBuffer = gl.createBuffer();
-    var indices = _WebGL_makeIndexedBuffer(mesh.c, mesh.a.bq);
+    var indices = _WebGL_makeIndexedBuffer(mesh.c, mesh.a.bu);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
     return {
@@ -5690,7 +5690,7 @@ function _WebGL_doBindSetup(gl, mesh) {
     };
   } else {
     return {
-      numIndices: mesh.a.bi * _WebGL_listLength(mesh.b),
+      numIndices: mesh.a.bo * _WebGL_listLength(mesh.b),
       indexBuffer: null,
       buffers: {}
     };
@@ -5836,9 +5836,9 @@ var _WebGL_drawGL = F2(function (model, domNode) {
 
     if (buffer.indexBuffer) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer.indexBuffer);
-      gl.drawElements(entity.d.a.bL, buffer.numIndices, gl.UNSIGNED_SHORT, 0);
+      gl.drawElements(entity.d.a.bP, buffer.numIndices, gl.UNSIGNED_SHORT, 0);
     } else {
-      gl.drawArrays(entity.d.a.bL, 0, buffer.numIndices);
+      gl.drawArrays(entity.d.a.bP, 0, buffer.numIndices);
     }
 
     _WebGL_listEach($elm_explorations$webgl$WebGL$Internal$disableSetting(model.f), entity.a);
@@ -5885,7 +5885,7 @@ function _WebGL_createUniformSetters(gl, model, program, uniformsMap) {
           var tex = model.f.textures.get(texture);
           if (!tex) {
             _WebGL_log('Created texture');
-            tex = texture.cp(gl);
+            tex = texture.cu(gl);
             model.f.textures.set(texture, tex);
           }
           gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -6448,7 +6448,7 @@ var $elm$core$Array$treeFromBuilder = F2(
 	});
 var $elm$core$Array$builderToArray = F2(
 	function (reverseNodeList, builder) {
-		if (!builder.h) {
+		if (!builder.i) {
 			return A4(
 				$elm$core$Array$Array_elm_builtin,
 				$elm$core$Elm$JsArray$length(builder.k),
@@ -6456,11 +6456,11 @@ var $elm$core$Array$builderToArray = F2(
 				$elm$core$Elm$JsArray$empty,
 				builder.k);
 		} else {
-			var treeLen = builder.h * $elm$core$Array$branchFactor;
+			var treeLen = builder.i * $elm$core$Array$branchFactor;
 			var depth = $elm$core$Basics$floor(
 				A2($elm$core$Basics$logBase, $elm$core$Array$branchFactor, treeLen - 1));
 			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.l) : builder.l;
-			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.h);
+			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.i);
 			return A4(
 				$elm$core$Array$Array_elm_builtin,
 				$elm$core$Elm$JsArray$length(builder.k) + treeLen,
@@ -6479,7 +6479,7 @@ var $elm$core$Array$initializeHelp = F5(
 				return A2(
 					$elm$core$Array$builderToArray,
 					false,
-					{l: nodeList, h: (len / $elm$core$Array$branchFactor) | 0, k: tail});
+					{l: nodeList, i: (len / $elm$core$Array$branchFactor) | 0, k: tail});
 			} else {
 				var leaf = $elm$core$Array$Leaf(
 					A3($elm$core$Elm$JsArray$initialize, $elm$core$Array$branchFactor, fromIndex, fn));
@@ -6546,7 +6546,7 @@ var $elm$url$Url$Http = 0;
 var $elm$url$Url$Https = 1;
 var $elm$url$Url$Url = F6(
 	function (protocol, host, port_, path, query, fragment) {
-		return {bl: fragment, bp: host, bO: path, bQ: port_, bT: protocol, bU: query};
+		return {br: fragment, bt: host, bS: path, bU: port_, bX: protocol, bY: query};
 	});
 var $elm$core$String$contains = _String_contains;
 var $elm$core$String$length = _String_length;
@@ -6837,12 +6837,12 @@ var $elm$core$Dict$RBEmpty_elm_builtin = {$: -2};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $author$project$Playground$Internal$Mouse = F4(
 	function (x, y, down, click) {
-		return {cn: click, aG: down, f: x, g: y};
+		return {cr: click, aM: down, g: x, h: y};
 	});
 var $author$project$Playground$Internal$Time = $elm$core$Basics$identity;
 var $elm$core$Set$Set_elm_builtin = $elm$core$Basics$identity;
 var $elm$core$Set$empty = $elm$core$Dict$empty;
-var $author$project$Playground$Internal$emptyKeyboard = {cl: false, aG: false, cr: false, cE: $elm$core$Set$empty, a$: false, a5: false, cQ: false, cS: false, cg: false};
+var $author$project$Playground$Internal$emptyKeyboard = {cp: false, aM: false, cw: false, cL: $elm$core$Set$empty, az: false, aB: false, bc: false, cY: false, ck: false};
 var $author$project$Playground$Internal$Success = function (a) {
 	return {$: 1, a: a};
 };
@@ -6976,13 +6976,13 @@ var $author$project$Playground$Internal$gotTextures = F2(
 						name,
 						$author$project$Playground$Internal$Success(
 							{
-								cR: function (_v2) {
+								cX: function (_v2) {
 									var w = _v2.a;
 									var h = _v2.b;
 									return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
 								}(
 									$elm_explorations$webgl$WebGL$Texture$size(t)),
-								b1: t
+								b3: t
 							}));
 				},
 				textures,
@@ -7003,23 +7003,23 @@ var $author$project$Playground$Internal$mouseClick = F2(
 	function (bool, mouse) {
 		return _Utils_update(
 			mouse,
-			{cn: bool});
+			{cr: bool});
 	});
 var $author$project$Playground$Internal$mouseDown = F2(
 	function (bool, mouse) {
 		return _Utils_update(
 			mouse,
-			{aG: bool});
+			{aM: bool});
 	});
 var $author$project$Playground$Internal$mouseMove = F3(
 	function (x, y, mouse) {
 		return _Utils_update(
 			mouse,
-			{f: x, g: y});
+			{g: x, h: y});
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Playground$Transformation$identity = {s: 1, t: 0, A: 0, u: 0, v: 1, B: 0};
+var $author$project$Playground$Transformation$identity = {r: 1, s: 0, z: 0, t: 0, u: 1, A: 0};
 var $elm$core$Tuple$mapSecond = F2(
 	function (func, _v0) {
 		var x = _v0.a;
@@ -7030,7 +7030,7 @@ var $elm$core$Tuple$mapSecond = F2(
 	});
 var $author$project$Playground$Transformation$apply = F2(
 	function (a, b) {
-		return {s: (a.s * b.s) + (a.t * b.u), t: (a.s * b.t) + (a.t * b.v), A: ((a.s * b.A) + (a.t * b.B)) + a.A, u: (a.u * b.s) + (a.v * b.u), v: (a.u * b.t) + (a.v * b.v), B: ((a.u * b.A) + (a.v * b.B)) + a.B};
+		return {r: (a.r * b.r) + (a.s * b.t), s: (a.r * b.s) + (a.s * b.u), z: ((a.r * b.z) + (a.s * b.A)) + a.z, t: (a.t * b.r) + (a.u * b.t), u: (a.t * b.s) + (a.u * b.u), A: ((a.t * b.z) + (a.u * b.A)) + a.A};
 	});
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -7084,22 +7084,22 @@ var $elm$core$Set$member = F2(
 	});
 var $author$project$Playground$Transformation$scale = F3(
 	function (sx, sy, b) {
-		return {s: sx * b.s, t: sx * b.t, A: sx * b.A, u: sy * b.u, v: sy * b.v, B: sy * b.B};
+		return {r: sx * b.r, s: sx * b.s, z: sx * b.z, t: sy * b.t, u: sy * b.u, A: sy * b.A};
 	});
 var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
 var $author$project$Playground$Transformation$toGL = function (_v0) {
-	var a11 = _v0.s;
-	var a12 = _v0.t;
-	var a13 = _v0.A;
-	var a21 = _v0.u;
-	var a22 = _v0.v;
-	var a23 = _v0.B;
+	var a11 = _v0.r;
+	var a12 = _v0.s;
+	var a13 = _v0.z;
+	var a21 = _v0.t;
+	var a22 = _v0.u;
+	var a23 = _v0.A;
 	return _Utils_Tuple2(
 		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
-			{aD: a22, f: a11, g: a12, c$: a21}),
+			{aI: a22, g: a11, h: a12, da: a21}),
 		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
-			{f: a13, g: a23}));
+			{g: a13, h: a23}));
 };
 var $elm$core$Basics$cos = _Basics_cos;
 var $elm$core$Basics$negate = function (n) {
@@ -7109,25 +7109,25 @@ var $elm$core$Basics$sin = _Basics_sin;
 var $author$project$Playground$Transformation$transform = F5(
 	function (tx, ty, sx, sy, angle) {
 		return {
-			s: $elm$core$Basics$cos(angle) * sx,
-			t: $elm$core$Basics$sin(angle) * (-sy),
-			A: tx,
-			u: $elm$core$Basics$sin(angle) * sx,
-			v: $elm$core$Basics$cos(angle) * sy,
-			B: ty
+			r: $elm$core$Basics$cos(angle) * sx,
+			s: $elm$core$Basics$sin(angle) * (-sy),
+			z: tx,
+			t: $elm$core$Basics$sin(angle) * sx,
+			u: $elm$core$Basics$cos(angle) * sy,
+			A: ty
 		};
 	});
 var $author$project$Playground$Internal$renderShape = F6(
 	function (screen, textures, parent, parentOpacity, _v0, acc) {
 		renderShape:
 		while (true) {
-			var x = _v0.f;
-			var y = _v0.g;
-			var a = _v0.b;
-			var sx = _v0.c;
-			var sy = _v0.d;
+			var x = _v0.g;
+			var y = _v0.h;
+			var a = _v0.an;
+			var sx = _v0.b;
+			var sy = _v0.c;
 			var o = _v0.a;
-			var form = _v0.e;
+			var form = _v0.d;
 			var entities = acc.a;
 			var missing = acc.b;
 			var opacity = o * parentOpacity;
@@ -7146,8 +7146,8 @@ var $author$project$Playground$Internal$renderShape = F6(
 					var _v2 = $author$project$Playground$Transformation$toGL(
 						A3(
 							$author$project$Playground$Transformation$scale,
-							1 / screen.bb,
-							1 / screen.aZ,
+							1 / screen.bi,
+							1 / screen.a3,
 							A5(createTrans, x * 2, y * 2, width * sx, height * sy, a)));
 					var t1 = _v2.a;
 					var t2 = _v2.b;
@@ -7167,8 +7167,8 @@ var $author$project$Playground$Internal$renderShape = F6(
 					while (true) {
 						if (!_v3.b.$) {
 							if (_v3.b.a.$ === 1) {
-								var texture = _v3.b.a.a.b1;
-								var size = _v3.b.a.a.cR;
+								var texture = _v3.b.a.a.b3;
+								var size = _v3.b.a.a.cX;
 								var $temp$screen = screen,
 									$temp$textures = textures,
 									$temp$parent = A5(createTrans, x * 2, y * 2, sx, sy, a),
@@ -7257,11 +7257,11 @@ var $elm$core$Basics$composeR = F3(
 	});
 var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 	function (_v0, url) {
-		var magnify = _v0.cG;
-		var minify = _v0.cH;
-		var horizontalWrap = _v0.av;
-		var verticalWrap = _v0.aB;
-		var flipY = _v0.ar;
+		var magnify = _v0.cN;
+		var minify = _v0.cO;
+		var horizontalWrap = _v0.ay;
+		var verticalWrap = _v0.aG;
+		var flipY = _v0.au;
 		var expand = F4(
 			function (_v1, _v2, _v3, _v4) {
 				var mag = _v1;
@@ -7281,10 +7281,10 @@ var $elm_explorations$webgl$WebGL$Texture$linear = 9729;
 var $elm_explorations$webgl$WebGL$Texture$Wrap = $elm$core$Basics$identity;
 var $elm_explorations$webgl$WebGL$Texture$clampToEdge = 33071;
 var $elm_explorations$webgl$WebGL$Texture$nearest = 9728;
-var $elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions = {ar: true, av: $elm_explorations$webgl$WebGL$Texture$clampToEdge, cG: $elm_explorations$webgl$WebGL$Texture$linear, cH: $elm_explorations$webgl$WebGL$Texture$nearest, aB: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
+var $elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions = {au: true, ay: $elm_explorations$webgl$WebGL$Texture$clampToEdge, cN: $elm_explorations$webgl$WebGL$Texture$linear, cO: $elm_explorations$webgl$WebGL$Texture$nearest, aG: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
 var $author$project$Playground$Internal$textureOption = _Utils_update(
 	$elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions,
-	{cG: $elm_explorations$webgl$WebGL$Texture$linear, cH: $elm_explorations$webgl$WebGL$Texture$linear});
+	{cN: $elm_explorations$webgl$WebGL$Texture$linear, cO: $elm_explorations$webgl$WebGL$Texture$linear});
 var $author$project$Playground$Internal$requestTexture = F2(
 	function (missing, textures) {
 		return A2(
@@ -7314,7 +7314,7 @@ var $author$project$Playground$Internal$requestTexture = F2(
 	});
 var $author$project$Playground$Internal$toScreen = F2(
 	function (width, height) {
-		return {bf: (-height) / 2, aZ: height, a$: (-width) / 2, a5: width / 2, b3: height / 2, bb: width};
+		return {aJ: (-height) / 2, a3: height, az: (-width) / 2, aB: width / 2, bg: height / 2, bi: width};
 	});
 var $elm$core$Dict$getMin = function (dict) {
 	getMin:
@@ -7685,81 +7685,81 @@ var $elm$core$Set$remove = F2(
 	});
 var $author$project$Playground$Internal$updateKeyboard = F3(
 	function (isDown, key, keyboard) {
-		var keys = isDown ? A2($elm$core$Set$insert, key, keyboard.cE) : A2($elm$core$Set$remove, key, keyboard.cE);
+		var keys = isDown ? A2($elm$core$Set$insert, key, keyboard.cL) : A2($elm$core$Set$remove, key, keyboard.cL);
 		switch (key) {
 			case ' ':
 				return _Utils_update(
 					keyboard,
-					{cE: keys, cS: isDown});
+					{cL: keys, cY: isDown});
 			case 'Enter':
 				return _Utils_update(
 					keyboard,
-					{cr: isDown, cE: keys});
+					{cw: isDown, cL: keys});
 			case 'Shift':
 				return _Utils_update(
 					keyboard,
-					{cE: keys, cQ: isDown});
+					{cL: keys, bc: isDown});
 			case 'Backspace':
 				return _Utils_update(
 					keyboard,
-					{cl: isDown, cE: keys});
+					{cp: isDown, cL: keys});
 			case 'ArrowUp':
 				return _Utils_update(
 					keyboard,
-					{cE: keys, cg: isDown});
+					{cL: keys, ck: isDown});
 			case 'ArrowDown':
 				return _Utils_update(
 					keyboard,
-					{aG: isDown, cE: keys});
+					{aM: isDown, cL: keys});
 			case 'ArrowLeft':
 				return _Utils_update(
 					keyboard,
-					{cE: keys, a$: isDown});
+					{cL: keys, az: isDown});
 			case 'ArrowRight':
 				return _Utils_update(
 					keyboard,
-					{cE: keys, a5: isDown});
+					{cL: keys, aB: isDown});
 			default:
 				return _Utils_update(
 					keyboard,
-					{cE: keys});
+					{cL: keys});
 		}
 	});
 var $author$project$Playground$Internal$gameUpdate = F4(
 	function (viewMemory, updateMemory, msg, _v0) {
 		var model = _v0;
-		var visibility = model.aC;
-		var memory = model.aw;
-		var textures = model.af;
-		var computer = model.co;
+		var visibility = model.aH;
+		var memory = model.aA;
+		var textures = model.ah;
+		var computer = model.ct;
 		switch (msg.$) {
 			case 1:
 				var time = msg.a;
 				var newModel = _Utils_update(
 					model,
 					{
-						co: computer.cI.cn ? _Utils_update(
+						ct: computer.cP.cr ? _Utils_update(
 							computer,
 							{
-								cI: A2($author$project$Playground$Internal$mouseClick, false, computer.cI),
-								cU: time
+								cP: A2($author$project$Playground$Internal$mouseClick, false, computer.cP),
+								c_: time
 							}) : _Utils_update(
 							computer,
-							{cU: time}),
-						aw: A2(updateMemory, computer, memory)
+							{c_: time}),
+						aA: A2(updateMemory, computer, memory)
 					});
 				var _v2 = A3(
 					$author$project$Playground$Internal$render,
-					computer.bY,
+					computer.Y,
 					textures,
-					A2(viewMemory, newModel.co, newModel.aw));
+					A2(viewMemory, newModel.ct, newModel.aA));
 				var entities = _v2.a;
 				var missing = _v2.b;
 				if (!missing.b) {
 					return _Utils_Tuple2(
 						_Utils_update(
 							newModel,
-							{cs: entities}),
+							{cx: entities}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					return A2(
@@ -7767,20 +7767,20 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 						function (loadingTextures) {
 							return _Utils_update(
 								newModel,
-								{cs: entities, af: loadingTextures});
+								{cx: entities, ah: loadingTextures});
 						},
 						A2($author$project$Playground$Internal$requestTexture, missing, textures));
 				}
 			case 2:
-				var viewport = msg.a.cZ;
+				var viewport = msg.a.c8;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
 								{
-									bY: A2($author$project$Playground$Internal$toScreen, viewport.bb, viewport.aZ)
+									Y: A2($author$project$Playground$Internal$toScreen, viewport.bi, viewport.a3)
 								})
 						}),
 					$elm$core$Platform$Cmd$none);
@@ -7790,9 +7790,9 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
-								{bY: newScreen})
+								{Y: newScreen})
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 0:
@@ -7802,26 +7802,26 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
 								{
-									bu: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.bu)
+									a5: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.a5)
 								})
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 5:
 				var pageX = msg.a;
 				var pageY = msg.b;
-				var y = computer.bY.b3 - pageY;
-				var x = computer.bY.a$ + pageX;
+				var y = computer.Y.bg - pageY;
+				var x = computer.Y.az + pageX;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
 								{
-									cI: A3($author$project$Playground$Internal$mouseMove, x, y, computer.cI)
+									cP: A3($author$project$Playground$Internal$mouseMove, x, y, computer.cP)
 								})
 						}),
 					$elm$core$Platform$Cmd$none);
@@ -7830,10 +7830,10 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
 								{
-									cI: A2($author$project$Playground$Internal$mouseClick, true, computer.cI)
+									cP: A2($author$project$Playground$Internal$mouseClick, true, computer.cP)
 								})
 						}),
 					$elm$core$Platform$Cmd$none);
@@ -7843,10 +7843,10 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
 								{
-									cI: A2($author$project$Playground$Internal$mouseDown, isDown, computer.cI)
+									cP: A2($author$project$Playground$Internal$mouseDown, isDown, computer.cP)
 								})
 						}),
 					$elm$core$Platform$Cmd$none);
@@ -7856,13 +7856,13 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							co: _Utils_update(
+							ct: _Utils_update(
 								computer,
 								{
-									bu: $author$project$Playground$Internal$emptyKeyboard,
-									cI: A4($author$project$Playground$Internal$Mouse, computer.cI.f, computer.cI.g, false, false)
+									a5: $author$project$Playground$Internal$emptyKeyboard,
+									cP: A4($author$project$Playground$Internal$Mouse, computer.cP.g, computer.cP.h, false, false)
 								}),
-							aC: vis
+							aH: vis
 						}),
 					$elm$core$Platform$Cmd$none);
 			default:
@@ -7871,7 +7871,7 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							af: A2($author$project$Playground$Internal$gotTextures, r, model.af)
+							ah: A2($author$project$Playground$Internal$gotTextures, r, model.ah)
 						}),
 					$elm$core$Platform$Cmd$none);
 		}
@@ -7880,10 +7880,10 @@ var $elm$browser$Browser$Dom$getViewport = _Browser_withWindow(_Browser_getViewp
 var $elm$time$Time$Posix = $elm$core$Basics$identity;
 var $elm$time$Time$millisToPosix = $elm$core$Basics$identity;
 var $author$project$Playground$Internal$initialComputer = {
-	bu: $author$project$Playground$Internal$emptyKeyboard,
-	cI: A4($author$project$Playground$Internal$Mouse, 0, 0, false, false),
-	bY: A2($author$project$Playground$Internal$toScreen, 600, 600),
-	cU: $elm$time$Time$millisToPosix(0)
+	a5: $author$project$Playground$Internal$emptyKeyboard,
+	cP: A4($author$project$Playground$Internal$Mouse, 0, 0, false, false),
+	Y: A2($author$project$Playground$Internal$toScreen, 600, 600),
+	c_: $elm$time$Time$millisToPosix(0)
 };
 var $elm$browser$Browser$Events$Document = 0;
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
@@ -7894,7 +7894,7 @@ var $elm$browser$Browser$Events$MySub = F3(
 	});
 var $elm$browser$Browser$Events$State = F2(
 	function (subs, pids) {
-		return {bP: pids, b_: subs};
+		return {bT: pids, b0: subs};
 	});
 var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
 	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
@@ -8015,7 +8015,7 @@ var $elm$core$Dict$merge = F6(
 	});
 var $elm$browser$Browser$Events$Event = F2(
 	function (key, event) {
-		return {bk: event, bt: key};
+		return {bq: event, by: key};
 	});
 var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
 var $elm$browser$Browser$Events$spawn = F3(
@@ -8090,7 +8090,7 @@ var $elm$browser$Browser$Events$onEffects = F3(
 			stepLeft,
 			stepBoth,
 			stepRight,
-			state.bP,
+			state.bT,
 			$elm$core$Dict$fromList(newSubs),
 			_Utils_Tuple3(_List_Nil, $elm$core$Dict$empty, _List_Nil));
 		var deadPids = _v0.a;
@@ -8136,8 +8136,8 @@ var $elm$core$List$filterMap = F2(
 	});
 var $elm$browser$Browser$Events$onSelfMsg = F3(
 	function (router, _v0, state) {
-		var key = _v0.bt;
-		var event = _v0.bk;
+		var key = _v0.by;
+		var event = _v0.bq;
 		var toMessage = function (_v2) {
 			var subKey = _v2.a;
 			var _v3 = _v2.b;
@@ -8146,7 +8146,7 @@ var $elm$browser$Browser$Events$onSelfMsg = F3(
 			var decoder = _v3.c;
 			return _Utils_eq(subKey, key) ? A2(_Browser_decodeEvent, decoder, event) : $elm$core$Maybe$Nothing;
 		};
-		var messages = A2($elm$core$List$filterMap, toMessage, state.b_);
+		var messages = A2($elm$core$List$filterMap, toMessage, state.b0);
 		return A2(
 			$elm$core$Task$andThen,
 			function (_v1) {
@@ -8187,24 +8187,24 @@ var $elm$browser$Browser$Events$onVisibilityChange = function (func) {
 	return A3(
 		$elm$browser$Browser$Events$on,
 		0,
-		info.cm,
+		info.cq,
 		A2(
 			$elm$json$Json$Decode$map,
 			$elm$browser$Browser$Events$withHidden(func),
 			A2(
 				$elm$json$Json$Decode$field,
 				'target',
-				A2($elm$json$Json$Decode$field, info.cA, $elm$json$Json$Decode$bool))));
+				A2($elm$json$Json$Decode$field, info.cH, $elm$json$Json$Decode$bool))));
 };
 var $author$project$Playground$Internal$embed = F4(
 	function (subs, viewMemory, updateMemory, initialMemory) {
 		var view = function (_v2) {
-			var entities = _v2.cs;
+			var entities = _v2.cx;
 			return entities;
 		};
 		var subscriptions = function (_v1) {
-			var visibility = _v1.aC;
-			var computer = _v1.co;
+			var visibility = _v1.aH;
+			var computer = _v1.ct;
 			if (visibility === 1) {
 				return $elm$browser$Browser$Events$onVisibilityChange($author$project$Playground$Internal$VisibilityChanged);
 			} else {
@@ -8212,13 +8212,13 @@ var $author$project$Playground$Internal$embed = F4(
 			}
 		};
 		var init = _Utils_Tuple2(
-			{co: $author$project$Playground$Internal$initialComputer, cs: _List_Nil, aw: initialMemory, af: $elm$core$Dict$empty, aC: 0},
+			{ct: $author$project$Playground$Internal$initialComputer, cx: _List_Nil, aA: initialMemory, ah: $elm$core$Dict$empty, aH: 0},
 			A2($elm$core$Task$perform, $author$project$Playground$Internal$GotViewport, $elm$browser$Browser$Dom$getViewport));
 		return {
-			br: init,
-			b$: subscriptions,
-			ch: A2($author$project$Playground$Internal$gameUpdate, viewMemory, updateMemory),
-			ci: view
+			bv: init,
+			b1: subscriptions,
+			cl: A2($author$project$Playground$Internal$gameUpdate, viewMemory, updateMemory),
+			cm: view
 		};
 	});
 var $author$project$Playground$Internal$KeyChanged = F2(
@@ -8244,7 +8244,7 @@ var $elm$browser$Browser$AnimationManager$Time = function (a) {
 };
 var $elm$browser$Browser$AnimationManager$State = F3(
 	function (subs, request, oldTime) {
-		return {a2: oldTime, bX: request, b_: subs};
+		return {a8: oldTime, b_: request, b0: subs};
 	});
 var $elm$browser$Browser$AnimationManager$init = $elm$core$Task$succeed(
 	A3($elm$browser$Browser$AnimationManager$State, _List_Nil, $elm$core$Maybe$Nothing, 0));
@@ -8253,8 +8253,8 @@ var $elm$browser$Browser$AnimationManager$rAF = _Browser_rAF(0);
 var $elm$core$Process$spawn = _Scheduler_spawn;
 var $elm$browser$Browser$AnimationManager$onEffects = F3(
 	function (router, subs, _v0) {
-		var request = _v0.bX;
-		var oldTime = _v0.a2;
+		var request = _v0.b_;
+		var oldTime = _v0.a8;
 		var _v1 = _Utils_Tuple2(request, subs);
 		if (_v1.a.$ === 1) {
 			if (!_v1.b.b) {
@@ -8300,8 +8300,8 @@ var $elm$browser$Browser$AnimationManager$onEffects = F3(
 	});
 var $elm$browser$Browser$AnimationManager$onSelfMsg = F3(
 	function (router, newTime, _v0) {
-		var subs = _v0.b_;
-		var oldTime = _v0.a2;
+		var subs = _v0.b0;
+		var oldTime = _v0.a8;
 		var send = function (sub) {
 			if (!sub.$) {
 				var tagger = sub.a;
@@ -8381,7 +8381,7 @@ var $author$project$Playground$Internal$allSubscriptions = function (computer) {
 			A2(
 				$elm$json$Json$Decode$andThen,
 				function (k) {
-					return A2($elm$core$Set$member, k, computer.bu.cE) ? $elm$json$Json$Decode$fail('') : $elm$json$Json$Decode$succeed(
+					return A2($elm$core$Set$member, k, computer.a5.cL) ? $elm$json$Json$Decode$fail('') : $elm$json$Json$Decode$succeed(
 						A2($author$project$Playground$Internal$KeyChanged, true, k));
 				},
 				A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string))),
@@ -8560,9 +8560,9 @@ var $author$project$Playground$Internal$viewWrap = F2(
 				_List_fromArray(
 					[
 						$elm$html$Html$Attributes$width(
-						$elm$core$Basics$round(screen.bb)),
+						$elm$core$Basics$round(screen.bi)),
 						$elm$html$Html$Attributes$height(
-						$elm$core$Basics$round(screen.aZ))
+						$elm$core$Basics$round(screen.a3))
 					]),
 				entities)
 			]);
@@ -8570,25 +8570,25 @@ var $author$project$Playground$Internal$viewWrap = F2(
 var $author$project$Playground$Internal$game = F3(
 	function (viewMemory, updateMemory, initialMemory) {
 		var view = function (_v2) {
-			var computer = _v2.co;
-			var entities = _v2.cs;
+			var computer = _v2.ct;
+			var entities = _v2.cx;
 			return {
-				be: A2($author$project$Playground$Internal$viewWrap, computer.bY, entities),
-				b2: 'Playground'
+				bl: A2($author$project$Playground$Internal$viewWrap, computer.Y, entities),
+				b4: 'Playground'
 			};
 		};
 		var _v0 = A4($author$project$Playground$Internal$embed, $author$project$Playground$Internal$gameSubscriptions, viewMemory, updateMemory, initialMemory);
-		var init = _v0.br;
-		var update = _v0.ch;
-		var subscriptions = _v0.b$;
+		var init = _v0.bv;
+		var update = _v0.cl;
+		var subscriptions = _v0.b1;
 		return $elm$browser$Browser$document(
 			{
-				br: function (_v1) {
+				bv: function (_v1) {
 					return init;
 				},
-				b$: subscriptions,
-				ch: update,
-				ci: view
+				b1: subscriptions,
+				cl: update,
+				cm: view
 			});
 	});
 var $author$project$Playground$game = $author$project$Playground$Internal$game;
@@ -8596,6 +8596,10 @@ var $author$project$Extra$Jump$Play = function (a) {
 	return {$: 1, a: a};
 };
 var $author$project$Extra$Jump$Direction$Neither = 8;
+var $author$project$Extra$Jump$applyIf = F3(
+	function (bool, f, world) {
+		return bool ? f(world) : world;
+	});
 var $author$project$Extra$Jump$Direction$East = 2;
 var $author$project$Extra$Jump$Direction$North = 0;
 var $author$project$Extra$Jump$Direction$NorthEast = 1;
@@ -8605,18 +8609,23 @@ var $author$project$Extra$Jump$Direction$SouthEast = 3;
 var $author$project$Extra$Jump$Direction$SouthWest = 5;
 var $author$project$Extra$Jump$Direction$West = 6;
 var $author$project$Extra$Jump$Direction$fromRecord = function (_v0) {
-	var x = _v0.f;
-	var y = _v0.g;
+	var x = _v0.g;
+	var y = _v0.h;
 	return (x > 0) ? ((y > 0) ? 1 : ((y < 0) ? 3 : 2)) : ((x < 0) ? ((y > 0) ? 7 : ((y < 0) ? 5 : 6)) : ((y > 0) ? 0 : ((y < 0) ? 4 : 8)));
 };
 var $elm$core$Basics$neq = _Utils_notEqual;
+var $author$project$AltMath$Vector2$setY = F2(
+	function (y, _v0) {
+		var x = _v0.g;
+		return {g: x, h: y};
+	});
 var $elm$core$Basics$sqrt = _Basics_sqrt;
 var $author$project$Playground$squareRootOfTwo = $elm$core$Basics$sqrt(2);
 var $author$project$Playground$toX = function (keyboard) {
-	return (keyboard.a5 ? 1 : 0) - (keyboard.a$ ? 1 : 0);
+	return (keyboard.aB ? 1 : 0) - (keyboard.az ? 1 : 0);
 };
 var $author$project$Playground$toY = function (keyboard) {
-	return (keyboard.cg ? 1 : 0) - (keyboard.aG ? 1 : 0);
+	return (keyboard.ck ? 1 : 0) - (keyboard.aM ? 1 : 0);
 };
 var $author$project$Playground$toXY = function (keyboard) {
 	var y = $author$project$Playground$toY(keyboard);
@@ -8625,396 +8634,30 @@ var $author$project$Playground$toXY = function (keyboard) {
 };
 var $author$project$Extra$Jump$animatePlayer = F2(
 	function (computer, memory) {
-		var player = memory.n;
-		var _v0 = $author$project$Playground$toXY(computer.bu);
+		var player = memory.e;
+		var _v0 = $author$project$Playground$toXY(computer.a5);
 		var x = _v0.a;
 		var y = _v0.b;
 		var dir = $author$project$Extra$Jump$Direction$fromRecord(
-			{f: x, g: y});
-		return ((dir !== 8) && (!_Utils_eq(dir, player.V))) ? _Utils_update(
+			A3(
+				$author$project$Extra$Jump$applyIf,
+				player.ar.h < 0,
+				$author$project$AltMath$Vector2$setY(0),
+				{g: x, h: y}));
+		return ((dir !== 8) && (!_Utils_eq(dir, player.O))) ? _Utils_update(
 			memory,
 			{
-				n: _Utils_update(
+				e: _Utils_update(
 					player,
-					{V: dir, R: 0})
+					{O: dir, Q: 0})
 			}) : _Utils_update(
 			memory,
 			{
-				n: _Utils_update(
+				e: _Utils_update(
 					player,
-					{R: player.R + 1})
+					{Q: player.Q + 1})
 			});
 	});
-var $author$project$AltMath$Vector2$Vec2 = F2(
-	function (x, y) {
-		return {f: x, g: y};
-	});
-var $author$project$AltMath$Vector2$vec2 = $author$project$AltMath$Vector2$Vec2;
-var $author$project$Extra$Jump$config = {
-	P: 0.5,
-	bm: -0.125,
-	bn: A2($author$project$AltMath$Vector2$vec2, 0, -0.5),
-	bs: 9,
-	y: 3
-};
-var $author$project$AltMath$Vector2$setX = F2(
-	function (x, _v0) {
-		var y = _v0.g;
-		return {f: x, g: y};
-	});
-var $author$project$AltMath$Vector2$setY = F2(
-	function (y, _v0) {
-		var x = _v0.f;
-		return {f: x, g: y};
-	});
-var $author$project$Extra$Jump$crossScreen = F2(
-	function (_v0, memory) {
-		var screen = _v0.bY;
-		var player = memory.n;
-		return (_Utils_cmp(player.i.f * $author$project$Extra$Jump$config.y, screen.a5) > 0) ? _Utils_update(
-			memory,
-			{
-				n: _Utils_update(
-					player,
-					{
-						i: A2($author$project$AltMath$Vector2$setX, screen.a$ / $author$project$Extra$Jump$config.y, player.i)
-					})
-			}) : ((_Utils_cmp(player.i.f * $author$project$Extra$Jump$config.y, screen.a$) < 0) ? _Utils_update(
-			memory,
-			{
-				n: _Utils_update(
-					player,
-					{
-						i: A2($author$project$AltMath$Vector2$setX, screen.a5 / $author$project$Extra$Jump$config.y, player.i)
-					})
-			}) : ((_Utils_cmp(player.i.g * $author$project$Extra$Jump$config.y, screen.bf) < 0) ? _Utils_update(
-			memory,
-			{
-				n: _Utils_update(
-					player,
-					{
-						i: A2($author$project$AltMath$Vector2$setY, screen.b3 / $author$project$Extra$Jump$config.y, player.i)
-					})
-			}) : ((_Utils_cmp(player.i.g * $author$project$Extra$Jump$config.y, screen.b3) > 0) ? _Utils_update(
-			memory,
-			{
-				n: _Utils_update(
-					player,
-					{
-						i: A2($author$project$AltMath$Vector2$setY, screen.bf / $author$project$Extra$Jump$config.y, player.i)
-					})
-			}) : memory)));
-	});
-var $author$project$Extra$Jump$zero = A2($author$project$AltMath$Vector2$vec2, 0, 0);
-var $author$project$Extra$Jump$initPlayer = F2(
-	function (x, y) {
-		return {
-			P: {f: 0, g: 0},
-			ao: {f: 0, g: 0},
-			aF: _List_fromArray(
-				[
-					{q: $author$project$Extra$Jump$zero, r: $author$project$Extra$Jump$zero}
-				]),
-			V: 2,
-			R: 0,
-			i: A2($author$project$AltMath$Vector2$vec2, x, y),
-			bV: 9,
-			o: $author$project$Extra$Jump$zero
-		};
-	});
-var $author$project$Extra$Jump$initGame = function (_v0) {
-	var screen = _v0.bY;
-	return {
-		n: A2($author$project$Extra$Jump$initPlayer, -10, 90),
-		a8: _List_fromArray(
-			[
-				{
-				q: {f: 98, g: -40},
-				r: {f: 91, g: 140}
-			},
-				{
-				q: {f: 50, g: -40},
-				r: {f: 50, g: 140}
-			},
-				{
-				q: {f: -50, g: -10},
-				r: {f: -120, g: -10}
-			},
-				{
-				q: {f: -120, g: 10},
-				r: {f: -90, g: 10}
-			},
-				{
-				q: {f: 120, g: -40},
-				r: {f: -300, g: -40}
-			},
-				{
-				q: {f: 15, g: 10},
-				r: {f: -90, g: 10}
-			},
-				{
-				q: {f: 25, g: 10},
-				r: {f: -20, g: -40}
-			},
-				{
-				q: {f: 120, g: 10},
-				r: {f: 20, g: 10}
-			},
-				{
-				q: {f: 204, g: 52},
-				r: {f: 100, g: 10}
-			},
-				{
-				q: {f: 160, g: -80},
-				r: {f: 120, g: -80}
-			}
-			])
-	};
-};
-var $author$project$AltMath$Vector2$add = F2(
-	function (a, b) {
-		return A2($author$project$AltMath$Vector2$Vec2, a.f + b.f, a.g + b.g);
-	});
-var $author$project$Extra$Jump$applyIf = F3(
-	function (bool, f, world) {
-		return bool ? f(world) : world;
-	});
-var $elm$core$Basics$ge = _Utils_ge;
-var $author$project$Extra$Jump$Collision$intersection = F8(
-	function (x1, y1, x2, y2, x3, y3, x4, y4) {
-		var den = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
-		if (!den) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var u = (-(((x1 - x2) * (y1 - y3)) - ((y1 - y2) * (x1 - x3)))) / den;
-			var t = (((x1 - x3) * (y3 - y4)) - ((y1 - y3) * (x3 - x4))) / den;
-			return ((t >= 0) && ((t <= 1) && ((u >= 0) && (u <= 1)))) ? $elm$core$Maybe$Just(
-				_Utils_Tuple2(t, u)) : $elm$core$Maybe$Nothing;
-		}
-	});
-var $author$project$Extra$Jump$Collision$intersectionVec2 = F4(
-	function (p1, p2, p3, p4) {
-		return A8($author$project$Extra$Jump$Collision$intersection, p1.f, p1.g, p2.f, p2.g, p3.f, p3.g, p4.f, p4.g);
-	});
-var $author$project$Extra$Jump$Collision$isLeft = F3(
-	function (a, b, c) {
-		return _Utils_cmp((b.f - a.f) * (c.g - a.g), (b.g - a.g) * (c.f - a.f)) < 0;
-	});
-var $author$project$AltMath$Vector2$length = function (_v0) {
-	var x = _v0.f;
-	var y = _v0.g;
-	return $elm$core$Basics$sqrt((x * x) + (y * y));
-};
-var $author$project$AltMath$Vector2$normalize = function (v2) {
-	var len = $author$project$AltMath$Vector2$length(v2);
-	return A2($author$project$AltMath$Vector2$Vec2, v2.f / len, v2.g / len);
-};
-var $author$project$Extra$Jump$Collision$leftNormal = function (vec) {
-	var _v0 = $author$project$AltMath$Vector2$normalize(vec);
-	var x = _v0.f;
-	var y = _v0.g;
-	return A2($author$project$AltMath$Vector2$vec2, -y, x);
-};
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (!maybe.$) {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $author$project$AltMath$Vector2$lengthSquared = function (_v0) {
-	var x = _v0.f;
-	var y = _v0.g;
-	return (x * x) + (y * y);
-};
-var $author$project$AltMath$Vector2$max = F2(
-	function (a, b) {
-		return (_Utils_cmp(
-			$author$project$AltMath$Vector2$lengthSquared(a),
-			$author$project$AltMath$Vector2$lengthSquared(b)) > 0) ? a : b;
-	});
-var $author$project$AltMath$Vector2$dot = F2(
-	function (a, b) {
-		return (a.f * b.f) + (a.g * b.g);
-	});
-var $author$project$AltMath$Vector2$scale = F2(
-	function (s, v2) {
-		return A2($author$project$AltMath$Vector2$Vec2, s * v2.f, s * v2.g);
-	});
-var $author$project$AltMath$Vector2$scalarProjection = F2(
-	function (a, b) {
-		return A2(
-			$author$project$AltMath$Vector2$scale,
-			A2($author$project$AltMath$Vector2$dot, a, b) / $author$project$AltMath$Vector2$lengthSquared(b),
-			b);
-	});
-var $author$project$Extra$Jump$Collision$slopeFix = 1 / 32;
-var $author$project$AltMath$Vector2$sub = F2(
-	function (a, b) {
-		return A2($author$project$AltMath$Vector2$Vec2, a.f - b.f, a.g - b.g);
-	});
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (!maybe.$) {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
-var $author$project$Extra$Jump$Collision$lineCircle = F2(
-	function (wall, player) {
-		var zeroedWall = A2($author$project$AltMath$Vector2$sub, wall.r, wall.q);
-		var normal = $author$project$Extra$Jump$Collision$leftNormal(zeroedWall);
-		var point = A2(
-			$author$project$AltMath$Vector2$add,
-			player.i,
-			A2($author$project$AltMath$Vector2$scale, player.bV + $author$project$Extra$Jump$Collision$slopeFix, normal));
-		return A3($author$project$Extra$Jump$Collision$isLeft, wall.q, wall.r, point) ? A2(
-			$elm$core$Maybe$withDefault,
-			player,
-			A2(
-				$elm$core$Maybe$map,
-				function (_v0) {
-					var t = _v0.a;
-					var u = _v0.b;
-					var restV = A2($author$project$AltMath$Vector2$scale, 1 - t, player.o);
-					var calcRest = A2($author$project$AltMath$Vector2$scalarProjection, restV, zeroedWall);
-					return _Utils_update(
-						player,
-						{
-							ao: A2($author$project$AltMath$Vector2$max, normal, player.ao),
-							o: A2(
-								$author$project$AltMath$Vector2$add,
-								A2($author$project$AltMath$Vector2$scale, -$author$project$Extra$Jump$Collision$slopeFix, normal),
-								A2(
-									$author$project$AltMath$Vector2$add,
-									calcRest,
-									A2($author$project$AltMath$Vector2$scale, t, player.o)))
-						});
-				},
-				A4(
-					$author$project$Extra$Jump$Collision$intersectionVec2,
-					point,
-					A2($author$project$AltMath$Vector2$add, point, player.o),
-					wall.q,
-					wall.r))) : (A3($author$project$Extra$Jump$Collision$isLeft, wall.q, wall.r, player.i) ? A2(
-			$elm$core$Maybe$withDefault,
-			player,
-			A2(
-				$elm$core$Maybe$map,
-				function (_v1) {
-					var t = _v1.a;
-					var u = _v1.b;
-					return _Utils_update(
-						player,
-						{
-							ao: A2($author$project$AltMath$Vector2$max, normal, player.ao),
-							o: A2(
-								$author$project$AltMath$Vector2$add,
-								A2(
-									$author$project$AltMath$Vector2$add,
-									A2($author$project$AltMath$Vector2$scale, -player.bV, normal),
-									A2(
-										$author$project$AltMath$Vector2$scale,
-										t,
-										A2($author$project$AltMath$Vector2$scale, player.bV, normal))),
-								A2($author$project$AltMath$Vector2$scale, 0.4, player.o))
-						});
-				},
-				A4($author$project$Extra$Jump$Collision$intersectionVec2, player.i, point, wall.q, wall.r))) : player);
-	});
-var $author$project$Extra$Jump$precision = 1.0e10;
-var $author$project$Extra$Jump$roundVec = function (_v0) {
-	var x = _v0.f;
-	var y = _v0.g;
-	return {
-		f: $elm$core$Basics$round(x * $author$project$Extra$Jump$precision) / $author$project$Extra$Jump$precision,
-		g: $elm$core$Basics$round(y * $author$project$Extra$Jump$precision) / $author$project$Extra$Jump$precision
-	};
-};
-var $author$project$Extra$Jump$simulate = F2(
-	function (computer, memory) {
-		var player = memory.n;
-		var acc = $author$project$Extra$Jump$roundVec(
-			A2(
-				$author$project$AltMath$Vector2$add,
-				$author$project$Extra$Jump$config.bn,
-				A2(
-					$author$project$AltMath$Vector2$add,
-					A2($author$project$AltMath$Vector2$scale, $author$project$Extra$Jump$config.bm, player.o),
-					player.P)));
-		var forceApplied = _Utils_update(
-			player,
-			{
-				ao: $author$project$Extra$Jump$zero,
-				o: A2(
-					$author$project$AltMath$Vector2$add,
-					A2($author$project$AltMath$Vector2$scale, 1.5, acc),
-					player.o)
-			});
-		var newPlayer = A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, forceApplied, memory.a8);
-		return _Utils_update(
-			memory,
-			{
-				n: _Utils_update(
-					newPlayer,
-					{
-						i: A2($author$project$AltMath$Vector2$add, newPlayer.i, newPlayer.o),
-						o: $author$project$Extra$Jump$roundVec(
-							A3(
-								$author$project$Extra$Jump$applyIf,
-								_Utils_eq(newPlayer.o, forceApplied.o),
-								$author$project$AltMath$Vector2$add(
-									A2($author$project$AltMath$Vector2$scale, -0.5, acc)),
-								newPlayer.o))
-					})
-			});
-	});
-var $author$project$Extra$Jump$updateMovement = F2(
-	function (_v0, memory) {
-		var keyboard = _v0.bu;
-		var player = memory.n;
-		var x = keyboard.a$ ? (-$author$project$Extra$Jump$config.P) : (keyboard.a5 ? $author$project$Extra$Jump$config.P : 0);
-		var _v1 = (keyboard.cS && (_Utils_cmp(player.ao.g, -0.5) < 0)) ? _Utils_Tuple2(
-			A2($author$project$AltMath$Vector2$vec2, x, $author$project$Extra$Jump$config.bs),
-			A2($author$project$AltMath$Vector2$setY, 0, player.o)) : _Utils_Tuple2(
-			A2($author$project$AltMath$Vector2$vec2, x, 0),
-			player.o);
-		var acc = _v1.a;
-		var v = _v1.b;
-		return _Utils_update(
-			memory,
-			{
-				n: _Utils_update(
-					player,
-					{P: acc, o: v})
-			});
-	});
-var $author$project$Extra$Jump$update = F2(
-	function (computer, memory) {
-		if (memory.$ === 1) {
-			var m = memory.a;
-			return $author$project$Extra$Jump$Play(
-				A2(
-					$author$project$Extra$Jump$animatePlayer,
-					computer,
-					A2(
-						$author$project$Extra$Jump$crossScreen,
-						computer,
-						A2(
-							$author$project$Extra$Jump$simulate,
-							computer,
-							A2($author$project$Extra$Jump$updateMovement, computer, m)))));
-		} else {
-			return $author$project$Extra$Jump$Play(
-				$author$project$Extra$Jump$initGame(computer));
-		}
-	});
-var $elm$core$Basics$atan2 = _Basics_atan2;
 var $author$project$Playground$Internal$Form = F3(
 	function (a, b, c) {
 		return {$: 0, a: a, b: b, c: c};
@@ -9042,12 +8685,12 @@ var $elm_explorations$webgl$WebGL$Internal$Blend = function (a) {
 	};
 };
 var $elm_explorations$webgl$WebGL$Settings$Blend$custom = function (_v0) {
-	var r = _v0.bV;
-	var g = _v0.au;
-	var b = _v0.an;
-	var a = _v0.b;
-	var color = _v0._;
-	var alpha = _v0.am;
+	var r = _v0.X;
+	var g = _v0.ax;
+	var b = _v0.aq;
+	var a = _v0.an;
+	var color = _v0.cs;
+	var alpha = _v0.ap;
 	var expand = F2(
 		function (_v1, _v2) {
 			var eq1 = _v1.a;
@@ -9074,12 +8717,12 @@ var $elm_explorations$webgl$WebGL$Settings$Blend$add = F2(
 	function (factor1, factor2) {
 		return $elm_explorations$webgl$WebGL$Settings$Blend$custom(
 			{
-				b: 0,
-				am: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
 				an: 0,
-				_: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
-				au: 0,
-				bV: 0
+				ap: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
+				aq: 0,
+				cs: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
+				ax: 0,
+				X: 0
 			});
 	});
 var $elm_explorations$webgl$WebGL$Internal$ColorMask = F4(
@@ -9099,42 +8742,42 @@ var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragCircle = {
 	src: '\n        precision mediump float;\n        uniform vec4 color;\n        varying vec2 uv;\n        void main () {\n            gl_FragColor = color;\n            gl_FragColor.a *= smoothstep(0.01,0.04,1.-length(uv));\n        }\n    ',
 	attributes: {},
-	uniforms: {color: '_'}
+	uniforms: {color: 'cs'}
 };
 var $elm_explorations$webgl$WebGL$Mesh1 = F2(
 	function (a, b) {
 		return {$: 0, a: a, b: b};
 	});
 var $elm_explorations$webgl$WebGL$triangleStrip = $elm_explorations$webgl$WebGL$Mesh1(
-	{bi: 1, bq: 0, bL: 5});
+	{bo: 1, bu: 0, bP: 5});
 var $author$project$Playground$Shader$mesh = $elm_explorations$webgl$WebGL$triangleStrip(
 	_List_fromArray(
 		[
 			{
-			al: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, -1)
+			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, -1)
 		},
 			{
-			al: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, 1)
+			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, 1)
 		},
 			{
-			al: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, -1)
+			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, -1)
 		},
 			{
-			al: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, 1)
+			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, 1)
 		}
 		]));
 var $elm_explorations$linear_algebra$Math$Vector3$toRecord = _MJS_v3toRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$vec4 = _MJS_v4;
 var $author$project$Playground$Render$setAlpha = function (c) {
 	return function (c1) {
-		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, c1.f, c1.g, c1.c$);
+		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, c1.g, c1.h, c1.da);
 	}(
 		$elm_explorations$linear_algebra$Math$Vector3$toRecord(c));
 };
 var $author$project$Playground$Shader$vertRect = {
 	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            void main () {\n                uv = aP;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
-	attributes: {aP: 'al'},
-	uniforms: {uP: 'M', uT: 'N'}
+	attributes: {aP: 'ao'},
+	uniforms: {uP: 'ch', uT: 'ci'}
 };
 var $author$project$Playground$Render$circle = F4(
 	function (color, uP, uT, opacity) {
@@ -9145,25 +8788,25 @@ var $author$project$Playground$Render$circle = F4(
 			$author$project$Playground$Shader$fragCircle,
 			$author$project$Playground$Shader$mesh,
 			{
-				_: A2($author$project$Playground$Render$setAlpha, color, opacity),
-				M: uP,
-				N: uT
+				cs: A2($author$project$Playground$Render$setAlpha, color, opacity),
+				ch: uP,
+				ci: uT
 			});
 	});
 var $author$project$Playground$circle = F2(
 	function (color, radius) {
 		return {
-			b: 0,
-			e: A3(
+			an: 0,
+			d: A3(
 				$author$project$Playground$Internal$Form,
 				radius * 2,
 				radius * 2,
 				$author$project$Playground$Render$circle(color)),
 			a: 1,
+			b: 1,
 			c: 1,
-			d: 1,
-			f: 0,
-			g: 0
+			g: 0,
+			h: 0
 		};
 	});
 var $author$project$Playground$Internal$Group = function (a) {
@@ -9171,269 +8814,37 @@ var $author$project$Playground$Internal$Group = function (a) {
 };
 var $author$project$Playground$group = function (shapes) {
 	return {
-		b: 0,
-		e: $author$project$Playground$Internal$Group(shapes),
+		an: 0,
+		d: $author$project$Playground$Internal$Group(shapes),
 		a: 1,
+		b: 1,
 		c: 1,
-		d: 1,
-		f: 0,
-		g: 0
+		g: 0,
+		h: 0
 	};
 };
-var $author$project$Playground$move = F3(
-	function (dx, dy, _v0) {
-		var shape = _v0;
-		var x = shape.f;
-		var y = shape.g;
-		var a = shape.b;
-		var sx = shape.c;
-		var sy = shape.d;
-		var o = shape.a;
-		var form = shape.e;
-		return _Utils_update(
-			shape,
-			{f: x + dx, g: y + dy});
+var $author$project$AltMath$Vector2$Vec2 = F2(
+	function (x, y) {
+		return {g: x, h: y};
 	});
-var $elm$core$Basics$pi = _Basics_pi;
-var $author$project$Playground$Shader$fragFill = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n\n        void main () {\n            gl_FragColor = color;\n\n        }\n    ',
-	attributes: {},
-	uniforms: {color: '_'}
-};
-var $author$project$Playground$Shader$vertNone = {
-	src: '\n        precision mediump float;\n        attribute vec2 aP;\n        uniform vec4 uT;\n        uniform vec2 uP;\n        void main () {\n            gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n        }\n    ',
-	attributes: {aP: 'al'},
-	uniforms: {uP: 'M', uT: 'N'}
-};
-var $author$project$Playground$Render$rect = F4(
-	function (color, uP, uT, opacity) {
-		return A5(
-			$elm_explorations$webgl$WebGL$entityWith,
-			$author$project$Playground$Render$defaultEntitySettings,
-			$author$project$Playground$Shader$vertNone,
-			$author$project$Playground$Shader$fragFill,
-			$author$project$Playground$Shader$mesh,
-			{
-				_: A2($author$project$Playground$Render$setAlpha, color, opacity),
-				M: uP,
-				N: uT
-			});
-	});
-var $author$project$Playground$rectangle = F3(
-	function (color, width, height) {
+var $author$project$AltMath$Vector2$vec2 = $author$project$AltMath$Vector2$Vec2;
+var $author$project$Extra$Jump$zero = A2($author$project$AltMath$Vector2$vec2, 0, 0);
+var $author$project$Extra$Jump$initPlayer = F2(
+	function (x, y) {
 		return {
-			b: 0,
-			e: A3(
-				$author$project$Playground$Internal$Form,
-				width,
-				height,
-				$author$project$Playground$Render$rect(color)),
-			a: 1,
-			c: 1,
-			d: 1,
-			f: 0,
-			g: 0
-		};
-	});
-var $elm$core$Basics$degrees = function (angleInDegrees) {
-	return (angleInDegrees * $elm$core$Basics$pi) / 180;
-};
-var $author$project$Playground$rotate = F2(
-	function (da, _v0) {
-		var shape = _v0;
-		var x = shape.f;
-		var y = shape.g;
-		var a = shape.b;
-		var sx = shape.c;
-		var sy = shape.d;
-		var o = shape.a;
-		var form = shape.e;
-		return _Utils_update(
-			shape,
-			{
-				b: a + $elm$core$Basics$degrees(da)
-			});
-	});
-var $author$project$Playground$Shader$fragNgon = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        uniform float n;\n        varying vec2 uv;\n        void main () {\n            float angle = 3.1415926535897932384626433832795;\n            float a = atan(uv.x,uv.y) + angle;\n            float b = 6.28319 / n;\n            float f = smoothstep(0.5,.5,cos(floor(.5 + a/b)*b-a)*length(uv));\n            gl_FragColor = color;\n            gl_FragColor.a -= f;\n        }\n    ',
-	attributes: {},
-	uniforms: {color: '_', n: 'cJ'}
-};
-var $author$project$Playground$Render$ngon = F5(
-	function (n, color, uP, uT, opacity) {
-		return A5(
-			$elm_explorations$webgl$WebGL$entityWith,
-			$author$project$Playground$Render$defaultEntitySettings,
-			$author$project$Playground$Shader$vertRect,
-			$author$project$Playground$Shader$fragNgon,
-			$author$project$Playground$Shader$mesh,
-			{
-				_: A2($author$project$Playground$Render$setAlpha, color, opacity),
-				cJ: n,
-				M: uP,
-				N: uT
-			});
-	});
-var $author$project$Playground$triangle = F2(
-	function (color, radius) {
-		return {
-			b: 0,
-			e: A3(
-				$author$project$Playground$Internal$Form,
-				radius * 2,
-				radius * 2,
-				A2($author$project$Playground$Render$ngon, 3, color)),
-			a: 1,
-			c: 1,
-			d: 1,
-			f: 0,
-			g: 0
-		};
-	});
-var $author$project$Extra$Jump$drawSegment_ = F6(
-	function (start_, end_, _v0, c1, c2, c3) {
-		var p1 = _v0.q;
-		var p2 = _v0.r;
-		var w = $author$project$AltMath$Vector2$length(
-			A2($author$project$AltMath$Vector2$sub, p1, p2));
-		var start = start_ ? _List_fromArray(
-			[
-				A3(
-				$author$project$Playground$move,
-				p1.f,
-				p1.g,
-				A2($author$project$Playground$circle, c1, 2))
-			]) : _List_Nil;
-		var a = (A2($elm$core$Basics$atan2, p2.g - p1.g, p2.f - p1.f) / $elm$core$Basics$pi) * 180;
-		var addon = end_ ? _List_fromArray(
-			[
-				A2(
-				$author$project$Playground$rotate,
-				-90,
-				A2(
-					$author$project$Playground$rotate,
-					a,
-					A3(
-						$author$project$Playground$move,
-						p2.f,
-						p2.g,
-						A2($author$project$Playground$triangle, c2, 3))))
-			]) : _List_Nil;
-		return $author$project$Playground$group(
-			_Utils_ap(
-				_List_fromArray(
-					[
-						A2(
-						$author$project$Playground$rotate,
-						a,
-						A3(
-							$author$project$Playground$move,
-							(p1.f + p2.f) / 2,
-							(p1.g + p2.g) / 2,
-							A3($author$project$Playground$rectangle, c3, w, 1)))
-					]),
-				_Utils_ap(start, addon)));
-	});
-var $author$project$Extra$Jump$drawSegment = A2($author$project$Extra$Jump$drawSegment_, true, true);
-var $author$project$Playground$fade = F2(
-	function (o, _v0) {
-		var shape = _v0;
-		return _Utils_update(
-			shape,
-			{a: o});
-	});
-var $author$project$Playground$moveX = F2(
-	function (dx, _v0) {
-		var shape = _v0;
-		var x = shape.f;
-		var y = shape.g;
-		var a = shape.b;
-		var sx = shape.c;
-		var sy = shape.d;
-		var o = shape.a;
-		var form = shape.e;
-		return _Utils_update(
-			shape,
-			{f: x + dx});
-	});
-var $elm$core$List$drop = F2(
-	function (n, list) {
-		drop:
-		while (true) {
-			if (n <= 0) {
-				return list;
-			} else {
-				if (!list.b) {
-					return list;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs;
-					n = $temp$n;
-					list = $temp$list;
-					continue drop;
-				}
-			}
-		}
-	});
-var $elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return $elm$core$Maybe$Just(x);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $elm$core$Basics$modBy = _Basics_modBy;
-var $elm$core$Basics$clamp = F3(
-	function (low, high, number) {
-		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
-	});
-var $author$project$Playground$colorClamp = function (number) {
-	return A3(
-		$elm$core$Basics$clamp,
-		0,
-		255,
-		$elm$core$Basics$round(number));
-};
-var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
-var $author$project$Playground$rgb = F3(
-	function (r, g, b) {
-		return A3(
-			$elm_explorations$linear_algebra$Math$Vector3$vec3,
-			$author$project$Playground$colorClamp(r) / 255,
-			$author$project$Playground$colorClamp(g) / 255,
-			$author$project$Playground$colorClamp(b) / 255);
-	});
-var $author$project$Extra$Jump$randomColor = function (i) {
-	var getAt = F2(
-		function (idx, xs) {
-			return (idx < 0) ? $elm$core$Maybe$Nothing : $elm$core$List$head(
-				A2($elm$core$List$drop, idx, xs));
-		});
-	return A2(
-		$elm$core$Maybe$withDefault,
-		A3($author$project$Playground$rgb, 196, 223, 15),
-		A2(
-			getAt,
-			A2($elm$core$Basics$modBy, 11, i),
-			_List_fromArray(
+			M: {g: 0, h: 0},
+			ar: {g: 0, h: 0},
+			aL: _List_fromArray(
 				[
-					A3($author$project$Playground$rgb, 130, 178, 182),
-					A3($author$project$Playground$rgb, 226, 23, 49),
-					A3($author$project$Playground$rgb, 57, 54, 134),
-					A3($author$project$Playground$rgb, 204, 2, 181),
-					A3($author$project$Playground$rgb, 18, 187, 231),
-					A3($author$project$Playground$rgb, 8, 144, 133),
-					A3($author$project$Playground$rgb, 129, 8, 16),
-					A3($author$project$Playground$rgb, 156, 230, 146),
-					A3($author$project$Playground$rgb, 5, 77, 37),
-					A3($author$project$Playground$rgb, 72, 116, 216),
-					A3($author$project$Playground$rgb, 196, 223, 15)
-				])));
-};
+					{p: $author$project$Extra$Jump$zero, q: $author$project$Extra$Jump$zero}
+				]),
+			O: 2,
+			Q: 0,
+			f: A2($author$project$AltMath$Vector2$vec2, x, y),
+			X: 9,
+			n: $author$project$Extra$Jump$zero
+		};
+	});
 var $author$project$Playground$intFromHexChar = function (s) {
 	switch (s) {
 		case '0':
@@ -9511,6 +8922,7 @@ var $elm$core$String$foldr = _String_foldr;
 var $elm$core$String$toList = function (string) {
 	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
 };
+var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
 var $author$project$Playground$hexColor2Vec3 = function (str) {
 	var withoutHash = A2($elm$core$String$startsWith, '#', str) ? A2($elm$core$String$dropLeft, 1, str) : str;
 	var _v0 = $elm$core$String$toList(withoutHash);
@@ -9542,24 +8954,737 @@ var $author$project$Playground$hexColor2Vec3 = function (str) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (!maybe.$) {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $author$project$Playground$red = A2(
+	$elm$core$Maybe$withDefault,
+	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
+	$author$project$Playground$hexColor2Vec3('#cc0000'));
+var $author$project$Playground$white = A2(
+	$elm$core$Maybe$withDefault,
+	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
+	$author$project$Playground$hexColor2Vec3('#ffffff'));
+var $author$project$Extra$Jump$initGame = function (_v0) {
+	var screen = _v0.Y;
+	return {
+		U: _List_Nil,
+		e: A2($author$project$Extra$Jump$initPlayer, -10, 90),
+		be: _List_fromArray(
+			[
+				{
+				p: {g: 98, h: -40},
+				q: {g: 91, h: 140}
+			},
+				{
+				p: {g: 50, h: -40},
+				q: {g: 50, h: 140}
+			},
+				{
+				p: {g: -50, h: -10},
+				q: {g: -120, h: -10}
+			},
+				{
+				p: {g: -120, h: 10},
+				q: {g: -90, h: 10}
+			},
+				{
+				p: {g: 120, h: -40},
+				q: {g: -300, h: -40}
+			},
+				{
+				p: {g: 15, h: 10},
+				q: {g: -90, h: 10}
+			},
+				{
+				p: {g: 25, h: 10},
+				q: {g: -20, h: -40}
+			},
+				{
+				p: {g: 120, h: 10},
+				q: {g: 20, h: 10}
+			},
+				{
+				p: {g: 204, h: 52},
+				q: {g: 100, h: 10}
+			},
+				{
+				p: {g: 160, h: -80},
+				q: {g: 120, h: -80}
+			}
+			]),
+		bh: _List_fromArray(
+			[
+				{
+				N: {
+					an: 30,
+					X: 10,
+					ae: function (_v1) {
+						return $author$project$Playground$group(
+							_List_fromArray(
+								[
+									A2($author$project$Playground$circle, $author$project$Playground$red, 2),
+									A2($author$project$Playground$circle, $author$project$Playground$white, 1)
+								]));
+					},
+					n: A2($author$project$AltMath$Vector2$vec2, 4, 4),
+					g: 3,
+					h: 0
+				},
+				V: 5,
+				bw: 15
+			}
+			])
+	};
+};
+var $author$project$Extra$Jump$config = {
+	M: 0.5,
+	cC: A2($author$project$AltMath$Vector2$vec2, -0.125, -0.05),
+	cG: A2($author$project$AltMath$Vector2$vec2, 0, -0.4),
+	bx: 9,
+	x: 3
+};
+var $author$project$AltMath$Vector2$add = F2(
+	function (a, b) {
+		return A2($author$project$AltMath$Vector2$Vec2, a.g + b.g, a.h + b.h);
+	});
+var $author$project$Extra$Jump$Collision$applyIf = F3(
+	function (bool, f, world) {
+		return bool ? f(world) : world;
+	});
+var $elm$core$Basics$ge = _Utils_ge;
+var $author$project$Extra$Jump$Collision$intersection = F8(
+	function (x1, y1, x2, y2, x3, y3, x4, y4) {
+		var den = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
+		if (!den) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var u = (-(((x1 - x2) * (y1 - y3)) - ((y1 - y2) * (x1 - x3)))) / den;
+			var t = (((x1 - x3) * (y3 - y4)) - ((y1 - y3) * (x3 - x4))) / den;
+			return ((t >= 0) && ((t <= 1) && ((u >= 0) && (u <= 1)))) ? $elm$core$Maybe$Just(
+				_Utils_Tuple2(t, u)) : $elm$core$Maybe$Nothing;
+		}
+	});
+var $author$project$Extra$Jump$Collision$intersectionVec2 = F4(
+	function (p1, p2, p3, p4) {
+		return A8($author$project$Extra$Jump$Collision$intersection, p1.g, p1.h, p2.g, p2.h, p3.g, p3.h, p4.g, p4.h);
+	});
+var $author$project$Extra$Jump$Collision$isLeft = F3(
+	function (a, b, c) {
+		return _Utils_cmp((b.g - a.g) * (c.h - a.h), (b.h - a.h) * (c.g - a.g)) < 0;
+	});
+var $author$project$AltMath$Vector2$length = function (_v0) {
+	var x = _v0.g;
+	var y = _v0.h;
+	return $elm$core$Basics$sqrt((x * x) + (y * y));
+};
+var $author$project$AltMath$Vector2$normalize = function (v2) {
+	var len = $author$project$AltMath$Vector2$length(v2);
+	return A2($author$project$AltMath$Vector2$Vec2, v2.g / len, v2.h / len);
+};
+var $author$project$Extra$Jump$Collision$leftNormal = function (vec) {
+	var _v0 = $author$project$AltMath$Vector2$normalize(vec);
+	var x = _v0.g;
+	var y = _v0.h;
+	return A2($author$project$AltMath$Vector2$vec2, -y, x);
+};
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (!maybe.$) {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $author$project$AltMath$Vector2$lengthSquared = function (_v0) {
+	var x = _v0.g;
+	var y = _v0.h;
+	return (x * x) + (y * y);
+};
+var $author$project$AltMath$Vector2$max = F2(
+	function (a, b) {
+		return (_Utils_cmp(
+			$author$project$AltMath$Vector2$lengthSquared(a),
+			$author$project$AltMath$Vector2$lengthSquared(b)) > 0) ? a : b;
+	});
+var $author$project$AltMath$Vector2$dot = F2(
+	function (a, b) {
+		return (a.g * b.g) + (a.h * b.h);
+	});
+var $author$project$AltMath$Vector2$scale = F2(
+	function (s, v2) {
+		return A2($author$project$AltMath$Vector2$Vec2, s * v2.g, s * v2.h);
+	});
+var $author$project$AltMath$Vector2$scalarProjection = F2(
+	function (a, b) {
+		return A2(
+			$author$project$AltMath$Vector2$scale,
+			A2($author$project$AltMath$Vector2$dot, a, b) / $author$project$AltMath$Vector2$lengthSquared(b),
+			b);
+	});
+var $author$project$Extra$Jump$Collision$slopeFix = 1 / 32;
+var $author$project$AltMath$Vector2$sub = F2(
+	function (a, b) {
+		return A2($author$project$AltMath$Vector2$Vec2, a.g - b.g, a.h - b.h);
+	});
+var $author$project$Extra$Jump$Collision$lineCircle = F2(
+	function (wall, player) {
+		var zeroedWall = A2($author$project$AltMath$Vector2$sub, wall.q, wall.p);
+		var normal = $author$project$Extra$Jump$Collision$leftNormal(zeroedWall);
+		var point = A2(
+			$author$project$AltMath$Vector2$add,
+			player.f,
+			A2($author$project$AltMath$Vector2$scale, player.X + $author$project$Extra$Jump$Collision$slopeFix, normal));
+		return A3($author$project$Extra$Jump$Collision$isLeft, wall.p, wall.q, point) ? A2(
+			$elm$core$Maybe$withDefault,
+			player,
+			A2(
+				$elm$core$Maybe$map,
+				function (_v0) {
+					var t = _v0.a;
+					var u = _v0.b;
+					var restV = A2($author$project$AltMath$Vector2$scale, 1 - t, player.n);
+					var calcRest = A2($author$project$AltMath$Vector2$scalarProjection, restV, zeroedWall);
+					return _Utils_update(
+						player,
+						{
+							ar: A2($author$project$AltMath$Vector2$max, normal, player.ar),
+							n: A2(
+								$author$project$AltMath$Vector2$add,
+								A2($author$project$AltMath$Vector2$scale, -$author$project$Extra$Jump$Collision$slopeFix, normal),
+								A2(
+									$author$project$AltMath$Vector2$add,
+									calcRest,
+									A2($author$project$AltMath$Vector2$scale, t, player.n)))
+						});
+				},
+				A4(
+					$author$project$Extra$Jump$Collision$intersectionVec2,
+					point,
+					A2($author$project$AltMath$Vector2$add, point, player.n),
+					wall.p,
+					wall.q))) : (A3($author$project$Extra$Jump$Collision$isLeft, wall.p, wall.q, player.f) ? A2(
+			$elm$core$Maybe$withDefault,
+			player,
+			A2(
+				$elm$core$Maybe$map,
+				function (_v1) {
+					var t = _v1.a;
+					var u = _v1.b;
+					return _Utils_update(
+						player,
+						{
+							ar: A2($author$project$AltMath$Vector2$max, normal, player.ar),
+							n: A2(
+								$author$project$AltMath$Vector2$add,
+								A2(
+									$author$project$AltMath$Vector2$add,
+									A2($author$project$AltMath$Vector2$scale, -player.X, normal),
+									A2(
+										$author$project$AltMath$Vector2$scale,
+										t,
+										A2($author$project$AltMath$Vector2$scale, player.X, normal))),
+								A2($author$project$AltMath$Vector2$scale, 0.4, player.n))
+						});
+				},
+				A4($author$project$Extra$Jump$Collision$intersectionVec2, player.f, point, wall.p, wall.q))) : player);
+	});
+var $author$project$AltMath$Vector2$mul = F2(
+	function (a, b) {
+		return {g: a.g * b.g, h: a.h * b.h};
+	});
+var $author$project$Extra$Jump$Collision$precision = 1.0e10;
+var $author$project$Extra$Jump$Collision$roundVec = function (_v0) {
+	var x = _v0.g;
+	var y = _v0.h;
+	return {
+		g: $elm$core$Basics$round(x * $author$project$Extra$Jump$Collision$precision) / $author$project$Extra$Jump$Collision$precision,
+		h: $elm$core$Basics$round(y * $author$project$Extra$Jump$Collision$precision) / $author$project$Extra$Jump$Collision$precision
+	};
+};
+var $author$project$Extra$Jump$Collision$zero = A2($author$project$AltMath$Vector2$vec2, 0, 0);
+var $author$project$Extra$Jump$Collision$simulate = F3(
+	function (config, player, _static) {
+		var acc = $author$project$Extra$Jump$Collision$roundVec(
+			A2(
+				$author$project$AltMath$Vector2$add,
+				config.cG,
+				A2(
+					$author$project$AltMath$Vector2$add,
+					A2($author$project$AltMath$Vector2$mul, config.cC, player.n),
+					player.M)));
+		var forceApplied = _Utils_update(
+			player,
+			{
+				ar: $author$project$Extra$Jump$Collision$zero,
+				n: A2(
+					$author$project$AltMath$Vector2$add,
+					A2($author$project$AltMath$Vector2$scale, 1.5, acc),
+					player.n)
+			});
+		var newPlayer = A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, forceApplied, _static);
+		return _Utils_update(
+			newPlayer,
+			{
+				f: A2($author$project$AltMath$Vector2$add, newPlayer.f, newPlayer.n),
+				n: $author$project$Extra$Jump$Collision$roundVec(
+					A3(
+						$author$project$Extra$Jump$Collision$applyIf,
+						_Utils_eq(newPlayer.n, forceApplied.n),
+						$author$project$AltMath$Vector2$add(
+							A2($author$project$AltMath$Vector2$scale, -0.5, acc)),
+						newPlayer.n))
+			});
+	});
+var $author$project$Extra$Jump$simulate = function (memory) {
+	return _Utils_update(
+		memory,
+		{
+			e: A3($author$project$Extra$Jump$Collision$simulate, $author$project$Extra$Jump$config, memory.e, memory.be)
+		});
+};
+var $author$project$Extra$Jump$updateBullet = F2(
+	function (computer, memory) {
+		return function (bullets) {
+			return _Utils_update(
+				memory,
+				{U: bullets});
+		}(
+			A3(
+				$elm$core$List$foldl,
+				F2(
+					function (mob, bullets) {
+						var y = mob.h + mob.n.h;
+						var x = mob.g + mob.n.g;
+						return ((_Utils_cmp(y, computer.Y.bg) > 0) || ((_Utils_cmp(y, computer.Y.aJ) < 0) || ((_Utils_cmp(x, memory.e.f.g + computer.Y.aB) > 0) || (_Utils_cmp(x, computer.Y.az + memory.e.f.g) < 0)))) ? bullets : A2(
+							$elm$core$List$cons,
+							_Utils_update(
+								mob,
+								{g: x, h: y}),
+							bullets);
+					}),
+				_List_Nil,
+				memory.U));
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Extra$Jump$updateMovement = F2(
+	function (_v0, memory) {
+		var keyboard = _v0.a5;
+		var player = memory.e;
+		var x = (keyboard.az && (!keyboard.bc)) ? (-$author$project$Extra$Jump$config.M) : ((keyboard.aB && (!keyboard.bc)) ? $author$project$Extra$Jump$config.M : 0);
+		var _v1 = (keyboard.cY && (_Utils_cmp(player.ar.h, -0.5) < 0)) ? _Utils_Tuple2(
+			A2($author$project$AltMath$Vector2$vec2, x, $author$project$Extra$Jump$config.bx),
+			A2($author$project$AltMath$Vector2$setY, 0, player.n)) : _Utils_Tuple2(
+			A2($author$project$AltMath$Vector2$vec2, x, 0),
+			player.n);
+		var acc = _v1.a;
+		var v = _v1.b;
+		return _Utils_update(
+			memory,
+			{
+				e: _Utils_update(
+					player,
+					{M: acc, n: v})
+			});
+	});
+var $author$project$AltMath$Vector2$negate = function (a) {
+	return A2($author$project$AltMath$Vector2$Vec2, -a.g, -a.h);
+};
+var $author$project$Extra$Jump$Direction$east = {g: 1, h: 0};
+var $author$project$Extra$Jump$Direction$neither = {g: 0, h: 0};
+var $author$project$Extra$Jump$Direction$north = {g: 0, h: 1};
+var $author$project$Extra$Jump$Direction$northEast = {g: 1, h: 1};
+var $author$project$Extra$Jump$Direction$northWest = {g: -1, h: 1};
+var $author$project$Extra$Jump$Direction$south = {g: 0, h: -1};
+var $author$project$Extra$Jump$Direction$southEast = {g: 1, h: -1};
+var $author$project$Extra$Jump$Direction$southWest = {g: -1, h: -1};
+var $author$project$Extra$Jump$Direction$west = {g: -1, h: 0};
+var $author$project$Extra$Jump$Direction$toRecord = function (dir) {
+	switch (dir) {
+		case 0:
+			return $author$project$Extra$Jump$Direction$north;
+		case 1:
+			return $author$project$Extra$Jump$Direction$northEast;
+		case 2:
+			return $author$project$Extra$Jump$Direction$east;
+		case 3:
+			return $author$project$Extra$Jump$Direction$southEast;
+		case 4:
+			return $author$project$Extra$Jump$Direction$south;
+		case 5:
+			return $author$project$Extra$Jump$Direction$southWest;
+		case 6:
+			return $author$project$Extra$Jump$Direction$west;
+		case 7:
+			return $author$project$Extra$Jump$Direction$northWest;
+		default:
+			return $author$project$Extra$Jump$Direction$neither;
+	}
+};
+var $author$project$Extra$Jump$shoot = F2(
+	function (weapon, memory) {
+		var player = memory.e;
+		var dirRecord = $author$project$Extra$Jump$Direction$toRecord(memory.e.O);
+		var v = A2(
+			$author$project$AltMath$Vector2$add,
+			A2($author$project$AltMath$Vector2$setY, 0, player.n),
+			A2($author$project$AltMath$Vector2$mul, weapon.N.n, dirRecord));
+		var bullet = {an: weapon.N.an, X: weapon.N.X, ae: weapon.N.ae, n: v, g: memory.e.f.g + weapon.N.g, h: memory.e.f.h + weapon.N.h};
+		return _Utils_update(
+			memory,
+			{
+				U: A2($elm$core$List$cons, bullet, memory.U),
+				e: _Utils_update(
+					player,
+					{
+						M: A2(
+							$author$project$AltMath$Vector2$mul,
+							A2($author$project$AltMath$Vector2$vec2, 3, 9),
+							$author$project$AltMath$Vector2$negate(dirRecord))
+					})
+			});
+	});
+var $author$project$Extra$Jump$updateShoot = F2(
+	function (computer, state) {
+		return function (_v1) {
+			var a = _v1.a;
+			var b = _v1.b;
+			return _Utils_update(
+				b,
+				{bh: a});
+		}(
+			A3(
+				$elm$core$List$foldl,
+				F2(
+					function (weapon, _v0) {
+						var acc = _v0.a;
+						var model = _v0.b;
+						return (computer.a5.bc && (weapon.V <= 0)) ? _Utils_Tuple2(
+							A2(
+								$elm$core$List$cons,
+								_Utils_update(
+									weapon,
+									{V: weapon.bw}),
+								acc),
+							A2($author$project$Extra$Jump$shoot, weapon, model)) : ((weapon.V > 0) ? _Utils_Tuple2(
+							A2(
+								$elm$core$List$cons,
+								_Utils_update(
+									weapon,
+									{V: weapon.V - 1}),
+								acc),
+							model) : _Utils_Tuple2(
+							A2($elm$core$List$cons, weapon, acc),
+							model));
+					}),
+				_Utils_Tuple2(_List_Nil, state),
+				state.bh));
+	});
+var $author$project$Extra$Jump$update = F2(
+	function (computer, memory) {
+		if (memory.$ === 1) {
+			var m = memory.a;
+			return $author$project$Extra$Jump$Play(
+				$author$project$Extra$Jump$simulate(
+					A2(
+						$author$project$Extra$Jump$updateShoot,
+						computer,
+						A2(
+							$author$project$Extra$Jump$updateBullet,
+							computer,
+							A2(
+								$author$project$Extra$Jump$animatePlayer,
+								computer,
+								A2($author$project$Extra$Jump$updateMovement, computer, m))))));
+		} else {
+			return $author$project$Extra$Jump$Play(
+				$author$project$Extra$Jump$initGame(computer));
+		}
+	});
+var $author$project$Extra$Jump$andFold = F3(
+	function (l, fn, acc) {
+		return A3($elm$core$List$foldr, fn, acc, l);
+	});
+var $elm$core$Basics$atan2 = _Basics_atan2;
+var $author$project$Playground$move = F3(
+	function (dx, dy, _v0) {
+		var shape = _v0;
+		var x = shape.g;
+		var y = shape.h;
+		var a = shape.an;
+		var sx = shape.b;
+		var sy = shape.c;
+		var o = shape.a;
+		var form = shape.d;
+		return _Utils_update(
+			shape,
+			{g: x + dx, h: y + dy});
+	});
+var $elm$core$Basics$pi = _Basics_pi;
+var $author$project$Playground$Shader$fragFill = {
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n\n        void main () {\n            gl_FragColor = color;\n\n        }\n    ',
+	attributes: {},
+	uniforms: {color: 'cs'}
+};
+var $author$project$Playground$Shader$vertNone = {
+	src: '\n        precision mediump float;\n        attribute vec2 aP;\n        uniform vec4 uT;\n        uniform vec2 uP;\n        void main () {\n            gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n        }\n    ',
+	attributes: {aP: 'ao'},
+	uniforms: {uP: 'ch', uT: 'ci'}
+};
+var $author$project$Playground$Render$rect = F4(
+	function (color, uP, uT, opacity) {
+		return A5(
+			$elm_explorations$webgl$WebGL$entityWith,
+			$author$project$Playground$Render$defaultEntitySettings,
+			$author$project$Playground$Shader$vertNone,
+			$author$project$Playground$Shader$fragFill,
+			$author$project$Playground$Shader$mesh,
+			{
+				cs: A2($author$project$Playground$Render$setAlpha, color, opacity),
+				ch: uP,
+				ci: uT
+			});
+	});
+var $author$project$Playground$rectangle = F3(
+	function (color, width, height) {
+		return {
+			an: 0,
+			d: A3(
+				$author$project$Playground$Internal$Form,
+				width,
+				height,
+				$author$project$Playground$Render$rect(color)),
+			a: 1,
+			b: 1,
+			c: 1,
+			g: 0,
+			h: 0
+		};
+	});
+var $elm$core$Basics$degrees = function (angleInDegrees) {
+	return (angleInDegrees * $elm$core$Basics$pi) / 180;
+};
+var $author$project$Playground$rotate = F2(
+	function (da, _v0) {
+		var shape = _v0;
+		var x = shape.g;
+		var y = shape.h;
+		var a = shape.an;
+		var sx = shape.b;
+		var sy = shape.c;
+		var o = shape.a;
+		var form = shape.d;
+		return _Utils_update(
+			shape,
+			{
+				an: a + $elm$core$Basics$degrees(da)
+			});
+	});
+var $author$project$Playground$Shader$fragNgon = {
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        uniform float n;\n        varying vec2 uv;\n        void main () {\n            float angle = 3.1415926535897932384626433832795;\n            float a = atan(uv.x,uv.y) + angle;\n            float b = 6.28319 / n;\n            float f = smoothstep(0.5,.5,cos(floor(.5 + a/b)*b-a)*length(uv));\n            gl_FragColor = color;\n            gl_FragColor.a -= f;\n        }\n    ',
+	attributes: {},
+	uniforms: {color: 'cs', n: 'cQ'}
+};
+var $author$project$Playground$Render$ngon = F5(
+	function (n, color, uP, uT, opacity) {
+		return A5(
+			$elm_explorations$webgl$WebGL$entityWith,
+			$author$project$Playground$Render$defaultEntitySettings,
+			$author$project$Playground$Shader$vertRect,
+			$author$project$Playground$Shader$fragNgon,
+			$author$project$Playground$Shader$mesh,
+			{
+				cs: A2($author$project$Playground$Render$setAlpha, color, opacity),
+				cQ: n,
+				ch: uP,
+				ci: uT
+			});
+	});
+var $author$project$Playground$triangle = F2(
+	function (color, radius) {
+		return {
+			an: 0,
+			d: A3(
+				$author$project$Playground$Internal$Form,
+				radius * 2,
+				radius * 2,
+				A2($author$project$Playground$Render$ngon, 3, color)),
+			a: 1,
+			b: 1,
+			c: 1,
+			g: 0,
+			h: 0
+		};
+	});
+var $author$project$Extra$Jump$drawSegment_ = F6(
+	function (start_, end_, _v0, c1, c2, c3) {
+		var p1 = _v0.p;
+		var p2 = _v0.q;
+		var w = $author$project$AltMath$Vector2$length(
+			A2($author$project$AltMath$Vector2$sub, p1, p2));
+		var start = start_ ? _List_fromArray(
+			[
+				A3(
+				$author$project$Playground$move,
+				p1.g,
+				p1.h,
+				A2($author$project$Playground$circle, c1, 2))
+			]) : _List_Nil;
+		var a = (A2($elm$core$Basics$atan2, p2.h - p1.h, p2.g - p1.g) / $elm$core$Basics$pi) * 180;
+		var addon = end_ ? _List_fromArray(
+			[
+				A2(
+				$author$project$Playground$rotate,
+				-90,
+				A2(
+					$author$project$Playground$rotate,
+					a,
+					A3(
+						$author$project$Playground$move,
+						p2.g,
+						p2.h,
+						A2($author$project$Playground$triangle, c2, 3))))
+			]) : _List_Nil;
+		return $author$project$Playground$group(
+			_Utils_ap(
+				_List_fromArray(
+					[
+						A2(
+						$author$project$Playground$rotate,
+						a,
+						A3(
+							$author$project$Playground$move,
+							(p1.g + p2.g) / 2,
+							(p1.h + p2.h) / 2,
+							A3($author$project$Playground$rectangle, c3, w, 1)))
+					]),
+				_Utils_ap(start, addon)));
+	});
+var $author$project$Extra$Jump$drawSegment = A2($author$project$Extra$Jump$drawSegment_, true, true);
+var $author$project$Playground$fade = F2(
+	function (o, _v0) {
+		var shape = _v0;
+		return _Utils_update(
+			shape,
+			{a: o});
+	});
+var $author$project$Playground$moveX = F2(
+	function (dx, _v0) {
+		var shape = _v0;
+		var x = shape.g;
+		var y = shape.h;
+		var a = shape.an;
+		var sx = shape.b;
+		var sy = shape.c;
+		var o = shape.a;
+		var form = shape.d;
+		return _Utils_update(
+			shape,
+			{g: x + dx});
+	});
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $elm$core$Basics$clamp = F3(
+	function (low, high, number) {
+		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
+	});
+var $author$project$Playground$colorClamp = function (number) {
+	return A3(
+		$elm$core$Basics$clamp,
+		0,
+		255,
+		$elm$core$Basics$round(number));
+};
+var $author$project$Playground$rgb = F3(
+	function (r, g, b) {
+		return A3(
+			$elm_explorations$linear_algebra$Math$Vector3$vec3,
+			$author$project$Playground$colorClamp(r) / 255,
+			$author$project$Playground$colorClamp(g) / 255,
+			$author$project$Playground$colorClamp(b) / 255);
+	});
+var $author$project$Extra$Jump$randomColor = function (i) {
+	var getAt = F2(
+		function (idx, xs) {
+			return (idx < 0) ? $elm$core$Maybe$Nothing : $elm$core$List$head(
+				A2($elm$core$List$drop, idx, xs));
+		});
+	return A2(
+		$elm$core$Maybe$withDefault,
+		A3($author$project$Playground$rgb, 196, 223, 15),
+		A2(
+			getAt,
+			A2($elm$core$Basics$modBy, 11, i),
+			_List_fromArray(
+				[
+					A3($author$project$Playground$rgb, 130, 178, 182),
+					A3($author$project$Playground$rgb, 226, 23, 49),
+					A3($author$project$Playground$rgb, 57, 54, 134),
+					A3($author$project$Playground$rgb, 204, 2, 181),
+					A3($author$project$Playground$rgb, 18, 187, 231),
+					A3($author$project$Playground$rgb, 8, 144, 133),
+					A3($author$project$Playground$rgb, 129, 8, 16),
+					A3($author$project$Playground$rgb, 156, 230, 146),
+					A3($author$project$Playground$rgb, 5, 77, 37),
+					A3($author$project$Playground$rgb, 72, 116, 216),
+					A3($author$project$Playground$rgb, 196, 223, 15)
+				])));
+};
 var $author$project$Playground$yellow = A2(
 	$elm$core$Maybe$withDefault,
 	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
 	$author$project$Playground$hexColor2Vec3('#edd400'));
 var $author$project$Extra$Jump$debug = F2(
 	function (computer, memory) {
-		var player = memory.n;
-		var _static = memory.a8;
+		var player = memory.e;
+		var _static = memory.be;
 		return $author$project$Playground$group(
 			A3(
 				$elm$core$List$foldl,
 				F2(
 					function (_v0, acc) {
-						var p1 = _v0.q;
-						var p2 = _v0.r;
+						var p1 = _v0.p;
+						var p2 = _v0.q;
 						var w = $author$project$AltMath$Vector2$length(
 							A2($author$project$AltMath$Vector2$sub, p1, p2));
-						var a = (A2($elm$core$Basics$atan2, p2.g - p1.g, p2.f - p1.f) / $elm$core$Basics$pi) * 180;
+						var a = (A2($elm$core$Basics$atan2, p2.h - p1.h, p2.g - p1.g) / $elm$core$Basics$pi) * 180;
 						return A2(
 							$elm$core$List$cons,
 							A2(
@@ -9570,8 +9695,8 @@ var $author$project$Extra$Jump$debug = F2(
 									a,
 									A3(
 										$author$project$Playground$move,
-										(p1.f + p2.f) / 2,
 										(p1.g + p2.g) / 2,
+										(p1.h + p2.h) / 2,
 										$author$project$Playground$group(
 											_List_fromArray(
 												[
@@ -9598,9 +9723,45 @@ var $author$project$Extra$Jump$debug = F2(
 								$author$project$Extra$Jump$randomColor(i),
 								$author$project$Extra$Jump$randomColor(i));
 						}),
-					player.aF),
+					player.aL),
 				_static));
 	});
+var $author$project$Playground$Advanced$custom = F3(
+	function (width, height, render) {
+		return {
+			an: 0,
+			d: A3($author$project$Playground$Internal$Form, width, height, render),
+			a: 1,
+			b: 1,
+			c: 1,
+			g: 0,
+			h: 0
+		};
+	});
+var $author$project$Extra$Jump$TileMap$vertFullscreen = {
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n\n            void main () {\n\n                gl_Position = vec4(aP, 0., 1.0);\n            }\n        ',
+	attributes: {aP: 'ao'},
+	uniforms: {}
+};
+var $author$project$Extra$Jump$TileMap$fullscreen = A3(
+	$author$project$Playground$Advanced$custom,
+	1,
+	1,
+	F3(
+		function (translate, scaleRotateSkew, opacity) {
+			return A5(
+				$elm_explorations$webgl$WebGL$entityWith,
+				$author$project$Playground$Render$defaultEntitySettings,
+				$author$project$Extra$Jump$TileMap$vertFullscreen,
+				$author$project$Playground$Shader$fragFill,
+				$author$project$Playground$Shader$mesh,
+				{
+					cs: A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 14 / 255, 21 / 255, 28 / 255, 1),
+					cg: opacity,
+					ch: translate,
+					ci: scaleRotateSkew
+				});
+		}));
 var $author$project$Extra$Jump$Sprite$getAt = F2(
 	function (idx, xs) {
 		return (idx < 0) ? $elm$core$Maybe$Nothing : $elm$core$List$head(
@@ -9611,34 +9772,22 @@ var $author$project$Playground$Extra$scaleX = F2(
 		var shape = _v0;
 		return _Utils_update(
 			shape,
-			{c: shape.c * sx});
+			{b: shape.b * sx});
 	});
 var $author$project$Extra$Jump$Sprite$image = 'data:image/png;base64,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';
 var $author$project$Playground$moveY = F2(
 	function (dy, _v0) {
 		var shape = _v0;
-		var x = shape.f;
-		var y = shape.g;
-		var a = shape.b;
-		var sx = shape.c;
-		var sy = shape.d;
+		var x = shape.g;
+		var y = shape.h;
+		var a = shape.an;
+		var sx = shape.b;
+		var sy = shape.c;
 		var o = shape.a;
-		var form = shape.e;
+		var form = shape.d;
 		return _Utils_update(
 			shape,
-			{g: y + dy});
-	});
-var $author$project$Playground$Advanced$custom = F3(
-	function (width, height, render) {
-		return {
-			b: 0,
-			e: A3($author$project$Playground$Internal$Form, width, height, render),
-			a: 1,
-			c: 1,
-			d: 1,
-			f: 0,
-			g: 0
-		};
+			{h: y + dy});
 	});
 var $author$project$Playground$Extra$size = function (t) {
 	return function (_v0) {
@@ -9651,12 +9800,12 @@ var $author$project$Playground$Extra$size = function (t) {
 var $author$project$Playground$Shader$fragImage = {
 	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform float uA;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel);\n            gl_FragColor.a *= uA;\n        }\n    ',
 	attributes: {},
-	uniforms: {uA: 'ba', uImg: 'az', uImgSize: 'aA'}
+	uniforms: {uA: 'cg', uImg: 'aE', uImgSize: 'aF'}
 };
 var $author$project$Playground$Shader$vertSprite = {
 	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            uniform vec4 uUV;\n            void main () {\n                vec2 aP_ = aP * .5 + 0.5;\n                uv = uUV.xy + (aP_ * uUV.zw);\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
-	attributes: {aP: 'al'},
-	uniforms: {uP: 'M', uT: 'N', uUV: 'cf'}
+	attributes: {aP: 'ao'},
+	uniforms: {uP: 'ch', uT: 'ci', uUV: 'cj'}
 };
 var $author$project$Playground$Render$sprite = F6(
 	function (image_, imageSize, uv, translate, scaleRotateSkew, opacity) {
@@ -9666,7 +9815,7 @@ var $author$project$Playground$Render$sprite = F6(
 			$author$project$Playground$Shader$vertSprite,
 			$author$project$Playground$Shader$fragImage,
 			$author$project$Playground$Shader$mesh,
-			{ba: opacity, az: image_, aA: imageSize, M: translate, N: scaleRotateSkew, cf: uv});
+			{cg: opacity, aE: image_, aF: imageSize, ch: translate, ci: scaleRotateSkew, cj: uv});
 	});
 var $author$project$Playground$Internal$Textured = F2(
 	function (a, b) {
@@ -9675,13 +9824,13 @@ var $author$project$Playground$Internal$Textured = F2(
 var $author$project$Playground$Advanced$useTexture = F2(
 	function (url, fn) {
 		return {
-			b: 0,
-			e: A2($author$project$Playground$Internal$Textured, url, fn),
+			an: 0,
+			d: A2($author$project$Playground$Internal$Textured, url, fn),
 			a: 1,
+			b: 1,
 			c: 1,
-			d: 1,
-			f: 0,
-			g: 0
+			g: 0,
+			h: 0
 		};
 	});
 var $author$project$Playground$Extra$sprite = F4(
@@ -9702,13 +9851,13 @@ var $author$project$Playground$Extra$sprite = F4(
 			});
 	});
 var $author$project$Extra$Jump$Sprite$sheet = {
-	aE: A4(
+	aK: A4(
 		$author$project$Playground$Extra$sprite,
 		12,
 		18,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.07391304347826087, 0, 0.05217391304347826, 0.23684210526315788)),
-	aH: A2(
+	aN: A2(
 		$author$project$Playground$moveY,
 		1,
 		A4(
@@ -9717,7 +9866,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.004347826086956522, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367))),
-	aI: A2(
+	aO: A2(
 		$author$project$Playground$moveY,
 		1.5,
 		A4(
@@ -9726,25 +9875,25 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			15,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.06956521739130435, 0.2894736842105262, 0.05652173913043478, 0.19736842105263158))),
-	ap: A4(
+	as: A4(
 		$author$project$Playground$Extra$sprite,
 		13,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.6565217391304348, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367)),
-	cu: A4(
+	cz: A4(
 		$author$project$Playground$Extra$sprite,
 		13,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.7217391304347827, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367)),
-	cv: A4(
+	cA: A4(
 		$author$project$Playground$Extra$sprite,
 		13,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.7869565217391304, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367)),
-	aJ: A2(
+	aP: A2(
 		$author$project$Playground$moveY,
 		0.5,
 		A4(
@@ -9753,13 +9902,13 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			17,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.8521739130434782, 0.26315789473684204, 0.05652173913043478, 0.2236842105263158))),
-	aK: A4(
+	aQ: A4(
 		$author$project$Playground$Extra$sprite,
 		13,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.13478260869565217, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367)),
-	aL: A2(
+	aR: A2(
 		$author$project$Playground$moveX,
 		0.5,
 		A2(
@@ -9771,7 +9920,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 				15,
 				$author$project$Extra$Jump$Sprite$image,
 				A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.2, 0.2894736842105262, 0.05217391304347826, 0.19736842105263158)))),
-	aM: A2(
+	aS: A2(
 		$author$project$Playground$moveX,
 		1,
 		A4(
@@ -9780,7 +9929,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.2608695652173913, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367))),
-	aN: A2(
+	aT: A2(
 		$author$project$Playground$moveX,
 		1,
 		A4(
@@ -9789,7 +9938,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.32608695652173914, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367))),
-	aO: A2(
+	aU: A2(
 		$author$project$Playground$moveX,
 		1,
 		A4(
@@ -9798,48 +9947,6 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.391304347826087, 0.2763157894736842, 0.05652173913043478, 0.21052631578947367))),
-	aq: A2(
-		$author$project$Playground$moveX,
-		0.5,
-		A4(
-			$author$project$Playground$Extra$sprite,
-			14,
-			16,
-			$author$project$Extra$Jump$Sprite$image,
-			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.45652173913043476, 0.2763157894736842, 0.06086956521739131, 0.21052631578947367))),
-	cw: A4(
-		$author$project$Playground$Extra$sprite,
-		13,
-		17,
-		$author$project$Extra$Jump$Sprite$image,
-		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5260869565217391, 0.26315789473684204, 0.05652173913043478, 0.2236842105263158)),
-	aP: A2(
-		$author$project$Playground$moveY,
-		-0.5,
-		A4(
-			$author$project$Playground$Extra$sprite,
-			13,
-			17,
-			$author$project$Extra$Jump$Sprite$image,
-			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5913, 0.2632, 0.05652, 0.2237))),
-	ab: A4(
-		$author$project$Playground$Extra$sprite,
-		14,
-		16,
-		$author$project$Extra$Jump$Sprite$image,
-		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.004347826086956522, 0.02631578947368418, 0.06086956521739131, 0.21052631578947367)),
-	as: A4(
-		$author$project$Playground$Extra$sprite,
-		14,
-		16,
-		$author$project$Extra$Jump$Sprite$image,
-		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.004347826086956522, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367)),
-	aQ: A4(
-		$author$project$Playground$Extra$sprite,
-		14,
-		15,
-		$author$project$Extra$Jump$Sprite$image,
-		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.07391304347826087, 0.5394736842105263, 0.06086956521739131, 0.19736842105263158)),
 	at: A2(
 		$author$project$Playground$moveX,
 		0.5,
@@ -9848,8 +9955,50 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			14,
 			16,
 			$author$project$Extra$Jump$Sprite$image,
+			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.45652173913043476, 0.2763157894736842, 0.06086956521739131, 0.21052631578947367))),
+	cB: A4(
+		$author$project$Playground$Extra$sprite,
+		13,
+		17,
+		$author$project$Extra$Jump$Sprite$image,
+		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5260869565217391, 0.26315789473684204, 0.05652173913043478, 0.2236842105263158)),
+	aV: A2(
+		$author$project$Playground$moveY,
+		-0.5,
+		A4(
+			$author$project$Playground$Extra$sprite,
+			13,
+			17,
+			$author$project$Extra$Jump$Sprite$image,
+			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5913, 0.2632, 0.05652, 0.2237))),
+	ac: A4(
+		$author$project$Playground$Extra$sprite,
+		14,
+		16,
+		$author$project$Extra$Jump$Sprite$image,
+		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.004347826086956522, 0.02631578947368418, 0.06086956521739131, 0.21052631578947367)),
+	av: A4(
+		$author$project$Playground$Extra$sprite,
+		14,
+		16,
+		$author$project$Extra$Jump$Sprite$image,
+		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.004347826086956522, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367)),
+	aW: A4(
+		$author$project$Playground$Extra$sprite,
+		14,
+		15,
+		$author$project$Extra$Jump$Sprite$image,
+		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.07391304347826087, 0.5394736842105263, 0.06086956521739131, 0.19736842105263158)),
+	aw: A2(
+		$author$project$Playground$moveX,
+		0.5,
+		A4(
+			$author$project$Playground$Extra$sprite,
+			14,
+			16,
+			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.7043478260869566, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367))),
-	cx: A2(
+	cD: A2(
 		$author$project$Playground$moveX,
 		0.5,
 		A4(
@@ -9858,7 +10007,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.7739130434782608, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367))),
-	cy: A2(
+	cE: A2(
 		$author$project$Playground$moveX,
 		0.5,
 		A4(
@@ -9867,7 +10016,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.8434782608695652, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367))),
-	aR: A2(
+	aX: A2(
 		$author$project$Playground$moveX,
 		0.5,
 		A2(
@@ -9879,49 +10028,49 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 				17,
 				$author$project$Extra$Jump$Sprite$image,
 				A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.9130434782608695, 0.513157894736842, 0.06086956521739131, 0.2236842105263158)))),
-	aS: A4(
+	aY: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.14347826086956522, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367)),
-	aT: A4(
+	aZ: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		15,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.21304347826086956, 0.5394736842105263, 0.06086956521739131, 0.19736842105263158)),
-	aU: A4(
+	a_: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		15,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.2826086956521739, 0.5394736842105263, 0.06086956521739131, 0.19736842105263158)),
-	aV: A4(
+	a$: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		15,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.3521739130434783, 0.5394736842105263, 0.06086956521739131, 0.19736842105263158)),
-	aW: A4(
+	a0: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.4217391304347826, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367)),
-	aX: A4(
+	a1: A4(
 		$author$project$Playground$Extra$sprite,
 		15,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.49130434782608695, 0.5263157894736843, 0.06521739130434782, 0.21052631578947367)),
-	cz: A4(
+	cF: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5652173913043478, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367)),
-	aY: A2(
+	a2: A2(
 		$author$project$Playground$moveX,
 		0.5,
 		A4(
@@ -9930,19 +10079,19 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.6347826086956522, 0.5263157894736843, 0.06086956521739131, 0.21052631578947367))),
-	b4: A4(
+	b5: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.004347826086956522, 0.7763157894736842, 0.06086956521739131, 0.21052631578947367)),
-	ax: A4(
+	aC: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		15,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.07391304347826087, 0.7894736842105262, 0.06086956521739131, 0.19736842105263158)),
-	ay: A2(
+	aD: A2(
 		$author$project$Playground$moveX,
 		1,
 		A4(
@@ -9951,15 +10100,6 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			16,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.7086956521739131, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367))),
-	b5: A2(
-		$author$project$Playground$moveX,
-		1,
-		A4(
-			$author$project$Playground$Extra$sprite,
-			15,
-			16,
-			$author$project$Extra$Jump$Sprite$image,
-			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.782608695652174, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367))),
 	b6: A2(
 		$author$project$Playground$moveX,
 		1,
@@ -9968,8 +10108,17 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			15,
 			16,
 			$author$project$Extra$Jump$Sprite$image,
-			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.8565217391304348, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367))),
+			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.782608695652174, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367))),
 	b7: A2(
+		$author$project$Playground$moveX,
+		1,
+		A4(
+			$author$project$Playground$Extra$sprite,
+			15,
+			16,
+			$author$project$Extra$Jump$Sprite$image,
+			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.8565217391304348, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367))),
+	b8: A2(
 		$author$project$Playground$moveX,
 		1,
 		A2(
@@ -9981,49 +10130,49 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 				17,
 				$author$project$Extra$Jump$Sprite$image,
 				A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.9304347826086956, 0.763157894736842, 0.06521739130434782, 0.2236842105263158)))),
-	b8: A4(
+	b9: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.14347826086956522, 0.7763157894736842, 0.06086956521739131, 0.21052631578947367)),
-	b9: A4(
+	ca: A4(
 		$author$project$Playground$Extra$sprite,
 		13,
 		15,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.21304347826086956, 0.7894736842105262, 0.05652173913043478, 0.19736842105263158)),
-	ca: A4(
-		$author$project$Playground$Extra$sprite,
-		14,
-		15,
-		$author$project$Extra$Jump$Sprite$image,
-		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.2782608695652174, 0.7894736842105262, 0.06086956521739131, 0.19736842105263158)),
 	cb: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		15,
 		$author$project$Extra$Jump$Sprite$image,
-		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.34782608695652173, 0.7894736842105262, 0.06086956521739131, 0.19736842105263158)),
+		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.2782608695652174, 0.7894736842105262, 0.06086956521739131, 0.19736842105263158)),
 	cc: A4(
+		$author$project$Playground$Extra$sprite,
+		14,
+		15,
+		$author$project$Extra$Jump$Sprite$image,
+		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.34782608695652173, 0.7894736842105262, 0.06086956521739131, 0.19736842105263158)),
+	cd: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.41739130434782606, 0.7763157894736842, 0.06086956521739131, 0.21052631578947367)),
-	cd: A4(
+	ce: A4(
 		$author$project$Playground$Extra$sprite,
 		15,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.48695652173913045, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367)),
-	cV: A4(
+	c$: A4(
 		$author$project$Playground$Extra$sprite,
 		15,
 		16,
 		$author$project$Extra$Jump$Sprite$image,
 		A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5608695652173913, 0.7763157894736842, 0.06521739130434782, 0.21052631578947367)),
-	ce: A2(
+	cf: A2(
 		$author$project$Playground$moveX,
 		1,
 		A4(
@@ -10044,54 +10193,125 @@ var $author$project$Extra$Jump$Sprite$idle = F2(
 			case 0:
 				return A2(
 					$elm$core$Maybe$withDefault,
-					$author$project$Extra$Jump$Sprite$sheet.ay,
+					$author$project$Extra$Jump$Sprite$sheet.aD,
 					get(
 						_List_fromArray(
-							[$author$project$Extra$Jump$Sprite$sheet.ce, $author$project$Extra$Jump$Sprite$sheet.ay, $author$project$Extra$Jump$Sprite$sheet.b5, $author$project$Extra$Jump$Sprite$sheet.b6, $author$project$Extra$Jump$Sprite$sheet.b7])));
+							[$author$project$Extra$Jump$Sprite$sheet.cf, $author$project$Extra$Jump$Sprite$sheet.aD, $author$project$Extra$Jump$Sprite$sheet.b6, $author$project$Extra$Jump$Sprite$sheet.b7, $author$project$Extra$Jump$Sprite$sheet.b8])));
 			case 1:
 				return A2(
 					$elm$core$Maybe$withDefault,
-					$author$project$Extra$Jump$Sprite$sheet.aY,
+					$author$project$Extra$Jump$Sprite$sheet.a2,
 					get(
 						_List_fromArray(
-							[$author$project$Extra$Jump$Sprite$sheet.at, $author$project$Extra$Jump$Sprite$sheet.aR])));
+							[$author$project$Extra$Jump$Sprite$sheet.aw, $author$project$Extra$Jump$Sprite$sheet.aX])));
 			case 2:
 				return A2(
 					$elm$core$Maybe$withDefault,
-					$author$project$Extra$Jump$Sprite$sheet.aP,
+					$author$project$Extra$Jump$Sprite$sheet.aV,
 					get(
 						_List_fromArray(
-							[$author$project$Extra$Jump$Sprite$sheet.ap, $author$project$Extra$Jump$Sprite$sheet.aJ])));
+							[$author$project$Extra$Jump$Sprite$sheet.as, $author$project$Extra$Jump$Sprite$sheet.aP])));
 			case 3:
-				return $author$project$Extra$Jump$Sprite$sheet.ab;
+				return $author$project$Extra$Jump$Sprite$sheet.ac;
 			case 4:
-				return $author$project$Extra$Jump$Sprite$sheet.aE;
+				return $author$project$Extra$Jump$Sprite$sheet.aK;
 			case 5:
-				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ab);
+				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ac);
 			case 6:
 				return A2(
 					$author$project$Playground$Extra$scaleX,
 					-1,
 					A2(
 						$elm$core$Maybe$withDefault,
-						$author$project$Extra$Jump$Sprite$sheet.aP,
+						$author$project$Extra$Jump$Sprite$sheet.aV,
 						get(
 							_List_fromArray(
-								[$author$project$Extra$Jump$Sprite$sheet.ap, $author$project$Extra$Jump$Sprite$sheet.aJ]))));
+								[$author$project$Extra$Jump$Sprite$sheet.as, $author$project$Extra$Jump$Sprite$sheet.aP]))));
 			case 7:
 				return A2(
 					$author$project$Playground$Extra$scaleX,
 					-1,
 					A2(
 						$elm$core$Maybe$withDefault,
-						$author$project$Extra$Jump$Sprite$sheet.aY,
+						$author$project$Extra$Jump$Sprite$sheet.a2,
 						get(
 							_List_fromArray(
-								[$author$project$Extra$Jump$Sprite$sheet.at, $author$project$Extra$Jump$Sprite$sheet.aR]))));
+								[$author$project$Extra$Jump$Sprite$sheet.aw, $author$project$Extra$Jump$Sprite$sheet.aX]))));
 			default:
-				return $author$project$Extra$Jump$Sprite$sheet.ax;
+				return $author$project$Extra$Jump$Sprite$sheet.aC;
 		}
 	});
+var $author$project$Extra$Jump$TileMap$lut1 = 'data:image/png;base64,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';
+var $author$project$Extra$Jump$TileMap$fragTileMap = {
+	src: '\nprecision mediump float;\nvarying vec2 uv;\nuniform sampler2D uAtlas;\nuniform sampler2D uLut;\nuniform vec2 uAtlasSize;\nuniform vec2 uLutSize;\nuniform vec2 uTileSize;\nuniform float uA;\nfloat color2float(vec4 color) {\n    return\n    color.a * 255.0\n    + color.b * 256.0 * 255.0\n    + color.g * 256.0 * 256.0 * 255.0\n    + color.r * 256.0 * 256.0 * 256.0 * 255.0;\n    }\nfloat modI(float a, float b) {\n   float m = a - floor((a + 0.5) / b) * b;\n   return floor(m + 0.5);\n}\n\nvoid main () {\n   vec2 point = uv * uLutSize;\n   vec2 look = floor(point);\n   //(2i + 1)/(2N) Pixel center\n   vec2 coordinate = (look + 0.5) / uLutSize;\n   float uIndex = color2float(texture2D(uLut, coordinate));\n   vec2 grid = uAtlasSize / uTileSize;\n   // tile indexes in uAtlas starts from zero, but in lut zero is used for\n   // \"none\" placeholder\n   vec2 tile = vec2(modI((uIndex - 1.), grid.x), int(uIndex - 1.) / int(grid.x));\n   // inverting reading botom to top\n   tile.y = grid.y - tile.y - 1.;\n   vec2 fragmentOffsetPx = floor((point - look) * uTileSize);\n   //(2i + 1)/(2N) Pixel center\n   vec2 pixel = (floor(tile * uTileSize + fragmentOffsetPx) + 0.5) / uAtlasSize;\n   gl_FragColor = texture2D(uAtlas, pixel);\n   gl_FragColor.a *= float(uIndex > 0.);\n   gl_FragColor.rgb *= gl_FragColor.a;\n\n}\n    ',
+	attributes: {},
+	uniforms: {uA: 'cg', uAtlas: 'c0', uAtlasSize: 'c1', uLut: 'c2', uLutSize: 'c3', uTileSize: 'c4'}
+};
+var $elm$core$Tuple$mapBoth = F3(
+	function (funcA, funcB, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			funcA(x),
+			funcB(y));
+	});
+var $author$project$Playground$Shader$vertImage = {
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            void main () {\n                uv = aP * .5 + 0.5;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
+	attributes: {aP: 'ao'},
+	uniforms: {uP: 'ch', uT: 'ci'}
+};
+var $author$project$Extra$Jump$TileMap$tileMap = F4(
+	function (tileW, tileH, tileset, lut) {
+		return A2(
+			$author$project$Playground$Advanced$useTexture,
+			tileset,
+			function (tileset_) {
+				return A2(
+					$author$project$Playground$Advanced$useTexture,
+					lut,
+					function (lut_) {
+						var _v0 = A3(
+							$elm$core$Tuple$mapBoth,
+							$elm$core$Basics$toFloat,
+							$elm$core$Basics$toFloat,
+							$elm_explorations$webgl$WebGL$Texture$size(lut_));
+						var w2 = _v0.a;
+						var h2 = _v0.b;
+						var _v1 = A3(
+							$elm$core$Tuple$mapBoth,
+							$elm$core$Basics$toFloat,
+							$elm$core$Basics$toFloat,
+							$elm_explorations$webgl$WebGL$Texture$size(tileset_));
+						var w1 = _v1.a;
+						var h1 = _v1.b;
+						return A3(
+							$author$project$Playground$Advanced$custom,
+							w2 * tileW,
+							h2 * tileH,
+							F3(
+								function (translate, scaleRotateSkew, opacity) {
+									return A5(
+										$elm_explorations$webgl$WebGL$entityWith,
+										$author$project$Playground$Render$defaultEntitySettings,
+										$author$project$Playground$Shader$vertImage,
+										$author$project$Extra$Jump$TileMap$fragTileMap,
+										$author$project$Playground$Shader$mesh,
+										{
+											cg: opacity,
+											c0: tileset_,
+											c1: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w1, h1),
+											c2: lut_,
+											c3: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w2, h2),
+											ch: translate,
+											ci: scaleRotateSkew,
+											c4: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, tileW, tileH)
+										});
+								}));
+					});
+			});
+	});
+var $author$project$Extra$Jump$TileMap$tileset1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAACgCAYAAAAy2+FlAAAAAXNSR0IArs4c6QAAIABJREFUeJztfX1wVVWW7+/EhMSAfBgvYgLN3KgYEzERxXYmDa0OvJ6B7ppn47TS3Ta03WCoQp1+w1CjVEHDFDqjdM3Q8gok6sCzp1Gf2DVPwzQF6jSY1mmUTsRcIkru0JKIXmjCV8iHct4f565z19l37332ufcmkHB+VbfOPWd/nH0/fmetvdbaa1tjx5fb0CCx+tGVuvLyf/zJCl356JpLdcX4uykJbfm3J2iL0VO9Xlu+e9Uibfn//KxW3/+EmLa896/v0ZY3vNSiLW9u+YP+/iMPact/fWiMtnzk8JHa8uqJ47XlFTVV2vLFn+dpy8/9eoO2/JtF+vFtW/YzbfmW+Qu05f+7bLS2/E86+7TlB4oKtOWzf/iEtvz9pkZ9/x36/9ex7i5tuf7bDxEixAWNkMAhQgxihAQOEWIQIyRwiBCDGCGBQ4QYxAgJHCLEIEZI4BAhBjGsLZb1U12Fh8ui2g4S7XFt+xBDCyuXbPwWgBUAKgC0rjix92ahynuo33ALnXS/WqeMMyj61gbLrzzb8Z6MrU/rf9jBZvReXY1hB5vT7hEpi9qH18QxfkkUifZ41vfPBSJlUZuPhZ+TBM4DMIK1uQyhdA6M7lfrfnoytv6n3a/WDZmH2solG99duWTj15PvvwXg/wG4GcDw5FHEdbJ+Zj7yH5j5yH+47wcSww42e150jSNSFrVPxtbbh9fEAQB0PN+IlEXtnz8cR6QsatN5YvWj7nl+st5wAJMBtMAh7vUA3gdwOsjN6Gk3snKR/Mm1qd55Gs5foC5XlSX7V/YN4NwE2HmfQFm+cslGe8WahcryyZVT7X2xPcryni2wC+fK++9+tc6mp3rv1dXofrVuRS4kyAWAm7/4ou+ZOTPmneg6e/qm4ktH+NX/ULzACTvzkf/Ajsf/MicDoz+xTlLuePyXJv08cXhNHGjWR+1lC1GSmiDRHrceWuuQ+KG1SfIuewyiBD4FYD+AG+CQtwUZkld872JTvX3y1i8c8hKRRWjIC2geDEnoyAsAOvICgI68AGBKXgDucSigt6/nGgA3FxVeqtfKxowCbq0ehU31p7Gp/l1sqv8mAA9hdzz+l2kSWJTMJhI6Uha1p18/HSvmz3SJnCkS7fGl45c4U0UKzaVzU0TKoja9VOWL5z6S0ViTJMbhNXEPeYGUBB4Q+BFwsIKTlVSzoULgs91nuj49/N/FANDdcxYSCfwegOtwxZgjuK78GgDXJK/fDOBVqiSSmIPOxSMHl16RsqhdUFiMt9vexYGOYky/fjp2AZ5yes9jzZf84u8BAGu+/4/Sz+qQ9gkAXvKKpBOlaKQsah/csRQNlY4Ef0gyZz24Yyn++TmkjVXWv3ifSFnU3jQtjlfmApvujWP+7vQ58GVwJO8HSEliX12Jg5NTSlSSvD5q8mAFSV96DZWH1UetTfaZMycAAJ99Kll4Ub/hFtRvuAzXlZ/orzEQYUnCjRt1BUqKivGn5bfg69FhuOOrha4kjpRFbS6Vq6u+4r4A53cSrxEqxpzDPTWlqBhzLm0MB3csdefFMsI1VC7C7Fj6wpoUeS8BANxYUwuZJD64YykSqx8FAPfIcfIF4NiyhTj5gvc6SeAz8M553wegXwYhge+fdggSF3A+t86aOphxbUWN1XE4jjOnT+DUyeOIt8Vw5VVfQdGwS8/lXXLJ71nVCll7sgPQ9yPaBfzKAUcSEYmB1AqdAx0xHADwaU8Prir82CFfTRVWbtohnReLhisRrcfz0Hq8AzL7bWFyfnxwx1JcPTN9BdJDZVGgcpFzFMZ+9cwn7HGjrnCvHTlxNG18I3/nUJHmuGIfD5VF7Z+v3oiHyqJSFfocvHPeU9pPGiIN5BIZStIXAC4tGl58Vdmf4OMPnT//qZPHcerkcQD4q607N7/GqrZCbpV24WfU05UTifm1Iz1dIFUaAPp6uoCmDqVR67EVztxalLy8/3tqSvGipI/UnDidvNSWyCu2TZ7bwrkHMtKK56JqDgCWZVnofrXuy7RRGaDoWxsu2XrftC9nf6fK9auJkF3vvboaOx7/JeY8v/sSAFg+ZeKX9KU2t/wB1VVf8V0n+0znCHS0tVzCJV/DSy2Y/Z3U+lVxLW7dG4ex4c7xgc75PEQcQ6I9bpWWV2klb1/yT6Y6miBIXdk9/eroILbPdixBP39HW0vafLOgsBhta6dhQt12AMAnG76B8od3o6+nKyPfrZ/3QcS6ZQvt1qYWrGtoTHuoiEi0x63yihF9ba2nCwBgyr0Re+8LCfdey6dM1LZf/5nebphvovqpFqVvvW+aTYThJCUDDvndiMSpfpxjaXmV/VTt5Whu+YOHsCry7jzOlARrBErLq+xv/6+Um6DziwL87C3vAum//VolfvZWDDPGjACQJ5SPTDsH4KnPMbX4mPt+T1eJdIwidH9ekz9xJoQPQl4TEovtgsD085cUpdRj/l4El8QHdyx1Lh5szpi8maC1KcWHRVee8/4vAZy6tNx9n2iPO0ktWr11yitG2G2tpwOPd9GV57D+szz3qLVC67JJ1L1xGADwyXfSMzYQmUXCinD+OJcr7yF+MYT/tsa57X90Z8raS2PiaG75Q5KMDj7q9WaAEM/F+hzlkya77/c0dSjHzZGtBApKXtk9TceTi7EQ+QCHgKafn5PVLwtFoj1uTajbbh/c4fz2E+q2Z0zeyZVTbcARJqK01+GV/Z0Akkay5DUSPDuPt2UyFF+I5F105Tk1gf3ISz8Cl7YmbR9s/COeqr3cJZtM2qqIC3jJS2Mh0NN53KgrXEPBeqSrOFQuO1epLIn2uPWizzxGBvqTqo5+yLUElo3DlMT9KYEJOukrouKb6wKNRQSRl2BK4oqaKnwbLVjXBsx5fnfgB0d5xYjABk9OWjoHJH5gvxxOADw/tilxAYe8gFxSAnriAunkJYiE5O9Nyv3qc2y4c7xy/P2BXEtgv3voSOxHOkBOPNXDQqY+mxA3W3Di8vuZSuDWphZXAgPOPFalRotz670vJCw+D+ak5BDJqqrnEtiEuECKhKbtxPriH8WUtKr2gJeAMslI5SZSM1IWtYPUzwX81Nr+mgPr7m/SLihM1GcgmBQuKSrGEcM5PIFIxQ2QQdTnipoqYH8qWR1Xo3/6XnfafXSQqcX8CKhJDgBWz2uL7KDkFX9obrk1qS/i2mEnpde5xFW1H8gVI5GyqD21+Bj2dJW49/WzQvvBRL3sbwmsGgeQvRXaFCrSqohFUyVA7lc1BUnjY91dviSeM2OeDQC79u9CQWFxINJzcAkcKYvafiT2k8CBXEjO/LXL/YET7fH8ujeg+xN/CaSrvdQWAKA0xafanG/yEkytz6bwmyOKdYL2Cf+Y9mJqIxsPmCm+v8gLmEnbXCMgeY8D6Ny1fxeA9P+jTI3+bfyY0f+TS1rVUSmBX/nBdF8CczVYIn3zZj7yXQDedZZASr2m8opvrkPra4s95bMlVmzChLrt+GTDN7TlIigM7m9u+orbd8NLLfiX3zvGstbjXiMVfwjMmTHP3rpzc04fCrSwo+E1J5Jn7lL9gov+xrplC20AWLx6Y7+NQ+dXbbg39bCf/YL8uwhqEc4Esnmw6p5zZsz7IxGXI9Eed10o5M/lJDYhsMwPLKrQOuRDs+5XJC6ANFV29neq0AukrbMk8lJ5xTfXoW3tNCDNxQTc+dD/Tbv3336t0ricgwha98ZhwGNsUn8ZU+6N2P+5fBV++NA7yjrZ4PZVywFEkmf6RPYnY+ttIjuQPeGJsIDXf8mvB8GL/74d1RPHo/nQYez+4FCgsTXcC3vGX7FzwFaRuL8gWp655Jc9OObMmGfLyAt4F01Q8NGMMSOkdh3R76vyA4vk9VOrlW4k0fhExBVVB1mkFSdn79XVLnnLH97tXn+q9nJPXfK9rv8sD9cOO5l0L+X5losIKoEJt69ajihmpV3nhMqETE7bCP5uSgJP7o2411VE5dee3BtBpGxE4DWkhEhZ1H76V0648tejw/CbeC8qapyy1qYW/Cbe69alct1586HD6Dw3Fr+J92Jf7JA17YaJdlASA8DOfwc4kTnIpuAnhTOdA5NmMLlyqm063452H0e8aAyi3ccBwH0fL0rtiuEXOSgL5pBBJKjfnDhP5hIRyQuo5z+6APEHG//oKW9bO82Rwqycq9DrP8tLM4j5lYtwAtLzUPfGYUyo244JddtR98Zh97oMe19IWGRUOBlbb0+5N5IKz0wSipPvqUcX2Pyouk5H2fYxt69ajif3Rjz9ctD1RHvcOjcB0rWmdK1nC6Rlifa4tS+2x/p6dBjWNTRa+2J7rB987yb84Hs3uediue68euJ47IvtsR646yYA/tuyiCBpS+QVpa9oEMzWQKjDvtgeq6So2DWeqcjLpe9PjnXiJ8c6ZdU88dXKQCDm/9VtOaSSwHTOr+cBDpH4i0OlOhO4tG14qcU9p35k5U/VXp5WriKnX7kKFWPOYcOd47HhzvHS5WEqOOpuCnOXwnpybwTj3usB4JDywcfqLX5UXX/wsXqLJKuMqJzY5RUjbPqBn9wbQWfTWdBDJe8TWIn2uOWGEW6qt4mgifa4VTgXFg8x5Krd4tm19rqGRqV0Est1582HnIc9SXU6D4LCubD+9he1nuQIpeVVtoys/TkP5gYsGoOq7qRuZ/+keyYA9/xgjOcagWL4CTyccsq9kT4AMA2dFI1WKgOWNhILSDdYmZAY8LqPgMvxVO3lKH94t6s2i+WA40oS45g5xPLHR43H6M/U4YwkhR3ojQF8DswDzQl7X0hYs64dac+6dqRU4i6eXeuS+MPmmHtOcEiccEn65NSbsLqvFQBc1bqtNUFEtzubzirHmmiPW5i/QDqTTrTHrS1PwJ67NKVOVtRUYV2N8+dsbWpB7d3PAfDOganc7Hy7XT1xGEbnZaY+A8C6hkaLPxg4UYlIfuqz7JpOjeaGNXEe7He/7aPHAgCuPBcFXk9d4xqpbIUTYe8LCXeHNJMoLFMDFgBYtDuh6HM0de4XFBanEZP3A8AjccXyH49WzwvWf5aHzkmlyvLRB+QE5vNgANr5b6I9bpHKHD06C/ErtgGAlMgAMOvakfZf/vU94NJXxIfNMaxraHSlsFheHR1jX/JV77NzWUEFnn2nGds+Ojkg1tcgq29kfejaq8rXLVtok/WbvyeYBlbQ/HdSaSWuKvxYuwZYHBc/97M+83GJ/3/RD7x8ykSbr6L7VfdY6XdMPmA6+lmhVdKXYFmWlXFOIXGhNcE0GMB0FUx/QnQj/evPb8Ptq5YrCUwgcpK0va66Eh82x3BddSW4Ci2223rfNPvZd5qxp6sEG+4cD3o/tfgY2r+4BM3x4xf8WuJMCQzI3VhBI6Lo/8qFDmAWFyCqyib3Ky2vOs7vQ/ftaGtxrVhb75tmAzAiML2XEVhmhdaB1gOnranlPlpVpBYFcpOvU3QhzXl+t8XLGl5qwYONf3R9wVytlqG55Q9YtVevptEXp4Iubln3g+syUMrArcoPrc1dTmHuRx5QH3KWGUSxIPmfqg+embOyYooda92bcwmcLXT2BJUEJncRdxvx9/QwUkncQOuBiXjiUQQNcvmUifYznY7FTWaNpqedWMbP9QsDsk9NTYEg/MEEJD/DlRPtVXsPWeKfsWcL7BEba9GzpdGmLIV+BOK+3p8/HMfcpfJ6s64dabd/cQk6eke7Urejd7T2z5fqW+9Dzhk21dtofA+jPvwA0kRXC+qc8ulfs0/seit93EnyytpzbS8bwh05cRTHupOZOJp2ZNpNzqCaA5P7SOdG8lOXZfHRhECLGbivizoqKJSt/03Bu5Bffq9rh53ER70jXZWcn/uN6dl39HmO+LibV0h8dZvq7YLNm9CXJPH3hw+3r19p4fSKRhTOhXUyBleyOgYiNYm5r5eMFaLlkea4kbLRdusl5zC84DqgV77yCRD8yEjF0JLEz7lU5uSVkdOvnJN311tpGSsuu4w9hCSGp8qKKTYdVVKYW9xpMcP53kVBtEIT9r6QsMorRniycBCZp9wbsT/ZrQ+V1C1yAAKklRUd1bwjmSpMRiuZ9Vl8nw0+KZBuBOBizvO7rT+LlkjV7N/Gj1mYvwB9m+rt8n/8Cf5s+HD72WfO4Ec/Hu66OUQ/cHnFWXv1/add4vhZlXUYnne90WcU/chiEAghiC1D+ofPMXnpMpH21CnnO1x9/2k8tDaKyy5LeHQKIi8/16nSf1p+C64q/BgvNuk/60BAZ4VWZeSg9yYSWKxH3MsDzJcScoiiXEXOjrYW68HGP7rzZTrnxgPR8a1yhMtAhgLVEXDCLmeMGeF5eZBUn5snVuJHPx6O307w/mee3BtJI9GWJ+BK2FVvfeDWI6JvvW9amttJxKTSSnw9Okz7+biE7Ww6i/KKEXbDa4uUQSDk+9a9pMiWvMk5s4q8/D2RlwhdWTHFFskLADryAk5WSh4tpoNf4nXTOir4RWIBKQNWZ9NZtLWetvzWBMsgkt1IApsMDpBLVQqJUx2zzaoPmJFYBdFni2iNE1B5tUPQuUsbrS1PJGyRLM55ImVV3j3aY1V+trgZ7V9cor03pUX1w9ylsCJlUfuyyxJYfb/zJBdDMzlo8YgM0q1GGDm/crQHYO6WfbE9VrbkXn3/aSx7znlonjoV8ZAX8BJVRmQVyIhlKoFVKWE5KsacU0bs6eDjB3Y/n2uFZhLZ1GUk1geAvEykL3VCIPO67EiSVnUcCNS9cdjzBe88ftpdKaKLJqKyuUthUWTU6JpLPRL52XcconZOKvW83/bRScvPJWQigQFHmk8tPoYiaxKWPTdCG4IJqMNbpdfJIEXk1ZRnJJkBl7yr7z/tktczF06Ck9dP+gLBJDAAl7xc0opSNxPyAmZCjkJ2RRdlkNVHvD5gIIFlA+M3yjZpG4BTwsDF86yRaI9bzprlvOR5aplXMppI+tTnkUbkCiCjxNxkHO+O8U6iu9EHOtB6mWOUGn2gA513OJK97011GKOpBKYHA/KBJ6felPOADyLfPllh7c22jpx+5D11KgJadPDYJmB4HnAKRzE873qcgmO8C0pcDlXqIw7aHeH//FsqDz1fmSXDi8L2J4ATQaaqr5PAfshGAluv/GC6UmXRPVWoA5pTcRcNxzdnOSuQostSixLiq51645dEzyXa43o9k2Hx7Fr7055roFqzGymL2hVjzimXuZG6rPoh/KKUul+ts5ds2KdsT6GUuh+aj3X69dOTKqA6GTmvf09NKdoO7FMGfETKovaGO8dr11g3vNTiyXc9WEESkycw9KsbFLzPrfdNs2c+8l3KZy4N0AH8AzlyDaUENiEvByevGABS/8FCAE4OofjqFtR/sBCPbWmEbPcWXRSPoy6p46X95i8ULSUDRQi9+V89AJA2hqceXWDXv/0lPu25BpMre6VjVPWtgqkEJrzRdhYJls5HhuaWP8jdZR6kviNKE/OvP78NP3zoHffIccdXC933b/5XT1rdrd//Gub84i388keb8d1n57nhqNGjzvLM717Vhl9+Wu4et0YvxZy4E++dTQIFXfJBEYElMEsbfDK23h52sBm9cOwL3d+psk23jhXXXbc2taCipkp6VEFVvq6h0Qq8O6GJekvE/dlbMTzYWAVOXgBJ8qbDL0Tv69Fh+LTnGuyL7ZGWtx7Pwz01pVjXHnxz5sWrN1q6QPoHH6u3pt0wMSmh1dFhQVboBDXC3Fl+KV5sOq6tE3T6QQT6V9xmb9252aIjr3PHV5245XXLFnrquHW//zXn+CPYW3dudmPLqZ/v3jfN/u5Vban7LajLKvMJSVROXtViBqrrZ7xS3efgjqXM8JciUferdUYkbm1qwZq6VD5x3DZZf1RBKKctWPPr3jiMRVee8+jwplZnIF3aApCuKiLyclVaxL7YHisbCUz72qhAscpokD9ASoqKlbmZaOHCf/6uF5PPxZRj7Dw3FsAh5Rg4MpHAOsi2vbwj8gXeTOQbqczSfZ1N6ibdcKrQ0zSVM4PwShE8lBKA8ncXJa8MJN1kkm7H4790/+M8B7qp8beiJsUP1dRGFr6sui7WcSWwCWn9VGfVckAZeeOrW9I2UZYt8+IgguvqLJ83Aw8+Vq8sX7V5p645SoqKIfsrmErg0Xmfa/vn6A8JfCHAbyFINuDS98iJXR5DqUwKB5K8kofAYzuWokEigWd/pwp4fndafR1EQvK0U6o6IsRrxiq0ytStW8MLiHNeB4/OrYVsuxU/FdlPxdbNcQHnKa1Ssf3mwEAqA8XuD9QStnrieG05R64lsAz3TP4TvJllInpaOUTH8737Ilm1J5U6edEcKTxaKoUp7DJy2RgkTh03MhbyuiMrF6XmwEwCm86BW5tagNsmS428OoLKCC4jfD5gHgkik8Af9Y70yet8zENeRxq3JKWxV131U5H9VGw/VIw5p1S1/ObABJ0K7vcAIYiraYBSqdtCVv/O8o+1dQctkv5kV70Wzxlo7nus+91+TXVLGFm5yHKs0NVKK7QJODl15abnAJBPT6hMfK/un0iT19lRk1NETanN6XNNPwkM6KOr/MjTejwPFWPOIdEuL9fNgU3uEcQKTSpgf9UnmG4Dc96k6oK6dgAY9dzmDgA4IZ5rmoqBQzokTplPPWR15zy/2wqqMhPI4NQfsCzLSq39DApagnchtW98D6i9OXWkazLkwJgSwgvVmllPzu0Fdbb0u99Ub496bjNO3D/P85uN+vAD82vX3aD8XSdXTrUpQZ/feE0/K6AP8PBbr54t8o3IoyLAgjrbJYkJxH5y3Z7KhWPBx9IYI+COWrvvzUargB0BJ3qKrhmNy29x+0UOMjzK8lK5GhWpzLmA6gEhgZifyxTUJi2WXsDP3oqhZYJ81VnVJ/sBAF+clO+tkD/SiXGaNvGYtHz3oRIfI5bmC41sc3ZFSKgI6PNjEKn6ctVeUl9JXKTyaSWQCneUEZZITRCJ7qksEjl5vgWw5+L878jA09jo8lPJ8lVlipQEagOuKgJunmajuwW4uQgAMCdY7Eu/IAiJ1y1baLc2tbhS16/tjDEj8NvrbpD2NeP0JwCAts/lwSjlE0cBAJY9ICfw6idHaAjsQ15tTitNWx2pctbeoF7npFKXxDIJzOv6nevGy8krI/K0GybaFIDyYlMHls+boZxLX1ddiVWbd7p1KWx08exaW2dAo+ASkhb8nBYDlJZX2XybUDqnBO90DGpINDL45FL6EgJIYcAhom7bmYHYkiYTpBPY4IvMhLymxMuovdDG5F6qjJYZY0Gd7ZmTz19g0bi+P3y4/YszZ6y5gLUFsBuGD8cvzpyxgJRhjVxcbrAJUkYxfs7Jy8NGqS7tnjA673NP4vUffO8mPMqCFPh50nWGY91dKCkq9px/2lMJIIZPe64BEHPV4CAk/rNoiS3uEyS7dr7BNRJVmQxEflUd0lbTcKVzoLS1IhbB8QyJ8RJuuScvtOETsPR1jSXufJA3i7oiZCq08TyYP+2Fz0Fk/f7w4TbOnHHPAceST1Zx1z8tuqkkbituSU9X3xw/NPdH1979nIdwwrm7jUmHcL61zSG56BkI4sqbMWYEfhs/Jr/WH9KXEFAKEzKRshRqytsunl1r49P+3QzeIXBA8krTwmbwI4w+0JFKqcLacxL2XaOOER19oAMJRTs/cBUaSJ/r8uvGJOZI/nkahg+3t5w5k6Y6k1QO3G+GEAnHz3VlQRApi9ovNnX4JlkfqiASA04Ax7qGRmvrfdPsDeroYQBANuWBFzN0/Pk0RLZtNyZv0Dlvwcf7PKR1jVXJa9lIWIKoPusIakTe+g1W2tM++f4XZ85YSJIYZ87gfBuz+gMU3vjJhm+40UK0Z7QvkecvsLCp/ngyaGPMCQDY9RZyda2/PrMKovQ29cNnCstauMjXjcTVZlH6JlY/mjGBRx/o8LQXycuvcSLT+9EHOpCY9Q3f+6juDRj8wZIqHr+nDrSTRN81kx0/tDgvNsUgck1FyqL2Nzo/x5HSVHaRikmVRuucA4Fcnv2lcpNHY5B874CPBBaJC0gMWNl+mf31Y2hgYsAi1Tmy7LHM+j7QAWzbPlCZnM87nnnhPgDexS0vIvN9iAk/vo1HCDr/lWfGnnOvP/OO8/6Zd8w3sFPio+Q8n435QrM6i1ASWDRWqfYH1sHED8tB0pWryzrpa3Ifk/sC3jlw35uNFqnOpCFkIYGNxzaY8eN7n0+TwEBqLghIEggq4Kl/22Qs2ZD++y5pkr/PJWgp4IUMa+z4cpvUUILM0qzaz0hsSzAlr6y9jLCq9gC0G6D5tSUVr0ASldX3ZmPWWTNdFZJUYj/VmMqFOfXJ2Hp7ZOUi62RsvV3YvMhde8tJUVFTlSYxaIEG9/GagG/8xV1H3C9MRIuURW2+AwZhKKTuySVMwyqDLJbIB/SuISKuyvcrm7cGgax9Nv3p4Cc9ZZboxKxvoODjfYH9xp2TSp3PUb/B6yPOAD1bYBdWLrLoCKQIDaQWorc2tSijqMjHawK+oIOTF4DrD3aOKfeWSgIDTrAKvffbklSsyyOferY4hjF6ePXn+eLZtbbsgZgN+sOglZP9gbNVYXOhApu0E11HHCprs9IJb3A/cDcZYGaYIptAUvqejK23C0nycglMhJ7baKGhEdNumGhXTxyfllGCL43M5JujNizXNviRoJoDE3Z/cMji5NQhSN3BhEVXnsPaERMAAGPGRnD88wSGHWxH79Vlbp2HT3+CVYrVcjLkA969fHVpYmXkJUL4qbEq4mTbnspM1Gjd/JeHUnKQBPYbA4dnHly/IRXkYWKwI5dU8n1hs7OFykiJBEZzanuV3R8csqonjj9vf/oJddtRXdzpnjd3jXbfEyFNNgTX1RVT9vT3+UCCCB0U7npgTk5VonYRNL+JlEXtTCTjhdJet5ghEwnMLdEJIPhWm6xe4Vx4VEf3fZLQYtOKmiplwoH+An2PzYqdB2meXj1xvO825JjDAAAWs0lEQVSCAbEuaRTZWrODgNRmv8yVmSJTsspgDbvza3bfvPkZNS7YvAkAkE37vjcbUxInAEpf342OthbH2CS5f8HmTY6fuD0u7T+ybXvODCw8+oZbLrkFVgWaa/E2dL549UZ3LiZm8nx0bq3b/7plC+3HtjSipKgYo/M+x9hxt+OOrxZ6Ynuf/pU3sdsDd93kRg75uWQW3LAxmRrYez4Qe/IOJWy9b5otmwf3Xl3mkvq5iVYwI1Yg8gkqoOsqyaC9O+8NQF5xrlxaXmV3KMjbd81kxxcr6b/g433onFSKCEtNI1s2aDImIg/gkErM/bWupsrW5QKuqKkCJ9cDd93kntODgc47lv8N0PgeSl/fjce2NDq5xRoa0drUgquLT6PhpcUobF6EW/4hhquahqWNjycXfPpXv8e6ZQvtlZt2AJjpShvuknmxqQPjRl2B1qZa/Cb+e9cQRucDBdrDmpLqc8t7povxhwrkRiyDuVrp67vR19MlXQ/sSmYh/JGfRw51Ou01FmeVcStyyJlrqQJKVO4nP2MZkVY2F1YRnJNPlHJEnKuLT+OV/Z3KI8fTv/q9awV++le/xwN33eSWla76F+m4K2qq8Mr+TtTe/RxG503EpNJKVNQUpqnSPdXrUdicvi1pa1NLWq6we2qcefyx7i40H/ocx7pHSM8HAmICuYudtBzpibB8yFv6+m6XvDKQ9BODMYhUpa/vdsmrQsHH+wKRlx4YHLKQTFk/qkUMsjIe4MERX92C1tcWA0hKSXYsKSpGw0t/rzzK2rS+ttiVlhwdy/8GHX8+Le06SeDGl+/HzmWHcKAj5krU1qYWPDq3FiVFxai9+znc8g9TUVJUjAfuusmtQ+Q9vCaOw2vinmsAcLBrhGvE7OvpwsGugSMv4EjgxbNrbZK89N40MGQowyuBDcgLaJKINb6XFk3FiSSVnAx+ElJFXp3fWNYn9QN4VeVM1WgASck2NS2dz+i8z1HYvAij8yZKj0BVWhsuJVubWly1uuSJjc5FgYA6Ccznz1wFJ+lesF/+m/BMj1lsXJcThBJYjXxT0hLSIrIkCxE4ofzam5JW1V5GXvdBY9Cf268BWVXSmhLWlxSl7k3HseNuxy3/EMOk0krpEejytikq9vRHc+Rj3V2eOazpHNjzvUhUcE5cvnDc85Dk37ciIq8/Ic55s0lEN9SQH9m2XRkOqVr/y388ai9KXtP2Oh8ul7h+95fdU+zfI3llASmaLUFVBOdGJ/6ezgHgqqZhqKgpVBxv8hi+Hrgrdc7nv4B6Dms6B+YSmLBi/kz3vWPQSr8mBvIMJHmBdIkbkjcFy7KsrLdfPJ/t/dpSnc5JpWlz78HgRqL+VW4g6qP50GE0vPT3SQk81Y1V9nND6faSMkHoRjJHf7iRnLzQC+qC79kBAPUbLs2oXQgXrh+bhVjKVHXX3SfU8yTjU/Sjsq5nlGkkRMbQEZgQnMDCgn7dEj4ZlH8C01U3mZZTHREDtRg7x59PXM6oaibWE1P+yPpRTQ0yThcUIiOYappBtBppRg6RxDJoM1oMBHnPJ3zG50uMC/3zhRg0yAe8FmRT8ipX9vgtncsxeXV+XEAe5lmweRP65s33+I+NJdGqlfrxrVpp9y1fEZI3xIDAiYVmFmTTpX1SCeyXxnOwS96h/vlCDDrkASlfbFYZH/3+3NlK5vMNv8/nI5kL7qi9sD9fiEGJ/CBSlyCq0AV31Np9fuTNRnLlEB6LLV3zU6Xn3OVPXh+1uS8kb4h+gGUtXGT7EDjNxcTnvp2TSi/Vzh/9yduF+QsGLi4vIHwNUoP884UY3LCG3fm1QEEUovTVmrz9/9xnCzZvKtLd74J2cxh8PsxfEPrKQ/QbjHdm4KlvjLJfGM6JZfHKgXC+fMEZTAtMNgTzk/jV0TF2c/z4hftQCzGgSF9OqADFE5smRfclbwabTkkxf4GV9upvBCTvX/+PH9oAMKm00nPO4c7NyZ0nuMeqo2NsAPiLicc95yEublhjx5fbpgnhZNJXVKGznjMGhM4PbOoDBsxV9Ww+38olG+0Vaxb6R5dpHkIN98Ke/cLQ218pRGbwJTBfzSOTvpzAA03eAYeftVzy+SZXTrUnlVbixppa/OT+L/HPz12C95sacaAj5qZqLbij1qb0RN0l76Ho2M3ubhB9bzZa1dEx9l9MPI7p44A//14dXv+3Ddh1BPj1oTEI1emLG1oCi1JXJ4GHOnlzER4ZSuAQuUYe4JWs9J6T12T+O1jIW3BHrU0vbKp3X+41BXw/n4Z0NOd9v6nRcy6OC0AqQYJiDrzriPc8xMWNnKwH1mJBXRfqNwxdP2iAzxdaoUPkGpZlWZgzY15GBN66c7Pfn/FsxWe9RXfPcnboe/qVtXjg2w+7kuhARwz7li7UdXFh79Ua+nlDnGdYd8+c70veAx0xZZlKopAkmTNjnn1jTS2efmUt/rT8lrQ+/SSSEc6DLziTtbSl5VU236sok35DCRyCQxvIoSPukRNHlWX8T8jJ+3bbu26doNtdajHAUjrThfAlRcW+G4z1XTMZeFO9NcpfTDyO5njQO4cYqlAS2I+8usyE/M9N6jIAVwITkfk2lplCZXgK4gMGgoVsZiJ5S4qKKZDDPtbdBVESc1cSUGeTC4nKuSsJt8MOXUghAAmBdcQlBEkryvuj9yVFxTkhL6Ahk0SK9SWvZx2+GRAdbS1WUvIqjVh9bzZazpgdi704xub4cas5DuB22P/0n7CA4/065hCDAy6BTYgLZCY1S4qK8Xbbu67aTH0MdHrS8w2T767g433aB8yvD41BSN4QhHwgOHmDJPfmO8PzP/BAZ/cnpGVmFNYF9+fqJz8DFuCvnodqcwiOfCB9j1kdSoqKcSRAcu++ni77WPq1Ac/u795bJAhTtQdatQ4RIltYN1bd+qVfJZnkZNn682hjr2EHm916E+pS++9m4md+u+1dV2JNrpwauL1oKCIXTq6Pfv0PxL0vZOh+u5y4EC9y5EOzpFAkLpBuwGpbOw1gxAWA7609i+nXT8cuwJ5+/XTjwYiqPFlvTSHOMUvLq2wgaUTqBwKZHOn+/UHeXBFZRTIimKyck08sF4kpI2omD+UQ6VC6kUQyqPbF6b262pW831sbbIMH1dzbY+TSENjPKNTX04VEe9wlUklRMUoqp9rHurvSpKL7h1IQhspLkuGQKmKJ/QApopn0QWMUywH2p2cPBqMv2gAiyXSk1BFaRUx+PZS8uUP+kRNHMW7UFZ6LMmKo5q0q8vKgDRE6o5mJhdrEmkvtZVLcPRdJR2VJgqSRMgkZ2Yl4sn7EMuqDSCobJy/3G7/vl2EI+lwqgpnEcuuwL7Yn7bsMkR3yAT0hiLgqo5NM6qrI62ft9iOvqQuLt9ep4JxYlC3jQEfM46em9byysRNJVffQ3ZsHdfC6fBx+f3aTyK5cQkdeE2KG5M09tKGUEoOVr+VYJK8paVX3DOp31lm4iRx8XPwanfMxU7msLZcoqr637twsrUPn/Pvi5ZzIqv5zDQ1B7cmVU8/xc8N2geqECA5r7PhyG0jtyK7ajV1HXJk/l9cXVXSCqV/Zz1+sax/EiHZjTS1e3lbvsWCvXLLR5uGgN9bU4v2mRncllljO6/HF+7SoQ+yL6pCqfPesBZD1p8LWnZuVW6yOG3UFJx2OnDiaJ1sCKpDTxb7YHuOcaSqEVuj+Ba0Hlv6Afki0x/MAZ9c1/gBg5RaVZ9h/TtoTeUQQUahMlS1j5ZKNNm8jLqPk5QRZX+I4/O4njk8cO40jUha1xYck2Tb4EQj38x1qsCzLwsolGzPaH3jFmoWXAsDkyqlp7Y+cOIpEe1xZnpRylwLAnBnzjO7PVUfqX/eEp0UXKpCVWndPkrB0b90qLCClbVAerHVbHsc9NamURS82dXjOOcSyF5s6jAhHDzgZYTmxk9+Zp79SwaJN5/yaWFcsI+MWN4L5GbzEcj9XlF/5xYp8UXq839QIruqJah/HnBnzbNl87Fi3o9KKkoHCKkl1jpRFpX7iAx2xtLmoiGS/NiAnFb+vTLU2DeNct+Vxo3oEGsuRE7uwa/8u9/reWCumVFa47+UYmVbXFPR5OXn5eFTTGA5OUPEa96XTdSIxkcnUyLUvtseS1fVzRfmVX4xIM2IRYemoIi/9OUWCqkBlqjoiaf0MNSJpRUkjghNWJLTs6U7XaE6ajQQG4CHkR70jtX0EJa9sXOL3QeWRsqjNpTCXpDqXlBiUwstkEljWB6/D2/SX2+piQD6Qkrr8vc6Qsmv/LifSikkYP/KqlhByK6sJaWVqIpUBaknDLekyqKKHjpw4GuhpL5PALzalO3tENZfey+rqwLUcsT+VKg3AQ2IVOVWEztT3nG1EVyh505HPCctJrAMnr5+bR0deIEXcIOSl84HA9Oun40BHLPD9xo26ApNKKz2aiuyBI76X1fW7j6ydqFKLDz8kSSxTmznEkFBdXZ209JOk2ZZfrHAlMD/mGjqS+2X+UElcXRsdZPNh3Z+DaxlB4JBmFxLtcStSFrVNrcBB6vJ7iQ83mVTmRw5RjRZJLS7akF3XSUdRxdbVA0KyBoG16u/qpX5MHUQV2s8PrCtPtMc9P2xQ0uqMM6ZWaN1cixvqgkpFCuQwapQhImXRcxJLc57oGiSf8JETR/OAlAtQjLcG/AlrKpFD9D9MdieUuniIvIn2eLGJH1hXLhLDVE1Ottf6sE3WHPtI4MDzLj4PHgBY/Hui75QIyiD9HDISqlY50fWQuBcO8g2kryfvscyAtXjuI2k5Xt5vasTWdid94vTrp6eVH+iIIZEsl7WXgY+VPUDyyJBDEo8HTKxYs9DirjLJuSdwgtrTvHfcqCvA81pTtBSdM6nUJI63o62lRnadlyfb+pJLpdaK81jZOmXV/XMFE8OXbPyq5Ze6fmT3G0zro3MN4/2BiTAiecUoJW7BFv28oqsoUha1F899JO1eJpZwWm+caI9bpELy+TR3/dC5eA/Cy9vqpbHGnLxUXzwHfElSrSrwI5fsjx2kzKRvOletMZZdl6nQNBbd/FkcE52LR5OHjuqzX2wwjnUlIqqMOn6GMD//rtjeTzPg4xBVbdGqzXeCkJ3L2vB+deT3Qy4kQ9A+gtbnxOMk0s1/ZX1QPf4yGRMPDtGViZqGSd9DHXmmVlZSnWXgLigZSPKq2ppIXBqDaiyiW4afi+RUkVXm2nl5W72nvngug+zPm4lPVSdlRKklwsQ9JNaTEclEvdeNhYjHX/y6qk9d3+IDwmS8QxXW2PHl2rQ3nCwysk+/frqSfLv273L9obI//JETR7F47iNGEk029wb6PzifVgnRCiXxnNej9ypV09Q9I5bl4jMEua9uvqq7h0m5zkAmG2N/pBAaStCq0Jw0fhJYB5208ov4EschAwXzkztKPDc9yvohspYUFbtk3hfbY4mL9U2kgkq9pDLZew5RivldD9K3CmL8s0rdNdEEdNKRS1rZIgod8XWffajDXQ/MpSyRRTyqICM2ry/z1fJgBZ61Msh9qb22QpaQWUpNJRI/D0IcWd+yP6hKxZa1DWLV1ZWr7uPnesrEsGYClSX7YrFO52R/YG5t5oTj5WJkkFiezf0vZOQi6EFFaNWf9EL64wYZS6YEpvcXC2k5LMuyMg4SpwCIk7H1NgCM/F0+Tt76BUb+Lh8rP7Cx4gaf7zG5q2C2+xPLFtSLeHlbPYBUappd+50wR5O2Kqzb8rj7EFEF6ptkpPBbPierk2mZrE6IwQvrxqpbff/Auljm1tcWY+Tv9O7klR+k30IkFEH0FfutUiK/LIdo1RbbcxKTr/flbfVuX/SeX5ONmx4COpJku4JG14dfGRCmtBnq0DLPL1ulDDKyBvGbEmH9VimJvl+RtOI9eb9AitREUB6gIV6jQA9VIjwd+pvEqvrZ3C/E4IFxYncOnkSOS18ib9DFESKx/KQuX+hgkjlElihgUmmlJ1aZS2vyaYtagsmaZUC9tjiomq1b8M6zYMja+y2GD0k+NJCmQgfNvbx47iPuXHflB7YxeXmssSh1TUASmPzIKjVZDCIR82qJoZ68rVif981isdPIKRJWReAgi9mzQZhPaujCJXAm+ZeBVCDHihssYwLnIq8xEZgW3KseAuJ1fiRXlUhq6ld0ZXFLOl1XWcIzIY3Jzgiy/ky2LQnX2g5N5AGZJ0/PFkdOHA00n+TtRN+yLNZaVJ1lqjTPtsHJy49AeuaL/gAle1OpxLJz5bYvwjVVIrkQgxvGq5FEyIxYQaSvjIRBQGTTqd7i3FokN82BxfQzsvBRMdGAX4BJNhkUZbmgdPmh/OqHxB26yM/l1iV+4ARKZdsIpk6LmTp0Elw3pxazbIgSVmynStvqh1yQx8+I1R/3DDE4YLyckLYWlZFXt4MAQTQmBU0SJyZmU/WtM0DJ6gDexG/8XlTGr3HNYTBEgoUY2jAmsCwljilENTcT9VkWikl9y47ivPbIiaPSeS+vk2iPW/SS3Us1hhAhzhfyTAmpMlzxuaBsDiwjVibpYVWkF6WpKq2qrA6QTlrxuo7oRgMPEaIf4SuBTbcWlUVgydTmoHNIWfJz1T0mlVZK640bdUXGVmRO8JC4IS40aAnM57x+riMK5iBrr8ytkwl5xcTkMqjS9cjm3KH6G2IoISf7AwNA56RSVHzWq62jIw+fX4p5oXXEFwMxxFhn3qd4nsyhHErUEIMWOVsPfL7aZ9pWHEOIEIMRlmVl9//125+XCLJyycZewM29PIy350v3+DH0Z4YIoUfe5MqpvSuXbOzN5Eid3D1rASaVVrqvu2ct8Ki8yUXzBe83NRZs3bl5GF/Avy+2x6LlevwYkjdECH/k7YvtGfbytvqCSaWVBS9vqy+4e9YC7ZHq7YvtcaUorcXdunOzRcv6aM7JM15s3bnZWrlko027HwCpsD/uK87FGtpcIFIWtafcG7EjZVE7Uhbder7HEyKEiHwWN2uLUpBUWX6dE4xLyRVrFlpzZsyz6chDNGnLkpVLNtor1iy0JldOtd9ue1e2ybPvps8yTLk3oiR7Z5OztVNb6+nAEn3CtNPobDqLyy47i1OnIkGbhwjR78jjhBGX23HS6sgLOJKWSLpr/y7Xai0jL+VUPtbdlUZi060oCTLyEmnpCADlFSPOu0QPESLXyJdJQdUaWhnRACcG+ulX1mLOjHn206+s9bikSF0WyevudAfv6plMJDCHjLwhQgxV5MlIGYS8QGrXvrfb3nWDPrjfmEgskheQL5XLdA4ckjbExYY8lQrLyNubvN4jHgHHVdTX0+UeVdi6c7NFuxvwvL0qSRtUAuvIe+pUJKM5bPhACHGhw80LrZqHJo+9+2J7holHAODuJBEU8SRry4+q9tzSfSGDtAW/nF58/2K/elQeutNC6KCUwMJxmOyY7KMAALmVpEddH1RPfA0W8gIpkvnl+qJE9HTkbTlC8oYwhmVZuLHqVlt2pJeuXFWWyZFesjEMhhf/DEHHn03b8HXxvnzJSy8/4snKxo4vz4rUg/ElEvDumfPtu2fOTyPljVW32nfPnJ92bTB/9vA18C9Yljlx+lsCBxnLhf4SH3CcxOL5UPi84ev8vAITpj8lsHiPofQSv6eh+BnD18C/YFnBCWMqgceOL1eS21RlH0qvoaJdhK8L6HVj1a0ZRT2RldpvPS7t3qezdGdughs8ED/rxfTZQ/QfLMsK/0MhQgxWGKeVDREixIWHkMAhQgxihAQOEWIQIyRwiBCDGCGBQ4QYxAgJHCLEIEZI4BAhBjH+P5gXUdLAMhG6AAAAAElFTkSuQmCC';
+var $author$project$Extra$Jump$TileMap$level1 = A4($author$project$Extra$Jump$TileMap$tileMap, 8, 8, $author$project$Extra$Jump$TileMap$tileset1, $author$project$Extra$Jump$TileMap$lut1);
 var $author$project$Extra$Jump$pxSnap = A2($elm$core$Basics$composeR, $elm$core$Basics$round, $elm$core$Basics$toFloat);
 var $author$project$Extra$Jump$Sprite$run = F2(
 	function (dir, frame_) {
@@ -10100,77 +10320,77 @@ var $author$project$Extra$Jump$Sprite$run = F2(
 			case 0:
 				return A2(
 					$elm$core$Maybe$withDefault,
-					$author$project$Extra$Jump$Sprite$sheet.ay,
+					$author$project$Extra$Jump$Sprite$sheet.aD,
 					A2(
 						$author$project$Extra$Jump$Sprite$getAt,
 						A2($elm$core$Basics$modBy, 8, frame),
 						_List_fromArray(
-							[$author$project$Extra$Jump$Sprite$sheet.b4, $author$project$Extra$Jump$Sprite$sheet.ax, $author$project$Extra$Jump$Sprite$sheet.b8, $author$project$Extra$Jump$Sprite$sheet.b9, $author$project$Extra$Jump$Sprite$sheet.ca, $author$project$Extra$Jump$Sprite$sheet.cb, $author$project$Extra$Jump$Sprite$sheet.cc, $author$project$Extra$Jump$Sprite$sheet.cd])));
+							[$author$project$Extra$Jump$Sprite$sheet.b5, $author$project$Extra$Jump$Sprite$sheet.aC, $author$project$Extra$Jump$Sprite$sheet.b9, $author$project$Extra$Jump$Sprite$sheet.ca, $author$project$Extra$Jump$Sprite$sheet.cb, $author$project$Extra$Jump$Sprite$sheet.cc, $author$project$Extra$Jump$Sprite$sheet.cd, $author$project$Extra$Jump$Sprite$sheet.ce])));
 			case 1:
 				return A2(
 					$elm$core$Maybe$withDefault,
-					$author$project$Extra$Jump$Sprite$sheet.as,
+					$author$project$Extra$Jump$Sprite$sheet.av,
 					A2(
 						$author$project$Extra$Jump$Sprite$getAt,
 						A2($elm$core$Basics$modBy, 8, frame),
 						_List_fromArray(
-							[$author$project$Extra$Jump$Sprite$sheet.as, $author$project$Extra$Jump$Sprite$sheet.aQ, $author$project$Extra$Jump$Sprite$sheet.aS, $author$project$Extra$Jump$Sprite$sheet.aT, $author$project$Extra$Jump$Sprite$sheet.aU, $author$project$Extra$Jump$Sprite$sheet.aV, $author$project$Extra$Jump$Sprite$sheet.aW, $author$project$Extra$Jump$Sprite$sheet.aX])));
+							[$author$project$Extra$Jump$Sprite$sheet.av, $author$project$Extra$Jump$Sprite$sheet.aW, $author$project$Extra$Jump$Sprite$sheet.aY, $author$project$Extra$Jump$Sprite$sheet.aZ, $author$project$Extra$Jump$Sprite$sheet.a_, $author$project$Extra$Jump$Sprite$sheet.a$, $author$project$Extra$Jump$Sprite$sheet.a0, $author$project$Extra$Jump$Sprite$sheet.a1])));
 			case 2:
 				return A2(
 					$elm$core$Maybe$withDefault,
-					$author$project$Extra$Jump$Sprite$sheet.aq,
+					$author$project$Extra$Jump$Sprite$sheet.at,
 					A2(
 						$author$project$Extra$Jump$Sprite$getAt,
 						A2($elm$core$Basics$modBy, 8, frame),
 						_List_fromArray(
-							[$author$project$Extra$Jump$Sprite$sheet.aH, $author$project$Extra$Jump$Sprite$sheet.aI, $author$project$Extra$Jump$Sprite$sheet.aK, $author$project$Extra$Jump$Sprite$sheet.aL, $author$project$Extra$Jump$Sprite$sheet.aM, $author$project$Extra$Jump$Sprite$sheet.aN, $author$project$Extra$Jump$Sprite$sheet.aO, $author$project$Extra$Jump$Sprite$sheet.aq])));
+							[$author$project$Extra$Jump$Sprite$sheet.aN, $author$project$Extra$Jump$Sprite$sheet.aO, $author$project$Extra$Jump$Sprite$sheet.aQ, $author$project$Extra$Jump$Sprite$sheet.aR, $author$project$Extra$Jump$Sprite$sheet.aS, $author$project$Extra$Jump$Sprite$sheet.aT, $author$project$Extra$Jump$Sprite$sheet.aU, $author$project$Extra$Jump$Sprite$sheet.at])));
 			case 3:
-				return $author$project$Extra$Jump$Sprite$sheet.ab;
+				return $author$project$Extra$Jump$Sprite$sheet.ac;
 			case 4:
-				return $author$project$Extra$Jump$Sprite$sheet.aE;
+				return $author$project$Extra$Jump$Sprite$sheet.aK;
 			case 5:
-				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ab);
+				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ac);
 			case 6:
 				return A2(
 					$author$project$Playground$Extra$scaleX,
 					-1,
 					A2(
 						$elm$core$Maybe$withDefault,
-						$author$project$Extra$Jump$Sprite$sheet.ap,
+						$author$project$Extra$Jump$Sprite$sheet.as,
 						A2(
 							$author$project$Extra$Jump$Sprite$getAt,
 							A2($elm$core$Basics$modBy, 8, frame),
 							_List_fromArray(
-								[$author$project$Extra$Jump$Sprite$sheet.aH, $author$project$Extra$Jump$Sprite$sheet.aI, $author$project$Extra$Jump$Sprite$sheet.aK, $author$project$Extra$Jump$Sprite$sheet.aL, $author$project$Extra$Jump$Sprite$sheet.aM, $author$project$Extra$Jump$Sprite$sheet.aN, $author$project$Extra$Jump$Sprite$sheet.aO, $author$project$Extra$Jump$Sprite$sheet.aq]))));
+								[$author$project$Extra$Jump$Sprite$sheet.aN, $author$project$Extra$Jump$Sprite$sheet.aO, $author$project$Extra$Jump$Sprite$sheet.aQ, $author$project$Extra$Jump$Sprite$sheet.aR, $author$project$Extra$Jump$Sprite$sheet.aS, $author$project$Extra$Jump$Sprite$sheet.aT, $author$project$Extra$Jump$Sprite$sheet.aU, $author$project$Extra$Jump$Sprite$sheet.at]))));
 			case 7:
 				return A2(
 					$author$project$Playground$Extra$scaleX,
 					-1,
 					A2(
 						$elm$core$Maybe$withDefault,
-						$author$project$Extra$Jump$Sprite$sheet.at,
+						$author$project$Extra$Jump$Sprite$sheet.aw,
 						A2(
 							$author$project$Extra$Jump$Sprite$getAt,
 							A2($elm$core$Basics$modBy, 8, frame),
 							_List_fromArray(
-								[$author$project$Extra$Jump$Sprite$sheet.as, $author$project$Extra$Jump$Sprite$sheet.aQ, $author$project$Extra$Jump$Sprite$sheet.aS, $author$project$Extra$Jump$Sprite$sheet.aT, $author$project$Extra$Jump$Sprite$sheet.aU, $author$project$Extra$Jump$Sprite$sheet.aV, $author$project$Extra$Jump$Sprite$sheet.aW, $author$project$Extra$Jump$Sprite$sheet.aX]))));
+								[$author$project$Extra$Jump$Sprite$sheet.av, $author$project$Extra$Jump$Sprite$sheet.aW, $author$project$Extra$Jump$Sprite$sheet.aY, $author$project$Extra$Jump$Sprite$sheet.aZ, $author$project$Extra$Jump$Sprite$sheet.a_, $author$project$Extra$Jump$Sprite$sheet.a$, $author$project$Extra$Jump$Sprite$sheet.a0, $author$project$Extra$Jump$Sprite$sheet.a1]))));
 			default:
-				return $author$project$Extra$Jump$Sprite$sheet.ax;
+				return $author$project$Extra$Jump$Sprite$sheet.aC;
 		}
 	});
 var $author$project$Playground$scale = F2(
 	function (ns, _v0) {
 		var shape = _v0;
-		var x = shape.f;
-		var y = shape.g;
-		var a = shape.b;
-		var sx = shape.c;
-		var sy = shape.d;
+		var x = shape.g;
+		var y = shape.h;
+		var a = shape.an;
+		var sx = shape.b;
+		var sy = shape.c;
 		var o = shape.a;
-		var form = shape.e;
+		var form = shape.d;
 		return _Utils_update(
 			shape,
-			{c: sx * ns, d: sy * ns});
+			{b: sx * ns, c: sy * ns});
 	});
 var $elm$core$List$singleton = function (value) {
 	return _List_fromArray(
@@ -10180,25 +10400,42 @@ var $author$project$Extra$Jump$view = F2(
 	function (computer, m) {
 		if (m.$ === 1) {
 			var memory = m.a;
-			var player = memory.n;
+			var player = memory.e;
 			return $elm$core$List$singleton(
 				A2(
 					$author$project$Playground$scale,
-					$author$project$Extra$Jump$config.y,
+					$author$project$Extra$Jump$config.x,
 					A3(
 						$author$project$Playground$move,
-						(-player.i.f) * $author$project$Extra$Jump$config.y,
-						(-16) * $author$project$Extra$Jump$config.y,
+						(-player.f.g) * $author$project$Extra$Jump$config.x,
+						(-16) * $author$project$Extra$Jump$config.x,
 						$author$project$Playground$group(
-							_List_fromArray(
-								[
+							A2(
+								$elm$core$List$cons,
+								$author$project$Extra$Jump$TileMap$fullscreen,
+								A2(
+									$elm$core$List$cons,
+									$author$project$Extra$Jump$TileMap$level1,
 									A3(
-									$author$project$Playground$move,
-									$author$project$Extra$Jump$pxSnap(player.i.f),
-									$author$project$Extra$Jump$pxSnap(player.i.g),
-									((player.o.f > 0.5) || (_Utils_cmp(player.o.f, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.V, player.R) : A2($author$project$Extra$Jump$Sprite$idle, player.V, player.R)),
-									A2($author$project$Extra$Jump$debug, computer, memory)
-								])))));
+										$author$project$Extra$Jump$andFold,
+										memory.U,
+										function (bullet) {
+											return $elm$core$List$cons(
+												A3(
+													$author$project$Playground$move,
+													bullet.g,
+													bullet.h,
+													bullet.ae(computer.c_)));
+										},
+										_List_fromArray(
+											[
+												A3(
+												$author$project$Playground$move,
+												$author$project$Extra$Jump$pxSnap(player.f.g),
+												$author$project$Extra$Jump$pxSnap(player.f.h),
+												((player.n.g > 0.5) || (_Utils_cmp(player.n.g, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.O, player.Q) : A2($author$project$Extra$Jump$Sprite$idle, player.O, player.Q)),
+												A2($author$project$Extra$Jump$debug, computer, memory)
+											]))))))));
 		} else {
 			return _List_Nil;
 		}
