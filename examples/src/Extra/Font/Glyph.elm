@@ -5,8 +5,7 @@ import Math.Vector3 exposing (Vec3, vec3)
 import Math.Vector4 exposing (Vec4, vec4)
 import Playground exposing (Number, Shape)
 import Playground.Advanced exposing (custom, useTexture)
-import Playground.Extra exposing (sprite)
-import Playground.Render exposing (Render, defaultEntitySettings)
+import Playground.Render exposing (defaultEntitySettings)
 import Playground.Shader as Shader
 import WebGL
 import WebGL.Texture exposing (Texture)

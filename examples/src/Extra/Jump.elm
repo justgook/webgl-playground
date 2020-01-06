@@ -4,13 +4,14 @@ import AltMath.Vector2 as Vec2 exposing (Vec2, vec2)
 import Extra.Jump.Collision as Collision
 import Extra.Jump.Direction as Direction exposing (Direction)
 import Extra.Jump.Sprite as Sprite
+import Extra.Jump.TileMap exposing (fullscreen, level1)
 import Playground exposing (..)
 
 
 config =
     { acc = 0.5
-    , friction = -0.125
-    , gravity = vec2 0 -0.5
+    , friction = vec2 -0.125 -0.05
+    , gravity = vec2 0 -0.4
     , jump = 9
     , viewScale = 3
     }
@@ -36,6 +37,9 @@ view computer m =
                 |> move (pxSnap player.p.x) (pxSnap player.p.y)
             , debug computer memory
             ]
+                |> andFold memory.bullets (\bullet -> (::) (bullet.shape computer.time |> move bullet.x bullet.y))
+                |> (::) level1
+                |> (::) fullscreen
                 |> group
                 |> move (-player.p.x * config.viewScale) (-16 * config.viewScale)
                 |> scale config.viewScale
@@ -50,13 +54,19 @@ update computer memory =
         Play m ->
             m
                 |> updateMovement computer
-                |> simulate computer
-                |> crossScreen computer
+                --|> crossScreen computer
                 |> animatePlayer computer
+                |> updateBullet computer
+                |> updateShoot computer
+                |> simulate
                 |> Play
 
         Init ->
             Play (initGame computer)
+
+
+simulate memory =
+    { memory | player = Collision.simulate config memory.player memory.static }
 
 
 animatePlayer computer ({ player } as memory) =
@@ -102,10 +112,10 @@ crossScreen { screen } ({ player } as memory) =
 updateMovement { keyboard } ({ player } as memory) =
     let
         x =
-            if keyboard.left then
+            if keyboard.left && not keyboard.shift then
                 -config.acc
 
-            else if keyboard.right then
+            else if keyboard.right && not keyboard.shift then
                 config.acc
 
             else
@@ -121,32 +131,78 @@ updateMovement { keyboard } ({ player } as memory) =
     { memory | player = { player | acc = acc, v = v } }
 
 
-simulate computer ({ player } as memory) =
+updateBullet computer memory =
+    memory.bullets
+        |> List.foldl
+            (\mob bullets ->
+                let
+                    y =
+                        mob.y + mob.v.y
+
+                    x =
+                        mob.x + mob.v.x
+                in
+                if
+                    (y > computer.screen.top)
+                        || (y < computer.screen.bottom)
+                        || (x > memory.player.p.x + computer.screen.right)
+                        || (x < computer.screen.left + memory.player.p.x)
+                then
+                    bullets
+
+                else
+                    { mob | y = y, x = x } :: bullets
+            )
+            []
+        |> (\bullets -> { memory | bullets = bullets })
+
+
+shoot weapon ({ player } as memory) =
     let
-        acc =
-            player.acc
-                |> Vec2.add (Vec2.scale config.friction player.v)
-                |> Vec2.add config.gravity
-                |> roundVec
+        dirRecord =
+            Direction.toRecord memory.player.dir
 
-        forceApplied =
-            { player
-                | v = player.v |> Vec2.add (Vec2.scale 1.5 acc)
-                , contact = zero
+        v =
+            dirRecord
+                |> Vec2.mul weapon.bullet.v
+                |> Vec2.add (Vec2.setY 0 player.v)
+
+        bullet =
+            { x = memory.player.p.x + weapon.bullet.x
+            , y = memory.player.p.y + weapon.bullet.y
+            , r = weapon.bullet.r
+            , a = weapon.bullet.a
+            , v = v
+            , shape = weapon.bullet.shape
             }
-
-        newPlayer =
-            List.foldl Collision.lineCircle forceApplied memory.static
     in
     { memory
-        | player =
-            { newPlayer
-                | p = Vec2.add newPlayer.p newPlayer.v
-                , v =
-                    applyIf (newPlayer.v == forceApplied.v) (Vec2.add (Vec2.scale -0.5 acc)) newPlayer.v
-                        |> roundVec
+        | bullets = bullet :: memory.bullets
+        , player =
+            { player
+                | acc =
+                    Vec2.add
+                        (Vec2.negate dirRecord |> Vec2.mul (vec2 3 6.5))
+                        player.acc
             }
     }
+
+
+updateShoot computer state =
+    List.foldl
+        (\weapon ( acc, model ) ->
+            if computer.keyboard.shift && weapon.counter <= 0 then
+                ( { weapon | counter = weapon.interval } :: acc, shoot weapon model )
+
+            else if weapon.counter > 0 then
+                ( { weapon | counter = weapon.counter - 1 } :: acc, model )
+
+            else
+                ( weapon :: acc, model )
+        )
+        ( [], state )
+        state.weapon
+        |> (\( a, b ) -> { b | weapon = a })
 
 
 type Phase
@@ -154,7 +210,24 @@ type Phase
     | Play
         { player : Player
         , static : List { p1 : Vec2, p2 : Vec2 }
+        , bullets : List Bullet
+        , weapon :
+            List
+                { counter : Int
+                , interval : Int
+                , bullet : Bullet
+                }
         }
+
+
+type alias Bullet =
+    { x : Number
+    , y : Number
+    , r : Number
+    , a : Number
+    , v : Vec2
+    , shape : Time -> Shape
+    }
 
 
 type alias Level =
@@ -181,6 +254,22 @@ initGame { screen } =
 
         --{ p1 = { x = -90, y = 50 }, p2 = { x = -160, y = 72 } }
         --, { p1 = { x = -90, y = 72 }, p2 = { x = -160, y = 50 } }
+        ]
+    , bullets = []
+
+    --, explosions = []
+    , weapon =
+        [ { counter = 5
+          , interval = 15
+          , bullet =
+                { x = 3
+                , y = 0
+                , r = 10
+                , a = 30
+                , v = vec2 4 4
+                , shape = \_ -> group [ circle red 2, circle white 1 ]
+                }
+          }
         ]
     }
 
@@ -210,21 +299,8 @@ type alias Player =
     }
 
 
-roundVec { x, y } =
-    { x = toFloat (round (x * precision)) / precision, y = toFloat (round (y * precision)) / precision }
-
-
-precision =
-    1.0e10
-
-
-applyIf : Bool -> (a -> a) -> a -> a
-applyIf bool f world =
-    if bool then
-        f world
-
-    else
-        world
+andFold l fn acc =
+    List.foldr fn acc l
 
 
 debug computer ({ player, static } as memory) =

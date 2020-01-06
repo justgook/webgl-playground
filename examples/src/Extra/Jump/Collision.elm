@@ -1,6 +1,52 @@
-module Extra.Jump.Collision exposing (intersection, lineCircle)
+module Extra.Jump.Collision exposing (intersection, lineCircle, simulate)
 
 import AltMath.Vector2 as Vec2 exposing (vec2)
+
+
+precision =
+    1.0e10
+
+
+simulate config player static =
+    let
+        acc =
+            player.acc
+                |> Vec2.add (Vec2.mul config.friction player.v)
+                |> Vec2.add config.gravity
+                |> roundVec
+
+        forceApplied =
+            { player
+                | v = player.v |> Vec2.add (Vec2.scale 1.5 acc)
+                , contact = zero
+            }
+
+        newPlayer =
+            List.foldl lineCircle forceApplied static
+    in
+    { newPlayer
+        | p = Vec2.add newPlayer.p newPlayer.v
+        , v =
+            applyIf (newPlayer.v == forceApplied.v) (Vec2.add (Vec2.scale -0.5 acc)) newPlayer.v
+                |> roundVec
+    }
+
+
+zero =
+    Vec2.vec2 0 0
+
+
+roundVec { x, y } =
+    { x = toFloat (round (x * precision)) / precision, y = toFloat (round (y * precision)) / precision }
+
+
+applyIf : Bool -> (a -> a) -> a -> a
+applyIf bool f world =
+    if bool then
+        f world
+
+    else
+        world
 
 
 intersection : Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> Maybe ( Float, Float )

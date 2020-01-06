@@ -330,7 +330,7 @@ updateMob computer state =
 updateBullet computer state =
     state.bullets
         |> List.foldl
-            (\mob ( bullets, seed ) ->
+            (\mob bullets ->
                 let
                     y =
                         mob.y + mob.speedY
@@ -339,13 +339,13 @@ updateBullet computer state =
                         mob.x + mob.speedX
                 in
                 if y > computer.screen.top then
-                    ( bullets, seed )
+                    bullets
 
                 else
-                    ( { mob | y = y, x = x } :: bullets, seed )
+                    { mob | y = y, x = x } :: bullets
             )
-            ( [], state.seed )
-        |> (\( bullets, seed ) -> { state | bullets = bullets, seed = seed })
+            []
+        |> (\bullets -> { state | bullets = bullets })
 
 
 type alias Object =

@@ -27,7 +27,9 @@ import Browser.Events as E
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as H
+import Html.Events as H
 import Json.Decode as D
+import Json.Encode
 import Math.Vector2
 import Math.Vector3
 import Math.Vector4
@@ -291,6 +293,19 @@ viewWrap screen entities =
     , WebGL.toHtmlWith webGLOption
         [ H.width (round screen.width)
         , H.height (round screen.height)
+
+        --, H.on "click"
+        --    (D.at [ "view", "devicePixelRatio" ] D.float
+        --        |> D.andThen
+        --            (\devicePixelRatio ->
+        --                let
+        --                    _ =
+        --                        devicePixelRatio
+        --                            |> Debug.log "hello"
+        --                in
+        --                D.fail ""
+        --            )
+        --    )
         ]
         entities
     ]
