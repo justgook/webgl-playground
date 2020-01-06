@@ -74,16 +74,19 @@
                 if (this.gamepad.buttons[0] !== gamepad.buttons[0]) {
                     document.dispatchEvent(new KeyboardEvent(key[gamepad.buttons[0].pressed], { 'key': ' ' }));
                 }
-                if (this.gamepad.axes[0] !== gamepad.axes[0]){
+                if (this.gamepad.buttons[1] !== gamepad.buttons[1]) {
+                    document.dispatchEvent(new KeyboardEvent(key[gamepad.buttons[1].pressed], { 'key': 'Shift' }));
+                }
+                if (this.gamepad.axes[0] !== gamepad.axes[0]) {
                     document.dispatchEvent(new KeyboardEvent(key[gamepad.axes[0] < -0.1], { 'key': 'ArrowLeft' }));
                     document.dispatchEvent(new KeyboardEvent(key[gamepad.axes[0] > 0.1], { 'key': 'ArrowRight' }));
                 }
-                if (this.gamepad.axes[1] !== gamepad.axes[1]){
+                if (this.gamepad.axes[1] !== gamepad.axes[1]) {
                     document.dispatchEvent(new KeyboardEvent(key[gamepad.axes[1] < -0.1], { 'key': 'ArrowUp' }));
                     document.dispatchEvent(new KeyboardEvent(key[gamepad.axes[1] > 0.1], { 'key': 'ArrowDown' }));
                 }
 
-                console.log(gamepad.axes[9]);
+                // console.log(gamepad.axes[9]);
                 this.gamepad = gamepad;
             }
         }

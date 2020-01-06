@@ -75,7 +75,9 @@ animatePlayer computer ({ player } as memory) =
             toXY computer.keyboard
 
         dir =
-            Direction.fromRecord { x = x, y = y }
+            { x = x, y = y }
+                |> applyIf (player.contact.y < 0) (Vec2.setY 0)
+                |> Direction.fromRecord
     in
     if dir /= Direction.Neither && dir /= player.dir then
         { memory | player = { player | frame = 0, dir = dir } }
@@ -181,9 +183,7 @@ shoot weapon ({ player } as memory) =
         , player =
             { player
                 | acc =
-                    Vec2.add
-                        (Vec2.negate dirRecord |> Vec2.mul (vec2 3 6.5))
-                        player.acc
+                    Vec2.negate dirRecord |> Vec2.mul (vec2 3 9)
             }
     }
 
@@ -301,6 +301,15 @@ type alias Player =
 
 andFold l fn acc =
     List.foldr fn acc l
+
+
+applyIf : Bool -> (a -> a) -> a -> a
+applyIf bool f world =
+    if bool then
+        f world
+
+    else
+        world
 
 
 debug computer ({ player, static } as memory) =
