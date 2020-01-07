@@ -76,11 +76,34 @@ animatePlayer computer ({ player } as memory) =
 
         dir =
             { x = x, y = y }
-                |> applyIf (player.contact.y < 0) (Vec2.setY 0)
+                |> applyIf (player.contact.y < 0 && y < 0) (Vec2.setY 0)
                 |> Direction.fromRecord
     in
     if dir /= Direction.Neither && dir /= player.dir then
         { memory | player = { player | frame = 0, dir = dir } }
+
+    else if
+        dir
+            == Direction.Neither
+            && player.contact.y
+            < 0
+            && (player.dir == Direction.SouthEast || player.dir == Direction.South || player.dir == Direction.SouthWest)
+    then
+        { memory
+            | player =
+                { player
+                    | dir =
+                        case player.dir of
+                            Direction.SouthEast ->
+                                Direction.East
+
+                            Direction.SouthWest ->
+                                Direction.West
+
+                            _ ->
+                                Direction.East
+                }
+        }
 
     else
         { memory | player = { player | frame = player.frame + 1 } }
