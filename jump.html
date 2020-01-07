@@ -798,11 +798,11 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 
 function _Debug_regionToString(region)
 {
-	if (region.bd.ad === region.bp.ad)
+	if (region.bd.ae === region.bp.ae)
 	{
-		return 'on line ' + region.bd.ad;
+		return 'on line ' + region.bd.ae;
 	}
-	return 'on lines ' + region.bd.ad + ' through ' + region.bp.ad;
+	return 'on lines ' + region.bd.ae + ' through ' + region.bp.ae;
 }
 
 
@@ -2673,7 +2673,7 @@ var _VirtualDom_mapEventTuple = F2(function(func, tuple)
 var _VirtualDom_mapEventRecord = F2(function(func, record)
 {
 	return {
-		J: func(record.J),
+		K: func(record.K),
 		bf: record.bf,
 		a9: record.a9
 	}
@@ -2943,7 +2943,7 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 		// 3 = Custom
 
 		var value = result.a;
-		var message = !tag ? value : tag < 3 ? value.a : value.J;
+		var message = !tag ? value : tag < 3 ? value.a : value.K;
 		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.bf;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
@@ -7019,7 +7019,7 @@ var $author$project$Playground$Internal$mouseMove = F3(
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Playground$Transformation$identity = {r: 1, s: 0, z: 0, t: 0, u: 1, A: 0};
+var $author$project$Playground$Transformation$identity = {r: 1, s: 0, A: 0, t: 0, u: 1, B: 0};
 var $elm$core$Tuple$mapSecond = F2(
 	function (func, _v0) {
 		var x = _v0.a;
@@ -7030,7 +7030,7 @@ var $elm$core$Tuple$mapSecond = F2(
 	});
 var $author$project$Playground$Transformation$apply = F2(
 	function (a, b) {
-		return {r: (a.r * b.r) + (a.s * b.t), s: (a.r * b.s) + (a.s * b.u), z: ((a.r * b.z) + (a.s * b.A)) + a.z, t: (a.t * b.r) + (a.u * b.t), u: (a.t * b.s) + (a.u * b.u), A: ((a.t * b.z) + (a.u * b.A)) + a.A};
+		return {r: (a.r * b.r) + (a.s * b.t), s: (a.r * b.s) + (a.s * b.u), A: ((a.r * b.A) + (a.s * b.B)) + a.A, t: (a.t * b.r) + (a.u * b.t), u: (a.t * b.s) + (a.u * b.u), B: ((a.t * b.A) + (a.u * b.B)) + a.B};
 	});
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -7084,17 +7084,17 @@ var $elm$core$Set$member = F2(
 	});
 var $author$project$Playground$Transformation$scale = F3(
 	function (sx, sy, b) {
-		return {r: sx * b.r, s: sx * b.s, z: sx * b.z, t: sy * b.t, u: sy * b.u, A: sy * b.A};
+		return {r: sx * b.r, s: sx * b.s, A: sx * b.A, t: sy * b.t, u: sy * b.u, B: sy * b.B};
 	});
 var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
 var $author$project$Playground$Transformation$toGL = function (_v0) {
 	var a11 = _v0.r;
 	var a12 = _v0.s;
-	var a13 = _v0.z;
+	var a13 = _v0.A;
 	var a21 = _v0.t;
 	var a22 = _v0.u;
-	var a23 = _v0.A;
+	var a23 = _v0.B;
 	return _Utils_Tuple2(
 		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
 			{aI: a22, g: a11, h: a12, da: a21}),
@@ -7111,10 +7111,10 @@ var $author$project$Playground$Transformation$transform = F5(
 		return {
 			r: $elm$core$Basics$cos(angle) * sx,
 			s: $elm$core$Basics$sin(angle) * (-sy),
-			z: tx,
+			A: tx,
 			t: $elm$core$Basics$sin(angle) * sx,
 			u: $elm$core$Basics$cos(angle) * sy,
-			A: ty
+			B: ty
 		};
 	});
 var $author$project$Playground$Internal$renderShape = F6(
@@ -7123,11 +7123,11 @@ var $author$project$Playground$Internal$renderShape = F6(
 		while (true) {
 			var x = _v0.g;
 			var y = _v0.h;
-			var a = _v0.an;
-			var sx = _v0.b;
-			var sy = _v0.c;
+			var a = _v0.ao;
+			var sx = _v0.c;
+			var sy = _v0.d;
 			var o = _v0.a;
-			var form = _v0.d;
+			var form = _v0.e;
 			var entities = acc.a;
 			var missing = acc.b;
 			var opacity = o * parentOpacity;
@@ -7730,7 +7730,7 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 		var model = _v0;
 		var visibility = model.aH;
 		var memory = model.aA;
-		var textures = model.ah;
+		var textures = model.ai;
 		var computer = model.ct;
 		switch (msg.$) {
 			case 1:
@@ -7767,7 +7767,7 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 						function (loadingTextures) {
 							return _Utils_update(
 								newModel,
-								{cx: entities, ah: loadingTextures});
+								{cx: entities, ai: loadingTextures});
 						},
 						A2($author$project$Playground$Internal$requestTexture, missing, textures));
 				}
@@ -7871,7 +7871,7 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 					_Utils_update(
 						model,
 						{
-							ah: A2($author$project$Playground$Internal$gotTextures, r, model.ah)
+							ai: A2($author$project$Playground$Internal$gotTextures, r, model.ai)
 						}),
 					$elm$core$Platform$Cmd$none);
 		}
@@ -8212,7 +8212,7 @@ var $author$project$Playground$Internal$embed = F4(
 			}
 		};
 		var init = _Utils_Tuple2(
-			{ct: $author$project$Playground$Internal$initialComputer, cx: _List_Nil, aA: initialMemory, ah: $elm$core$Dict$empty, aH: 0},
+			{ct: $author$project$Playground$Internal$initialComputer, cx: _List_Nil, aA: initialMemory, ai: $elm$core$Dict$empty, aH: 0},
 			A2($elm$core$Task$perform, $author$project$Playground$Internal$GotViewport, $elm$browser$Browser$Dom$getViewport));
 		return {
 			bv: init,
@@ -8595,19 +8595,19 @@ var $author$project$Playground$game = $author$project$Playground$Internal$game;
 var $author$project$Extra$Jump$Play = function (a) {
 	return {$: 1, a: a};
 };
-var $author$project$Extra$Jump$Direction$Neither = 8;
-var $author$project$Extra$Jump$applyIf = F3(
-	function (bool, f, world) {
-		return bool ? f(world) : world;
-	});
 var $author$project$Extra$Jump$Direction$East = 2;
-var $author$project$Extra$Jump$Direction$North = 0;
-var $author$project$Extra$Jump$Direction$NorthEast = 1;
-var $author$project$Extra$Jump$Direction$NorthWest = 7;
+var $author$project$Extra$Jump$Direction$Neither = 8;
 var $author$project$Extra$Jump$Direction$South = 4;
 var $author$project$Extra$Jump$Direction$SouthEast = 3;
 var $author$project$Extra$Jump$Direction$SouthWest = 5;
 var $author$project$Extra$Jump$Direction$West = 6;
+var $author$project$Extra$Jump$applyIf = F3(
+	function (bool, f, world) {
+		return bool ? f(world) : world;
+	});
+var $author$project$Extra$Jump$Direction$North = 0;
+var $author$project$Extra$Jump$Direction$NorthEast = 1;
+var $author$project$Extra$Jump$Direction$NorthWest = 7;
 var $author$project$Extra$Jump$Direction$fromRecord = function (_v0) {
 	var x = _v0.g;
 	var y = _v0.h;
@@ -8634,29 +8634,47 @@ var $author$project$Playground$toXY = function (keyboard) {
 };
 var $author$project$Extra$Jump$animatePlayer = F2(
 	function (computer, memory) {
-		var player = memory.e;
+		var player = memory.b;
 		var _v0 = $author$project$Playground$toXY(computer.a5);
 		var x = _v0.a;
 		var y = _v0.b;
 		var dir = $author$project$Extra$Jump$Direction$fromRecord(
 			A3(
 				$author$project$Extra$Jump$applyIf,
-				player.ar.h < 0,
+				(player.ab.h < 0) && (y < 0),
 				$author$project$AltMath$Vector2$setY(0),
 				{g: x, h: y}));
-		return ((dir !== 8) && (!_Utils_eq(dir, player.O))) ? _Utils_update(
+		return ((dir !== 8) && (!_Utils_eq(dir, player.v))) ? _Utils_update(
 			memory,
 			{
-				e: _Utils_update(
+				b: _Utils_update(
 					player,
-					{O: dir, Q: 0})
+					{v: dir, Q: 0})
+			}) : (((dir === 8) && ((player.ab.h < 0) && ((player.v === 3) || ((player.v === 4) || (player.v === 5))))) ? _Utils_update(
+			memory,
+			{
+				b: _Utils_update(
+					player,
+					{
+						v: function () {
+							var _v1 = player.v;
+							switch (_v1) {
+								case 3:
+									return 2;
+								case 5:
+									return 6;
+								default:
+									return 2;
+							}
+						}()
+					})
 			}) : _Utils_update(
 			memory,
 			{
-				e: _Utils_update(
+				b: _Utils_update(
 					player,
 					{Q: player.Q + 1})
-			});
+			}));
 	});
 var $author$project$Playground$Internal$Form = F3(
 	function (a, b, c) {
@@ -8687,10 +8705,10 @@ var $elm_explorations$webgl$WebGL$Internal$Blend = function (a) {
 var $elm_explorations$webgl$WebGL$Settings$Blend$custom = function (_v0) {
 	var r = _v0.X;
 	var g = _v0.ax;
-	var b = _v0.aq;
-	var a = _v0.an;
+	var b = _v0.ar;
+	var a = _v0.ao;
 	var color = _v0.cs;
-	var alpha = _v0.ap;
+	var alpha = _v0.aq;
 	var expand = F2(
 		function (_v1, _v2) {
 			var eq1 = _v1.a;
@@ -8717,9 +8735,9 @@ var $elm_explorations$webgl$WebGL$Settings$Blend$add = F2(
 	function (factor1, factor2) {
 		return $elm_explorations$webgl$WebGL$Settings$Blend$custom(
 			{
-				an: 0,
-				ap: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
-				aq: 0,
+				ao: 0,
+				aq: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
+				ar: 0,
 				cs: A2($elm_explorations$webgl$WebGL$Settings$Blend$customAdd, factor1, factor2),
 				ax: 0,
 				X: 0
@@ -8754,16 +8772,16 @@ var $author$project$Playground$Shader$mesh = $elm_explorations$webgl$WebGL$trian
 	_List_fromArray(
 		[
 			{
-			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, -1)
+			ap: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, -1)
 		},
 			{
-			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, 1)
+			ap: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, -1, 1)
 		},
 			{
-			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, -1)
+			ap: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, -1)
 		},
 			{
-			ao: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, 1)
+			ap: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, 1)
 		}
 		]));
 var $elm_explorations$linear_algebra$Math$Vector3$toRecord = _MJS_v3toRecord;
@@ -8776,7 +8794,7 @@ var $author$project$Playground$Render$setAlpha = function (c) {
 };
 var $author$project$Playground$Shader$vertRect = {
 	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            void main () {\n                uv = aP;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
-	attributes: {aP: 'ao'},
+	attributes: {aP: 'ap'},
 	uniforms: {uP: 'ch', uT: 'ci'}
 };
 var $author$project$Playground$Render$circle = F4(
@@ -8796,15 +8814,15 @@ var $author$project$Playground$Render$circle = F4(
 var $author$project$Playground$circle = F2(
 	function (color, radius) {
 		return {
-			an: 0,
-			d: A3(
+			ao: 0,
+			e: A3(
 				$author$project$Playground$Internal$Form,
 				radius * 2,
 				radius * 2,
 				$author$project$Playground$Render$circle(color)),
 			a: 1,
-			b: 1,
 			c: 1,
+			d: 1,
 			g: 0,
 			h: 0
 		};
@@ -8814,11 +8832,11 @@ var $author$project$Playground$Internal$Group = function (a) {
 };
 var $author$project$Playground$group = function (shapes) {
 	return {
-		an: 0,
-		d: $author$project$Playground$Internal$Group(shapes),
+		ao: 0,
+		e: $author$project$Playground$Internal$Group(shapes),
 		a: 1,
-		b: 1,
 		c: 1,
+		d: 1,
 		g: 0,
 		h: 0
 	};
@@ -8832,13 +8850,13 @@ var $author$project$Extra$Jump$zero = A2($author$project$AltMath$Vector2$vec2, 0
 var $author$project$Extra$Jump$initPlayer = F2(
 	function (x, y) {
 		return {
-			M: {g: 0, h: 0},
-			ar: {g: 0, h: 0},
+			N: {g: 0, h: 0},
+			ab: {g: 0, h: 0},
 			aL: _List_fromArray(
 				[
 					{p: $author$project$Extra$Jump$zero, q: $author$project$Extra$Jump$zero}
 				]),
-			O: 2,
+			v: 2,
 			Q: 0,
 			f: A2($author$project$AltMath$Vector2$vec2, x, y),
 			X: 9,
@@ -8975,7 +8993,7 @@ var $author$project$Extra$Jump$initGame = function (_v0) {
 	var screen = _v0.Y;
 	return {
 		U: _List_Nil,
-		e: A2($author$project$Extra$Jump$initPlayer, -10, 90),
+		b: A2($author$project$Extra$Jump$initPlayer, -10, 90),
 		be: _List_fromArray(
 			[
 				{
@@ -9022,10 +9040,10 @@ var $author$project$Extra$Jump$initGame = function (_v0) {
 		bh: _List_fromArray(
 			[
 				{
-				N: {
-					an: 30,
+				O: {
+					ao: 30,
 					X: 10,
-					ae: function (_v1) {
+					af: function (_v1) {
 						return $author$project$Playground$group(
 							_List_fromArray(
 								[
@@ -9044,11 +9062,11 @@ var $author$project$Extra$Jump$initGame = function (_v0) {
 	};
 };
 var $author$project$Extra$Jump$config = {
-	M: 0.5,
+	N: 0.5,
 	cC: A2($author$project$AltMath$Vector2$vec2, -0.125, -0.05),
 	cG: A2($author$project$AltMath$Vector2$vec2, 0, -0.4),
 	bx: 9,
-	x: 3
+	y: 3
 };
 var $author$project$AltMath$Vector2$add = F2(
 	function (a, b) {
@@ -9156,7 +9174,7 @@ var $author$project$Extra$Jump$Collision$lineCircle = F2(
 					return _Utils_update(
 						player,
 						{
-							ar: A2($author$project$AltMath$Vector2$max, normal, player.ar),
+							ab: A2($author$project$AltMath$Vector2$max, normal, player.ab),
 							n: A2(
 								$author$project$AltMath$Vector2$add,
 								A2($author$project$AltMath$Vector2$scale, -$author$project$Extra$Jump$Collision$slopeFix, normal),
@@ -9182,7 +9200,7 @@ var $author$project$Extra$Jump$Collision$lineCircle = F2(
 					return _Utils_update(
 						player,
 						{
-							ar: A2($author$project$AltMath$Vector2$max, normal, player.ar),
+							ab: A2($author$project$AltMath$Vector2$max, normal, player.ab),
 							n: A2(
 								$author$project$AltMath$Vector2$add,
 								A2(
@@ -9220,11 +9238,11 @@ var $author$project$Extra$Jump$Collision$simulate = F3(
 				A2(
 					$author$project$AltMath$Vector2$add,
 					A2($author$project$AltMath$Vector2$mul, config.cC, player.n),
-					player.M)));
+					player.N)));
 		var forceApplied = _Utils_update(
 			player,
 			{
-				ar: $author$project$Extra$Jump$Collision$zero,
+				ab: $author$project$Extra$Jump$Collision$zero,
 				n: A2(
 					$author$project$AltMath$Vector2$add,
 					A2($author$project$AltMath$Vector2$scale, 1.5, acc),
@@ -9248,7 +9266,7 @@ var $author$project$Extra$Jump$simulate = function (memory) {
 	return _Utils_update(
 		memory,
 		{
-			e: A3($author$project$Extra$Jump$Collision$simulate, $author$project$Extra$Jump$config, memory.e, memory.be)
+			b: A3($author$project$Extra$Jump$Collision$simulate, $author$project$Extra$Jump$config, memory.b, memory.be)
 		});
 };
 var $author$project$Extra$Jump$updateBullet = F2(
@@ -9264,7 +9282,7 @@ var $author$project$Extra$Jump$updateBullet = F2(
 					function (mob, bullets) {
 						var y = mob.h + mob.n.h;
 						var x = mob.g + mob.n.g;
-						return ((_Utils_cmp(y, computer.Y.bg) > 0) || ((_Utils_cmp(y, computer.Y.aJ) < 0) || ((_Utils_cmp(x, memory.e.f.g + computer.Y.aB) > 0) || (_Utils_cmp(x, computer.Y.az + memory.e.f.g) < 0)))) ? bullets : A2(
+						return ((_Utils_cmp(y, computer.Y.bg) > 0) || ((_Utils_cmp(y, computer.Y.aJ) < 0) || ((_Utils_cmp(x, memory.b.f.g + computer.Y.aB) > 0) || (_Utils_cmp(x, computer.Y.az + memory.b.f.g) < 0)))) ? bullets : A2(
 							$elm$core$List$cons,
 							_Utils_update(
 								mob,
@@ -9278,9 +9296,9 @@ var $elm$core$Basics$not = _Basics_not;
 var $author$project$Extra$Jump$updateMovement = F2(
 	function (_v0, memory) {
 		var keyboard = _v0.a5;
-		var player = memory.e;
-		var x = (keyboard.az && (!keyboard.bc)) ? (-$author$project$Extra$Jump$config.M) : ((keyboard.aB && (!keyboard.bc)) ? $author$project$Extra$Jump$config.M : 0);
-		var _v1 = (keyboard.cY && (_Utils_cmp(player.ar.h, -0.5) < 0)) ? _Utils_Tuple2(
+		var player = memory.b;
+		var x = (keyboard.az && (!keyboard.bc)) ? (-$author$project$Extra$Jump$config.N) : ((keyboard.aB && (!keyboard.bc)) ? $author$project$Extra$Jump$config.N : 0);
+		var _v1 = (keyboard.cY && (_Utils_cmp(player.ab.h, -0.5) < 0)) ? _Utils_Tuple2(
 			A2($author$project$AltMath$Vector2$vec2, x, $author$project$Extra$Jump$config.bx),
 			A2($author$project$AltMath$Vector2$setY, 0, player.n)) : _Utils_Tuple2(
 			A2($author$project$AltMath$Vector2$vec2, x, 0),
@@ -9290,9 +9308,9 @@ var $author$project$Extra$Jump$updateMovement = F2(
 		return _Utils_update(
 			memory,
 			{
-				e: _Utils_update(
+				b: _Utils_update(
 					player,
-					{M: acc, n: v})
+					{N: acc, n: v})
 			});
 	});
 var $author$project$AltMath$Vector2$negate = function (a) {
@@ -9331,21 +9349,21 @@ var $author$project$Extra$Jump$Direction$toRecord = function (dir) {
 };
 var $author$project$Extra$Jump$shoot = F2(
 	function (weapon, memory) {
-		var player = memory.e;
-		var dirRecord = $author$project$Extra$Jump$Direction$toRecord(memory.e.O);
+		var player = memory.b;
+		var dirRecord = $author$project$Extra$Jump$Direction$toRecord(memory.b.v);
 		var v = A2(
 			$author$project$AltMath$Vector2$add,
 			A2($author$project$AltMath$Vector2$setY, 0, player.n),
-			A2($author$project$AltMath$Vector2$mul, weapon.N.n, dirRecord));
-		var bullet = {an: weapon.N.an, X: weapon.N.X, ae: weapon.N.ae, n: v, g: memory.e.f.g + weapon.N.g, h: memory.e.f.h + weapon.N.h};
+			A2($author$project$AltMath$Vector2$mul, weapon.O.n, dirRecord));
+		var bullet = {ao: weapon.O.ao, X: weapon.O.X, af: weapon.O.af, n: v, g: memory.b.f.g + weapon.O.g, h: memory.b.f.h + weapon.O.h};
 		return _Utils_update(
 			memory,
 			{
 				U: A2($elm$core$List$cons, bullet, memory.U),
-				e: _Utils_update(
+				b: _Utils_update(
 					player,
 					{
-						M: A2(
+						N: A2(
 							$author$project$AltMath$Vector2$mul,
 							A2($author$project$AltMath$Vector2$vec2, 3, 9),
 							$author$project$AltMath$Vector2$negate(dirRecord))
@@ -9419,11 +9437,11 @@ var $author$project$Playground$move = F3(
 		var shape = _v0;
 		var x = shape.g;
 		var y = shape.h;
-		var a = shape.an;
-		var sx = shape.b;
-		var sy = shape.c;
+		var a = shape.ao;
+		var sx = shape.c;
+		var sy = shape.d;
 		var o = shape.a;
-		var form = shape.d;
+		var form = shape.e;
 		return _Utils_update(
 			shape,
 			{g: x + dx, h: y + dy});
@@ -9436,7 +9454,7 @@ var $author$project$Playground$Shader$fragFill = {
 };
 var $author$project$Playground$Shader$vertNone = {
 	src: '\n        precision mediump float;\n        attribute vec2 aP;\n        uniform vec4 uT;\n        uniform vec2 uP;\n        void main () {\n            gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n        }\n    ',
-	attributes: {aP: 'ao'},
+	attributes: {aP: 'ap'},
 	uniforms: {uP: 'ch', uT: 'ci'}
 };
 var $author$project$Playground$Render$rect = F4(
@@ -9456,15 +9474,15 @@ var $author$project$Playground$Render$rect = F4(
 var $author$project$Playground$rectangle = F3(
 	function (color, width, height) {
 		return {
-			an: 0,
-			d: A3(
+			ao: 0,
+			e: A3(
 				$author$project$Playground$Internal$Form,
 				width,
 				height,
 				$author$project$Playground$Render$rect(color)),
 			a: 1,
-			b: 1,
 			c: 1,
+			d: 1,
 			g: 0,
 			h: 0
 		};
@@ -9477,15 +9495,15 @@ var $author$project$Playground$rotate = F2(
 		var shape = _v0;
 		var x = shape.g;
 		var y = shape.h;
-		var a = shape.an;
-		var sx = shape.b;
-		var sy = shape.c;
+		var a = shape.ao;
+		var sx = shape.c;
+		var sy = shape.d;
 		var o = shape.a;
-		var form = shape.d;
+		var form = shape.e;
 		return _Utils_update(
 			shape,
 			{
-				an: a + $elm$core$Basics$degrees(da)
+				ao: a + $elm$core$Basics$degrees(da)
 			});
 	});
 var $author$project$Playground$Shader$fragNgon = {
@@ -9511,15 +9529,15 @@ var $author$project$Playground$Render$ngon = F5(
 var $author$project$Playground$triangle = F2(
 	function (color, radius) {
 		return {
-			an: 0,
-			d: A3(
+			ao: 0,
+			e: A3(
 				$author$project$Playground$Internal$Form,
 				radius * 2,
 				radius * 2,
 				A2($author$project$Playground$Render$ngon, 3, color)),
 			a: 1,
-			b: 1,
 			c: 1,
+			d: 1,
 			g: 0,
 			h: 0
 		};
@@ -9581,11 +9599,11 @@ var $author$project$Playground$moveX = F2(
 		var shape = _v0;
 		var x = shape.g;
 		var y = shape.h;
-		var a = shape.an;
-		var sx = shape.b;
-		var sy = shape.c;
+		var a = shape.ao;
+		var sx = shape.c;
+		var sy = shape.d;
 		var o = shape.a;
-		var form = shape.d;
+		var form = shape.e;
 		return _Utils_update(
 			shape,
 			{g: x + dx});
@@ -9673,7 +9691,7 @@ var $author$project$Playground$yellow = A2(
 	$author$project$Playground$hexColor2Vec3('#edd400'));
 var $author$project$Extra$Jump$debug = F2(
 	function (computer, memory) {
-		var player = memory.e;
+		var player = memory.b;
 		var _static = memory.be;
 		return $author$project$Playground$group(
 			A3(
@@ -9729,18 +9747,18 @@ var $author$project$Extra$Jump$debug = F2(
 var $author$project$Playground$Advanced$custom = F3(
 	function (width, height, render) {
 		return {
-			an: 0,
-			d: A3($author$project$Playground$Internal$Form, width, height, render),
+			ao: 0,
+			e: A3($author$project$Playground$Internal$Form, width, height, render),
 			a: 1,
-			b: 1,
 			c: 1,
+			d: 1,
 			g: 0,
 			h: 0
 		};
 	});
 var $author$project$Extra$Jump$TileMap$vertFullscreen = {
 	src: '\n            precision mediump float;\n            attribute vec2 aP;\n\n            void main () {\n\n                gl_Position = vec4(aP, 0., 1.0);\n            }\n        ',
-	attributes: {aP: 'ao'},
+	attributes: {aP: 'ap'},
 	uniforms: {}
 };
 var $author$project$Extra$Jump$TileMap$fullscreen = A3(
@@ -9772,7 +9790,7 @@ var $author$project$Playground$Extra$scaleX = F2(
 		var shape = _v0;
 		return _Utils_update(
 			shape,
-			{b: shape.b * sx});
+			{c: shape.c * sx});
 	});
 var $author$project$Extra$Jump$Sprite$image = 'data:image/png;base64,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';
 var $author$project$Playground$moveY = F2(
@@ -9780,11 +9798,11 @@ var $author$project$Playground$moveY = F2(
 		var shape = _v0;
 		var x = shape.g;
 		var y = shape.h;
-		var a = shape.an;
-		var sx = shape.b;
-		var sy = shape.c;
+		var a = shape.ao;
+		var sx = shape.c;
+		var sy = shape.d;
 		var o = shape.a;
-		var form = shape.d;
+		var form = shape.e;
 		return _Utils_update(
 			shape,
 			{h: y + dy});
@@ -9804,7 +9822,7 @@ var $author$project$Playground$Shader$fragImage = {
 };
 var $author$project$Playground$Shader$vertSprite = {
 	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            uniform vec4 uUV;\n            void main () {\n                vec2 aP_ = aP * .5 + 0.5;\n                uv = uUV.xy + (aP_ * uUV.zw);\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
-	attributes: {aP: 'ao'},
+	attributes: {aP: 'ap'},
 	uniforms: {uP: 'ch', uT: 'ci', uUV: 'cj'}
 };
 var $author$project$Playground$Render$sprite = F6(
@@ -9824,11 +9842,11 @@ var $author$project$Playground$Internal$Textured = F2(
 var $author$project$Playground$Advanced$useTexture = F2(
 	function (url, fn) {
 		return {
-			an: 0,
-			d: A2($author$project$Playground$Internal$Textured, url, fn),
+			ao: 0,
+			e: A2($author$project$Playground$Internal$Textured, url, fn),
 			a: 1,
-			b: 1,
 			c: 1,
+			d: 1,
 			g: 0,
 			h: 0
 		};
@@ -9971,7 +9989,7 @@ var $author$project$Extra$Jump$Sprite$sheet = {
 			17,
 			$author$project$Extra$Jump$Sprite$image,
 			A4($elm_explorations$linear_algebra$Math$Vector4$vec4, 0.5913, 0.2632, 0.05652, 0.2237))),
-	ac: A4(
+	ad: A4(
 		$author$project$Playground$Extra$sprite,
 		14,
 		16,
@@ -10212,11 +10230,11 @@ var $author$project$Extra$Jump$Sprite$idle = F2(
 						_List_fromArray(
 							[$author$project$Extra$Jump$Sprite$sheet.as, $author$project$Extra$Jump$Sprite$sheet.aP])));
 			case 3:
-				return $author$project$Extra$Jump$Sprite$sheet.ac;
+				return $author$project$Extra$Jump$Sprite$sheet.ad;
 			case 4:
 				return $author$project$Extra$Jump$Sprite$sheet.aK;
 			case 5:
-				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ac);
+				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ad);
 			case 6:
 				return A2(
 					$author$project$Playground$Extra$scaleX,
@@ -10257,7 +10275,7 @@ var $elm$core$Tuple$mapBoth = F3(
 	});
 var $author$project$Playground$Shader$vertImage = {
 	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            void main () {\n                uv = aP * .5 + 0.5;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
-	attributes: {aP: 'ao'},
+	attributes: {aP: 'ap'},
 	uniforms: {uP: 'ch', uT: 'ci'}
 };
 var $author$project$Extra$Jump$TileMap$tileMap = F4(
@@ -10345,11 +10363,11 @@ var $author$project$Extra$Jump$Sprite$run = F2(
 						_List_fromArray(
 							[$author$project$Extra$Jump$Sprite$sheet.aN, $author$project$Extra$Jump$Sprite$sheet.aO, $author$project$Extra$Jump$Sprite$sheet.aQ, $author$project$Extra$Jump$Sprite$sheet.aR, $author$project$Extra$Jump$Sprite$sheet.aS, $author$project$Extra$Jump$Sprite$sheet.aT, $author$project$Extra$Jump$Sprite$sheet.aU, $author$project$Extra$Jump$Sprite$sheet.at])));
 			case 3:
-				return $author$project$Extra$Jump$Sprite$sheet.ac;
+				return $author$project$Extra$Jump$Sprite$sheet.ad;
 			case 4:
 				return $author$project$Extra$Jump$Sprite$sheet.aK;
 			case 5:
-				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ac);
+				return A2($author$project$Playground$Extra$scaleX, -1, $author$project$Extra$Jump$Sprite$sheet.ad);
 			case 6:
 				return A2(
 					$author$project$Playground$Extra$scaleX,
@@ -10383,14 +10401,14 @@ var $author$project$Playground$scale = F2(
 		var shape = _v0;
 		var x = shape.g;
 		var y = shape.h;
-		var a = shape.an;
-		var sx = shape.b;
-		var sy = shape.c;
+		var a = shape.ao;
+		var sx = shape.c;
+		var sy = shape.d;
 		var o = shape.a;
-		var form = shape.d;
+		var form = shape.e;
 		return _Utils_update(
 			shape,
-			{b: sx * ns, c: sy * ns});
+			{c: sx * ns, d: sy * ns});
 	});
 var $elm$core$List$singleton = function (value) {
 	return _List_fromArray(
@@ -10400,15 +10418,15 @@ var $author$project$Extra$Jump$view = F2(
 	function (computer, m) {
 		if (m.$ === 1) {
 			var memory = m.a;
-			var player = memory.e;
+			var player = memory.b;
 			return $elm$core$List$singleton(
 				A2(
 					$author$project$Playground$scale,
-					$author$project$Extra$Jump$config.x,
+					$author$project$Extra$Jump$config.y,
 					A3(
 						$author$project$Playground$move,
-						(-player.f.g) * $author$project$Extra$Jump$config.x,
-						(-16) * $author$project$Extra$Jump$config.x,
+						(-player.f.g) * $author$project$Extra$Jump$config.y,
+						(-16) * $author$project$Extra$Jump$config.y,
 						$author$project$Playground$group(
 							A2(
 								$elm$core$List$cons,
@@ -10425,7 +10443,7 @@ var $author$project$Extra$Jump$view = F2(
 													$author$project$Playground$move,
 													bullet.g,
 													bullet.h,
-													bullet.ae(computer.c_)));
+													bullet.af(computer.c_)));
 										},
 										_List_fromArray(
 											[
@@ -10433,7 +10451,7 @@ var $author$project$Extra$Jump$view = F2(
 												$author$project$Playground$move,
 												$author$project$Extra$Jump$pxSnap(player.f.g),
 												$author$project$Extra$Jump$pxSnap(player.f.h),
-												((player.n.g > 0.5) || (_Utils_cmp(player.n.g, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.O, player.Q) : A2($author$project$Extra$Jump$Sprite$idle, player.O, player.Q)),
+												((player.n.g > 0.5) || (_Utils_cmp(player.n.g, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.v, player.Q) : A2($author$project$Extra$Jump$Sprite$idle, player.v, player.Q)),
 												A2($author$project$Extra$Jump$debug, computer, memory)
 											]))))))));
 		} else {
