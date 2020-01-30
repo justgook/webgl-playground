@@ -6,7 +6,7 @@ module Playground exposing
     , move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY
     , scale, rotate, fade
     , group
-    , Time, spin, wave, zigzag, toFrac
+    , Time, spin, wave, zigzag, delta, now
     , Computer, Mouse, Screen, Keyboard, toX, toY, toXY
     , Color, rgb, red, orange, yellow, green, blue, purple, brown
     , lightRed, lightOrange, lightYellow, lightGreen, lightBlue, lightPurple, lightBrown
@@ -56,7 +56,7 @@ module Playground exposing
 
 # Time
 
-@docs Time, spin, wave, zigzag, toFrac
+@docs Time, spin, wave, zigzag, delta, now
 
 
 # Computer
@@ -551,9 +551,46 @@ zigzag lo hi period time =
     lo + (hi - lo) * abs (2 * toFrac period time - 1)
 
 
+{-| Time in milliseconds since the previous frame.
+Here is an example of a green square that
+just moves to the right precisely 1px per second,
+independent from frame rate:
+import Playground exposing (..)
+main =
+game view update 0
+view computer offset =
+[ square green 40
+|> moveRight offset
+]
+update computer offset =
+offset + 1 \* (delta computer.time)
+-}
+delta : Time -> Int
+delta (Internal.Time _ d) =
+    d
+
+
+{-| Turn a `Time` time into the number of milliseconds since 1970 January 1 at 00:00:00 UTC. It was a Thursday.
+Here is example of text that shows current seconds:
+import Playground exposing (..)
+main =
+animation view
+view time =
+let
+s =
+remainderBy (now time // 1000) 60
+|> String.fromInt
+in
+words black s
+-}
+now : Time -> Int
+now (Internal.Time posix _) =
+    Time.posixToMillis posix
+
+
 {-| -}
 toFrac : Float -> Time -> Float
-toFrac period (Internal.Time posix) =
+toFrac period (Internal.Time posix _) =
     let
         ms =
             Time.posixToMillis posix
@@ -593,7 +630,11 @@ animation : (Time -> List Shape) -> Program () Animation Msg
 animation viewFrame =
     let
         init () =
-            ( Animation E.Visible (Internal.toScreen 666 666) Dict.empty [] (Internal.Time (Time.millisToPosix 0))
+            ( Animation E.Visible
+                (Internal.toScreen 666 666)
+                Dict.empty
+                []
+                (Internal.Time (Time.millisToPosix 0) 0)
             , Task.perform GotViewport Dom.getViewport
             )
 
@@ -641,16 +682,22 @@ animationUpdate viewFrame msg ((Animation v screen textures entities t) as state
     case msg of
         Tick time ->
             let
+                (Internal.Time timeWas _) =
+                    t
+
+                d =
+                    Time.posixToMillis time - Time.posixToMillis timeWas
+
                 ( newEntities, missing ) =
-                    Internal.render screen textures (viewFrame (Internal.Time time))
+                    Internal.render screen textures (viewFrame (Internal.Time time d))
             in
             case missing of
                 [] ->
-                    ( Animation v screen textures newEntities (Internal.Time time), Cmd.none )
+                    ( Animation v screen textures newEntities (Internal.Time time d), Cmd.none )
 
                 _ ->
                     Internal.requestTexture missing textures
-                        |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Internal.Time time))
+                        |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Internal.Time time d))
 
         VisibilityChanged vis ->
             ( Animation vis screen textures entities t, Cmd.none )

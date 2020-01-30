@@ -1,17 +1,15 @@
 module Extra.Jump.TileMap exposing (fullscreen, level1)
 
-import Math.Vector2 exposing (vec2)
 import Math.Vector4 exposing (vec4)
-import Playground exposing (rgb)
 import Playground.Advanced exposing (..)
+import Playground.Batch.Tilemap as Extra
 import Playground.Render exposing (defaultEntitySettings)
 import Playground.Shader as Shader
 import WebGL
-import WebGL.Texture
 
 
 level1 =
-    tileMap 8 8 tileset1 lut1
+    Extra.tilemap 8 8 tileset1 lut1
 
 
 fullscreen =
@@ -35,94 +33,10 @@ vertFullscreen =
     [glsl|
             precision mediump float;
             attribute vec2 aP;
-
             void main () {
-
                 gl_Position = vec4(aP, 0., 1.0);
             }
         |]
-
-
-tileMap tileW tileH tileset lut =
-    useTexture tileset
-        (\tileset_ ->
-            useTexture lut
-                (\lut_ ->
-                    let
-                        ( w1, h1 ) =
-                            WebGL.Texture.size tileset_
-                                |> Tuple.mapBoth toFloat toFloat
-
-                        ( w2, h2 ) =
-                            WebGL.Texture.size lut_
-                                |> Tuple.mapBoth toFloat toFloat
-                    in
-                    custom
-                        (w2 * tileW)
-                        (h2 * tileH)
-                        (\translate scaleRotateSkew opacity ->
-                            WebGL.entityWith
-                                defaultEntitySettings
-                                Shader.vertImage
-                                fragTileMap
-                                Shader.mesh
-                                { uP = translate
-                                , uT = scaleRotateSkew
-                                , uA = opacity
-                                , uTileSize = vec2 tileW tileH
-                                , uAtlas = tileset_
-                                , uAtlasSize = vec2 w1 h1
-                                , uLut = lut_
-                                , uLutSize = vec2 w2 h2
-                                }
-                        )
-                )
-        )
-
-
-fragTileMap =
-    [glsl|
-precision mediump float;
-varying vec2 uv;
-uniform sampler2D uAtlas;
-uniform sampler2D uLut;
-uniform vec2 uAtlasSize;
-uniform vec2 uLutSize;
-uniform vec2 uTileSize;
-uniform float uA;
-float color2float(vec4 color) {
-    return
-    color.a * 255.0
-    + color.b * 256.0 * 255.0
-    + color.g * 256.0 * 256.0 * 255.0
-    + color.r * 256.0 * 256.0 * 256.0 * 255.0;
-    }
-float modI(float a, float b) {
-   float m = a - floor((a + 0.5) / b) * b;
-   return floor(m + 0.5);
-}
-
-void main () {
-   vec2 point = uv * uLutSize;
-   vec2 look = floor(point);
-   //(2i + 1)/(2N) Pixel center
-   vec2 coordinate = (look + 0.5) / uLutSize;
-   float uIndex = color2float(texture2D(uLut, coordinate));
-   vec2 grid = uAtlasSize / uTileSize;
-   // tile indexes in uAtlas starts from zero, but in lut zero is used for
-   // "none" placeholder
-   vec2 tile = vec2(modI((uIndex - 1.), grid.x), int(uIndex - 1.) / int(grid.x));
-   // inverting reading botom to top
-   tile.y = grid.y - tile.y - 1.;
-   vec2 fragmentOffsetPx = floor((point - look) * uTileSize);
-   //(2i + 1)/(2N) Pixel center
-   vec2 pixel = (floor(tile * uTileSize + fragmentOffsetPx) + 0.5) / uAtlasSize;
-   gl_FragColor = texture2D(uAtlas, pixel);
-   gl_FragColor.a *= float(uIndex > 0.);
-   gl_FragColor.rgb *= gl_FragColor.a;
-
-}
-    |]
 
 
 tileset1 =

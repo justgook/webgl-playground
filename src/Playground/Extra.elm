@@ -1,6 +1,7 @@
 module Playground.Extra exposing
     ( scaleX, scaleY
     , tile, sprite
+    , tilemap
     )
 
 {-|
@@ -15,12 +16,18 @@ module Playground.Extra exposing
 
 @docs tile, sprite
 
+
+# Batch renders
+
+@docs tilemap
+
 -}
 
 import Math.Vector2 exposing (vec2)
 import Math.Vector4 exposing (Vec4)
 import Playground exposing (Number, Shape)
 import Playground.Advanced exposing (Render, custom, useTexture)
+import Playground.Batch.Tilemap
 import Playground.Internal exposing (Form(..), Number, Shape(..))
 import Playground.Render as Render
 import WebGL.Texture
@@ -84,5 +91,12 @@ sprite tileW tileH atlas uv =
             custom tileW tileH <| Render.sprite t (size t) uv
 
 
+{-| -}
+tilemap : Float -> Float -> String -> String -> Shape
+tilemap =
+    Playground.Batch.Tilemap.tilemap
+
+
+size : WebGL.Texture.Texture -> Math.Vector2.Vec2
 size t =
     WebGL.Texture.size t |> (\( w, h ) -> vec2 (toFloat w) (toFloat h))

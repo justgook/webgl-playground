@@ -10,7 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout
+      uses: actions/checkout@v2.0.0
+      with:
+        persist-credentials: false
 
     - name: Setup Elm
       uses: justgook/setup-elm@v1
@@ -28,7 +31,7 @@ jobs:
         echo "::add-path::$(yarn global bin)"
 
     - name: Get Yarn cache
-      uses: actions/cache@v1.0.3
+      uses: actions/cache@v1.1.0
       id: yarn-cache-exists
       with:
         path: ${{ steps.yarn.outputs.dir }}
@@ -37,7 +40,7 @@ jobs:
           ${{ runner.os }}-yarn-
 
     - name: Get node_modules
-      uses: actions/cache@v1.0.3
+      uses: actions/cache@v1.1.0
       id: node_modules-cache-exists
       with:
         path: ./examples/node_modules
@@ -93,7 +96,7 @@ jobs:
 
 
     - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@3.0.5
+      uses: JamesIves/github-pages-deploy-action@3.2.1
       with:
         ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         BASE_BRANCH: master

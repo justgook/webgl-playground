@@ -43,6 +43,7 @@ view computer m =
                 |> group
                 |> move (-player.p.x * config.viewScale) (-16 * config.viewScale)
                 |> scale config.viewScale
+                --|> scale (wave 3 5 1 computer.time)
                 |> List.singleton
 
         Init ->
@@ -190,7 +191,6 @@ shoot weapon ({ player } as memory) =
         v =
             dirRecord
                 |> Vec2.mul weapon.bullet.v
-                |> Vec2.add (Vec2.setY 0 player.v)
 
         bullet =
             { x = memory.player.p.x + weapon.bullet.x

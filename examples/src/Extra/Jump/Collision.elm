@@ -3,6 +3,10 @@ module Extra.Jump.Collision exposing (intersection, lineCircle, simulate)
 import AltMath.Vector2 as Vec2 exposing (vec2)
 
 
+
+--https://github.com/shakiba/planck.js
+
+
 precision =
     1.0e10
 

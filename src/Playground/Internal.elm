@@ -27,9 +27,7 @@ import Browser.Events as E
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as H
-import Html.Events as H
 import Json.Decode as D
-import Json.Encode
 import Math.Vector2
 import Math.Vector3
 import Math.Vector4
@@ -213,15 +211,21 @@ gameUpdate viewMemory updateMemory msg (Game ({ visibility, memory, textures, co
     case msg of
         Tick time ->
             let
+                (Time timeWas _) =
+                    computer.time
+
+                d =
+                    Time.posixToMillis time - Time.posixToMillis timeWas
+
                 newModel =
                     { model
                         | memory = updateMemory computer memory
                         , computer =
                             if computer.mouse.click then
-                                { computer | time = Time time, mouse = mouseClick False computer.mouse }
+                                { computer | time = Time time d, mouse = mouseClick False computer.mouse }
 
                             else
-                                { computer | time = Time time }
+                                { computer | time = Time time d }
                     }
 
                 --TODO move that after all updates
@@ -375,7 +379,7 @@ initialComputer =
     { mouse = Mouse 0 0 False False
     , keyboard = emptyKeyboard
     , screen = toScreen 600 600
-    , time = Time (Time.millisToPosix 0)
+    , time = Time (Time.millisToPosix 0) 0
     }
 
 
@@ -520,7 +524,7 @@ type Msg
 
 
 type Time
-    = Time Time.Posix
+    = Time Time.Posix Int
 
 
 type alias Computer =
