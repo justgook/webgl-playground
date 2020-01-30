@@ -1,7 +1,7 @@
 module Playground.Advanced exposing
     ( custom, useTexture
-    , embed, resize
     , Render, Opacity, ScaleRotateSkew, Translate
+    , embed, subscriptions, resize, cacheTextures
     )
 
 {-| Advanced user section, for:
@@ -16,14 +16,14 @@ module Playground.Advanced exposing
 @docs custom, useTexture
 
 
-# Embedding
-
-@docs embed, resize
-
-
 # Types
 
 @docs Render, Opacity, ScaleRotateSkew, Translate
+
+
+# Embedding
+
+@docs embed, subscriptions, resize, cacheTextures
 
 -}
 
@@ -69,6 +69,10 @@ useTexture url fn =
     Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
 
 
+
+------ Embed Stuff ------
+
+
 {-| When you need advanced application or just need to playground be part of your app
 -}
 embed :
@@ -79,12 +83,11 @@ embed :
         { init : ( Internal.Game memory, Cmd Internal.Msg )
         , view : Internal.Game memory -> Html a
         , update : Internal.Msg -> Internal.Game memory -> ( Internal.Game memory, Cmd Internal.Msg )
-        , subscriptions : Internal.Game memory -> Sub Internal.Msg
         }
 embed viewMemory updateMemory initialMemory =
     let
-        { init, update, subscriptions } =
-            Internal.embed (Internal.allSubscriptions >> Sub.batch) viewMemory updateMemory initialMemory
+        { init, update } =
+            Internal.embed viewMemory updateMemory initialMemory
 
         view (Game { computer, entities }) =
             Internal.embedViewWrap computer.screen entities
@@ -92,8 +95,34 @@ embed viewMemory updateMemory initialMemory =
     { init = init
     , view = view
     , update = update
-    , subscriptions = subscriptions
     }
+
+
+{-| Playground have different subscriptions:
+
+  - `picture` uses only `subscriptions.resize`
+  - `animation` uses only `subscriptions.resize` and `subscriptions.time`
+  - `game` uses all (shortcut `subscriptions.all`)
+
+When embedding playground you can choose what to use:
+
+  - `keys` - listen to keyboard events (keyUp and keyDown) and updates
+  - `time` - updates `Computer.time` each frame
+  - `click` - listen on mouse movement `Computer.mouse.down/click`
+  - `mouse` - listen on mouse movement `Computer.mouse.x/y`
+  - `resize` - listen on window resize and updates `Computer.screen`
+
+-}
+subscriptions :
+    { keys : Sub Internal.Msg
+    , time : Sub Internal.Msg
+    , click : Sub Internal.Msg
+    , mouse : Sub Internal.Msg
+    , resize : Sub Internal.Msg
+    , all : Sub Internal.Msg
+    }
+subscriptions =
+    Internal.subscriptions
 
 
 {-| Embedded target is be part of your application,
@@ -103,6 +132,16 @@ so it is up to you decide on dimensions, and pass it to update function as Msg
 resize : Int -> Int -> Internal.Msg
 resize =
     Internal.resize
+
+
+{-| All textures start loading only after first time request in `view`,
+with slow network that can take some time,
+but for more advanced games and more smooth transition you can cache textures for later use,
+so when you need show new image - texture already there.
+-}
+cacheTextures : List ( String, Texture ) -> Internal.Msg
+cacheTextures =
+    Internal.setTexture
 
 
 {-| Create Your own Render and use it in [`Advanced.custom`](Playground-Advanced#custom) to create [`Shape`](Playground#Shape)

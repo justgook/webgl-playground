@@ -97,7 +97,7 @@ module Playground exposing
 
 import Browser
 import Browser.Dom as Dom
-import Browser.Events as E
+import Browser.Events
 import Dict exposing (Dict)
 import Math.Vector2 exposing (vec2)
 import Math.Vector3
@@ -154,15 +154,12 @@ picture shapes =
                     model
             )
                 |> renderPicture shapes
-
-        subscriptions _ =
-            E.onResize Internal.resize
     in
     Browser.document
         { init = init
         , view = view
         , update = update
-        , subscriptions = subscriptions
+        , subscriptions = \_ -> Internal.subscriptions.resize
         }
 
 
@@ -630,7 +627,7 @@ animation : (Time -> List Shape) -> Program () Animation Msg
 animation viewFrame =
     let
         init () =
-            ( Animation E.Visible
+            ( Animation Browser.Events.Visible
                 (Internal.toScreen 666 666)
                 Dict.empty
                 []
@@ -648,10 +645,10 @@ animation viewFrame =
 
         subscriptions (Animation visibility _ _ _ _) =
             case visibility of
-                E.Hidden ->
-                    E.onVisibilityChange VisibilityChanged
+                Browser.Events.Hidden ->
+                    Internal.subscriptions_.visibility
 
-                E.Visible ->
+                Browser.Events.Visible ->
                     animationSubscriptions
     in
     Browser.document
@@ -665,39 +662,36 @@ animation viewFrame =
 {-| Animation State
 -}
 type Animation
-    = Animation E.Visibility Screen TextureManager (List Entity) Time
+    = Animation Browser.Events.Visibility Screen TextureManager (List Entity) Time
 
 
 animationSubscriptions : Sub Msg
 animationSubscriptions =
     Sub.batch
-        [ E.onResize Internal.resize
-        , E.onAnimationFrame Tick
-        , E.onVisibilityChange VisibilityChanged
+        [ Internal.subscriptions.resize
+        , Internal.subscriptions.time
+        , Internal.subscriptions_.visibility
         ]
 
 
 animationUpdate : (Time -> List Shape) -> Msg -> Animation -> ( Animation, Cmd Msg )
-animationUpdate viewFrame msg ((Animation v screen textures entities t) as state) =
+animationUpdate viewFrame msg ((Animation v screen textures entities ((Internal.Time timeWas _) as t)) as state) =
     case msg of
-        Tick time ->
+        Tick posix ->
             let
-                (Internal.Time timeWas _) =
-                    t
-
                 d =
-                    Time.posixToMillis time - Time.posixToMillis timeWas
+                    Time.posixToMillis posix - Time.posixToMillis timeWas
 
                 ( newEntities, missing ) =
-                    Internal.render screen textures (viewFrame (Internal.Time time d))
+                    Internal.render screen textures (viewFrame (Internal.Time posix d))
             in
             case missing of
                 [] ->
-                    ( Animation v screen textures newEntities (Internal.Time time d), Cmd.none )
+                    ( Animation v screen textures newEntities (Internal.Time posix d), Cmd.none )
 
                 _ ->
                     Internal.requestTexture missing textures
-                        |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Internal.Time time d))
+                        |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Internal.Time posix d))
 
         VisibilityChanged vis ->
             ( Animation vis screen textures entities t, Cmd.none )

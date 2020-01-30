@@ -9,7 +9,6 @@ module Playground.Internal exposing
     , TextureData(..)
     , TextureManager
     , Time(..)
-    , allSubscriptions
     , embed
     , embedViewWrap
     , game
@@ -17,6 +16,9 @@ module Playground.Internal exposing
     , render
     , requestTexture
     , resize
+    , setTexture
+    , subscriptions
+    , subscriptions_
     , toScreen
     , viewWrap
     )
@@ -36,7 +38,7 @@ import Set exposing (Set)
 import Task
 import Time
 import WebGL exposing (Entity)
-import WebGL.Texture as Texture exposing (nonPowerOfTwoOptions)
+import WebGL.Texture as Texture exposing (Texture, nonPowerOfTwoOptions)
 
 
 type Shape
@@ -53,7 +55,7 @@ type Shape
 
 type Form
     = Form Number Number Render
-    | Textured String (Texture.Texture -> Shape)
+    | Textured String (Texture -> Shape)
     | Group (List Shape)
 
 
@@ -77,8 +79,16 @@ type alias Render =
 game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
 game viewMemory updateMemory initialMemory =
     let
-        { init, update, subscriptions } =
-            embed gameSubscriptions viewMemory updateMemory initialMemory
+        { init, update } =
+            embed viewMemory updateMemory initialMemory
+
+        subs (Game { visibility, computer }) =
+            case visibility of
+                E.Hidden ->
+                    E.onVisibilityChange VisibilityChanged
+
+                E.Visible ->
+                    subscriptions.all
 
         view (Game { computer, entities }) =
             { title = "Playground"
@@ -89,26 +99,20 @@ game viewMemory updateMemory initialMemory =
         { init = \_ -> init
         , view = view
         , update = update
-        , subscriptions = subscriptions
+        , subscriptions = subs
         }
 
 
-
---embed :
-
-
 embed :
-    (Computer -> Sub Msg)
-    -> (Computer -> memory -> List Shape)
+    (Computer -> memory -> List Shape)
     -> (Computer -> memory -> memory)
     -> memory
     ->
         { init : ( Game memory, Cmd Msg )
         , view : Game memory -> List Entity
         , update : Msg -> Game memory -> ( Game memory, Cmd Msg )
-        , subscriptions : Game memory -> Sub Msg
         }
-embed subs viewMemory updateMemory initialMemory =
+embed viewMemory updateMemory initialMemory =
     let
         init =
             ( Game
@@ -123,19 +127,10 @@ embed subs viewMemory updateMemory initialMemory =
 
         view (Game { entities }) =
             entities
-
-        subscriptions (Game { visibility, computer }) =
-            case visibility of
-                E.Hidden ->
-                    E.onVisibilityChange VisibilityChanged
-
-                E.Visible ->
-                    subs computer
     in
     { init = init
     , view = view
     , update = gameUpdate viewMemory updateMemory
-    , subscriptions = subscriptions
     }
 
 
@@ -145,7 +140,7 @@ type alias TextureManager =
 
 type TextureData
     = Loading
-    | Success { texture : Texture.Texture, size : Math.Vector2.Vec2 }
+    | Success { texture : Texture, size : Math.Vector2.Vec2 }
 
 
 type Game memory
@@ -185,7 +180,7 @@ textureOption =
     }
 
 
-gotTextures : Result error (List ( String, Texture.Texture )) -> TextureManager -> TextureManager
+gotTextures : Result error (List ( String, Texture )) -> TextureManager -> TextureManager
 gotTextures r textures =
     case r of
         Ok texturesList ->
@@ -297,19 +292,6 @@ viewWrap screen entities =
     , WebGL.toHtmlWith webGLOption
         [ H.width (round screen.width)
         , H.height (round screen.height)
-
-        --, H.on "click"
-        --    (D.at [ "view", "devicePixelRatio" ] D.float
-        --        |> D.andThen
-        --            (\devicePixelRatio ->
-        --                let
-        --                    _ =
-        --                        devicePixelRatio
-        --                            |> Debug.log "hello"
-        --                in
-        --                D.fail ""
-        --            )
-        --    )
         ]
         entities
     ]
@@ -387,32 +369,68 @@ initialComputer =
 -- SUBSCRIPTIONS
 
 
-gameSubscriptions : Computer -> Sub Msg
-gameSubscriptions computer =
-    Sub.batch (E.onResize resize :: allSubscriptions computer)
+subscriptions_ :
+    { keys : Sub Msg
+    , time : Sub Msg
+    , visibility : Sub Msg
+    , click : Sub Msg
+    , mouse : Sub Msg
+    , resize : Sub Msg
+    }
+subscriptions_ =
+    { keys =
+        [ E.onKeyUp (D.map (KeyChanged False) (D.field "key" D.string))
+        , E.onKeyDown
+            (D.field "repeat" D.bool
+                |> D.andThen
+                    (\repeat ->
+                        if repeat then
+                            D.fail ""
+
+                        else
+                            D.field "key" D.string
+                                |> D.map (KeyChanged True)
+                    )
+            )
+        ]
+            |> Sub.batch
+    , time = E.onAnimationFrame Tick
+    , visibility = E.onVisibilityChange VisibilityChanged
+    , click =
+        [ E.onClick (D.succeed MouseClick)
+        , E.onMouseDown (D.succeed (MouseButton True))
+        , E.onMouseUp (D.succeed (MouseButton False))
+        ]
+            |> Sub.batch
+    , mouse = E.onMouseMove (D.map2 MouseMove (D.field "pageX" D.float) (D.field "pageY" D.float))
+    , resize = E.onResize resize
+    }
 
 
-allSubscriptions : Computer -> List (Sub Msg)
-allSubscriptions computer =
-    [ E.onKeyUp (D.map (KeyChanged False) (D.field "key" D.string))
-    , E.onKeyDown
-        (D.field "key" D.string
-            |> D.andThen
-                (\k ->
-                    if Set.member k computer.keyboard.keys then
-                        D.fail ""
-
-                    else
-                        D.succeed (KeyChanged True k)
-                )
-        )
-    , E.onAnimationFrame Tick
-    , E.onVisibilityChange VisibilityChanged
-    , E.onClick (D.succeed MouseClick)
-    , E.onMouseDown (D.succeed (MouseButton True))
-    , E.onMouseUp (D.succeed (MouseButton False))
-    , E.onMouseMove (D.map2 MouseMove (D.field "pageX" D.float) (D.field "pageY" D.float))
-    ]
+subscriptions :
+    { keys : Sub Msg
+    , time : Sub Msg
+    , click : Sub Msg
+    , mouse : Sub Msg
+    , resize : Sub Msg
+    , all : Sub Msg
+    }
+subscriptions =
+    { keys = subscriptions_.keys
+    , time = subscriptions_.time
+    , click = subscriptions_.click
+    , mouse = subscriptions_.mouse
+    , resize = subscriptions_.resize
+    , all =
+        [ subscriptions_.keys
+        , subscriptions_.time
+        , subscriptions_.visibility
+        , subscriptions_.click
+        , subscriptions_.mouse
+        , subscriptions_.resize
+        ]
+            |> Sub.batch
+    }
 
 
 
@@ -433,6 +451,11 @@ toScreen width height =
 resize : Int -> Int -> Msg
 resize w h =
     Resized (toScreen (toFloat w) (toFloat h))
+
+
+setTexture : List ( String, Texture ) -> Msg
+setTexture =
+    Ok >> GotTexture
 
 
 
@@ -520,7 +543,7 @@ type Msg
     | MouseMove Float Float
     | MouseClick
     | MouseButton Bool
-    | GotTexture (Result Texture.Error (List ( String, Texture.Texture )))
+    | GotTexture (Result Texture.Error (List ( String, Texture )))
 
 
 type Time

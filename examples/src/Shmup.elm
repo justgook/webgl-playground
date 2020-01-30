@@ -1,9 +1,10 @@
-module Shmup exposing (main)
+module Shmup exposing (State, main)
 
 import Playground exposing (..)
 import Random
 
 
+main : Program () (Game State) Msg
 main =
     game view update Init
 

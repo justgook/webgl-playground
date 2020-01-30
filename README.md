@@ -1,4 +1,4 @@
-# Elm Playground
+# WebGL Playground
 
 Fork of [evancz/elm-playground](https://package.elm-lang.org/packages/evancz/elm-playground/latest/), but with [WebGL](https://package.elm-lang.org/packages/elm-explorations/webgl/latest/) backend.
 
