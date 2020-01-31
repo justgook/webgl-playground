@@ -67,7 +67,7 @@ getFrame mario time =
 update computer mario =
     let
         dt =
-            1.666
+            toFloat (delta computer.time) / 10
 
         vx =
             toX computer.keyboard
