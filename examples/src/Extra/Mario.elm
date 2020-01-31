@@ -48,7 +48,7 @@ view computer mario =
 getFrame mario time =
     let
         frame =
-            toFrac 0.75 time |> (*) 8 |> floor
+            now time // 60 |> remainderBy 8
     in
     if mario.y > 0 then
         5
