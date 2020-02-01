@@ -11,7 +11,7 @@ const examples = [
     //"Tree",
     "Mouse",
     "Vectors",
-    "Shmup",
+    // "Shmup",
     "Circles",
     "Font",
     "MSDF",
