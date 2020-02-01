@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "justgook/elm-playground",
-    "summary": "A fun way to create pictures,animations and games in WebGL https://git.io/Jv3wc",
+    "summary": "A fun way to create pictures, animations and games in WebGL",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
