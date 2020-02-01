@@ -59,13 +59,11 @@ function screenshot(done) {
 async function stepScreenshot(input) {
     const puppeteer = require('puppeteer');
 
-
     // 1. Launch the browser
     const browser = await puppeteer.launch();
     // 2. Open a new page
     const page = await browser.newPage();
     await stepStepSTEP(page, input);
-
     await browser.close();
 
 }
@@ -74,9 +72,8 @@ async function stepStepSTEP(page, input) {
     const url = `http://localhost:${port}/`;
     const item = input.pop();
     console.log(`Screenshot for ${item} (${[...input].reverse().join(", ")})`);
-
     // 3. Navigate to URL
-    await page.goto(`${url}${item}.html`);
+    await page.goto(`${url}${item}.html`, { waitUntil: 'load' });
     // 4. Take screenshot
     await page.screenshot({ omitBackground: true, path: `${__dirname}/gh-pages/${item}.png` });
     if (input.length) {
