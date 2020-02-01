@@ -9,7 +9,7 @@
   "license": "BSD-3-Clause",
   "private": true,
   "scripts": {
-    "posthtml": "posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js"
+    "posthtml": "posthtml ./gh-pages/index_template.html -o ./gh-pages/index.html -c posthtml.config.js"
   },
   "dependencies": {
     "glslx": "0.1.26",
