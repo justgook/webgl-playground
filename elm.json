@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "justgook/webgl-playground",
-    "summary": "A fun way to create pictures, animations and games in WebGL",
+    "summary": "A fun way to create pictures,animations and games in WebGL https://git.io/Jv3wc",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
