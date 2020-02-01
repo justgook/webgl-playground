@@ -4,7 +4,7 @@ const elmJson = require("../elm.json");
 const root = "gh-pages";
 
 const info = {
-    title: "Playground Game",
+    title: "WebGL Playground",
     description: elmJson.summary,
     version: elmJson.version,
     license: elmJson.license,
