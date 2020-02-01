@@ -58,32 +58,32 @@ module.exports = function (file, api, options) {
     //===============================PREPACK MAGIC Start ===============================
 
     //Add Prepack __optimize
-    tree.find(j.ExpressionStatement)
-        .filter(path => path.node.expression.callee && path.node.expression.callee.name === "_Platform_export")
-        .replaceWith((path) => {
-            let $author$project$Main$main = path.node.expression.arguments[0].properties[0].value.properties[0].value;
-            $author$project$Main$main = $author$project$Main$main.callee
-                ? $author$project$Main$main.callee.callee.name
-                : $author$project$Main$main.properties[0].value.callee.callee.name
-            const viewUpdate = tree.find(j.VariableDeclarator)
-                .filter(path => path.node.id.name === $author$project$Main$main)
-                .at(0).get().node.init.arguments.map((a) => a.name);
-            path.insertBefore(`__evaluatePureFunction(${viewUpdate[1]});`);
-            path.insertBefore(`__evaluatePureFunction(${viewUpdate[2]});`);
-            path.insertBefore(`__evaluatePureFunction(${$author$project$Main$main}($elm$json$Json$Decode$succeed(0)));`);
-            return (path.node);
-        });
-    // Add global declarations unknown by prepack
-    tree.find(j.Declaration).at(0).get()
-        .insertBefore(`
-            __assumeDataProperty(global, "requestAnimationFrame", __abstractOrUndefined("function"));
-            __assumeDataProperty(global, "cancelAnimationFrame", __abstractOrUndefined("function"));
-            __assumeDataProperty(global, "document", __abstract({
-                hidden: __abstractOrUndefined("boolean"),
-                mozHidden: __abstractOrUndefined("boolean"),
-                msHidden: __abstractOrUndefined("boolean"),
-                webkitHidden: __abstractOrUndefined("boolean"),
-            }));`);
+    // tree.find(j.ExpressionStatement)
+    //     .filter(path => path.node.expression.callee && path.node.expression.callee.name === "_Platform_export")
+    //     .replaceWith((path) => {
+    //         let $author$project$Main$main = path.node.expression.arguments[0].properties[0].value.properties[0].value;
+    //         $author$project$Main$main = $author$project$Main$main.callee
+    //             ? $author$project$Main$main.callee.callee.name
+    //             : $author$project$Main$main.properties[0].value.callee.callee.name
+    //         const viewUpdate = tree.find(j.VariableDeclarator)
+    //             .filter(path => path.node.id.name === $author$project$Main$main)
+    //             .at(0).get().node.init.arguments.map((a) => a.name);
+    //         path.insertBefore(`__evaluatePureFunction(${viewUpdate[1]});`);
+    //         path.insertBefore(`__evaluatePureFunction(${viewUpdate[2]});`);
+    //         path.insertBefore(`__evaluatePureFunction(${$author$project$Main$main}($elm$json$Json$Decode$succeed(0)));`);
+    //         return (path.node);
+    //     });
+    // // Add global declarations unknown by prepack
+    // tree.find(j.Declaration).at(0).get()
+    //     .insertBefore(`
+    //         __assumeDataProperty(global, "requestAnimationFrame", __abstractOrUndefined("function"));
+    //         __assumeDataProperty(global, "cancelAnimationFrame", __abstractOrUndefined("function"));
+    //         __assumeDataProperty(global, "document", __abstract({
+    //             hidden: __abstractOrUndefined("boolean"),
+    //             mozHidden: __abstractOrUndefined("boolean"),
+    //             msHidden: __abstractOrUndefined("boolean"),
+    //             webkitHidden: __abstractOrUndefined("boolean"),
+    //         }));`);
     //===============================PREPACK MAGIC End ===============================
 
 
