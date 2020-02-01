@@ -1,7 +1,7 @@
 {
   "name": "Playground Game",
   "short_name": "Playground Game",
-  "description": "Example page of Playground with WebGL backend",
+  "description": "A fun way to create pictures,animations and games in WebGL https://git.io/Jv32o",
   "dir": "auto",
   "lang": "en-US",
   "display": "fullscreen",
