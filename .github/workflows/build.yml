@@ -65,8 +65,7 @@ jobs:
 
     - name: Build
       run: |
-        elm make src/Shmup.elm --optimize --output=./gh-pages/bundle.js
-        elm make src/Extra/Jump.elm --optimize --output=./gh-pages/jump.html
+        elm make src/Main.elm --optimize --output=./gh-pages/bundle.js
       working-directory: examples
 
 
@@ -92,8 +91,27 @@ jobs:
         BUNDLE_JS: jump.js
       working-directory: examples
       run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
-#        posthtml ./gh-pages/index.html -o ./gh-pages/jump.html -c posthtml.fast.js
 
+    - name: Building assets
+      run: |
+        elm make src/Clock.elm --output=./gh-pages/Clock.html
+        elm make src/HexGrid.elm --output=./gh-pages/HexGrid.html
+        elm make src/Polygon.elm --output=./gh-pages/Polygon.html
+        elm make src/MulticolorPolygon.elm --output=./gh-pages/Polygon2.html
+        elm make src/Tree.elm --output=./gh-pages/Tree.html
+        elm make src/Mouse.elm --output=./gh-pages/Mouse.html
+        elm make src/Vectors.elm --output=./gh-pages/Vectors.html
+        elm make src/Shmup.elm --output=./gh-pages/Shmup.html
+        elm make src/Circles.elm --output=./gh-pages/Circles.html
+        elm make src/Main.elm --output=./gh-pages/Main.html
+        elm make src/Font.elm --output=./gh-pages/Font.html
+        elm make src/Extra/Font.elm --output=./gh-pages/MSDF.html
+        elm make src/Extra/JumpGun.elm --output=./gh-pages/JumpGun.html
+        elm make src/Extra/Mario.elm --output=./gh-pages/Mario.html
+        elm make src/Main.elm --output=./gh-pages/Main.html
+
+        node build-assets.js
+      working-directory: examples
 
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@3.2.1

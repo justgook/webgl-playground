@@ -1,7 +1,17 @@
-module Vectors exposing (main)
+module Vectors exposing (Memory, init, main, update, view)
 
 import AltMath.Vector2 as Vec2 exposing (Vec2, vec2)
 import Playground exposing (..)
+
+
+main : Program () (Game Memory) Msg
+main =
+    game view update Init
+
+
+init : Memory
+init =
+    Init
 
 
 intersectionSegment : Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> Maybe ( Float, Float )
@@ -28,11 +38,8 @@ intersectionSegment x1 y1 x2 y2 x3 y3 x4 y4 =
             Nothing
 
 
-main =
-    game view update Init
-
-
-view computer phase =
+view : Computer -> Memory -> List Shape
+view _ phase =
     case phase of
         LineLine ({ l1, l2 } as memory) ->
             case memory.intersection of
@@ -155,6 +162,7 @@ drawSegment_ start_ end_ { p1, p2 } c1 c2 c3 =
         |> group
 
 
+update : Computer -> Memory -> Memory
 update { mouse } phase =
     case phase of
         LineLine ({ l1, l2 } as memory) ->
@@ -209,7 +217,7 @@ mousePointTest tolerance mouse point =
         && (mouse.y < point.y + tolerance)
 
 
-type Phase
+type Memory
     = Init
     | LineLine
         { l1 : Segment

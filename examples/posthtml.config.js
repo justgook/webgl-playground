@@ -1,16 +1,17 @@
 const packageJson = require("./package.json");
+const elmJson = require("../elm.json");
 
 const root = "gh-pages";
 
 const info = {
     title: "Playground Game",
-    description: "Example page of Playground with WebGL backend",
-    version: packageJson.version,
-    license: packageJson.license,
+    description: elmJson.summary,
+    version: elmJson.version,
+    license: elmJson.license,
     twitterName: "@justgook",
-    image: "screenshot.png",
+    image: "Main.png",
     favicon: "gh-pages/favicon.png",
-    url: "https://justgook.github.io/elm-playground/"
+    url: "https://justgook.github.io/webgl-playground/"
 };
 const socialTags_ = ({ facebook, twitter }) =>
     ({
@@ -42,7 +43,7 @@ const socialTags_ = ({ facebook, twitter }) =>
 const buildSocialTags = ({ url, image, title, description, version, license, twitterName, facebookId }) => socialTags_({
     facebook: {
         type: "website",
-        url: "https://justgook.github.io/elm-playground/",
+        url: "https://justgook.github.io/webgl-playground/",
         title,
         description,
         image: url + image,
@@ -56,7 +57,7 @@ const buildSocialTags = ({ url, image, title, description, version, license, twi
         title,
         description,
         image: url + image,
-        url: "https://justgook.github.io/elm-playground/",
+        url: "https://justgook.github.io/webgl-playground/",
         label1: "Version",
         data1: version,
         label2: "License",

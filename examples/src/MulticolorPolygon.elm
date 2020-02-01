@@ -1,4 +1,4 @@
-module MulticolorPolygon exposing (main)
+module MulticolorPolygon exposing (main, view)
 
 import Array
 import Math.Vector2 exposing (vec2)
@@ -12,8 +12,23 @@ triangle color data =
     custom 1 1 <| Render.triangle color data
 
 
+main : Program () Picture Msg
 main =
+    picture view
+
+
+view : List Shape
+view =
     let
+        newWay =
+            data
+                |> group
+                |> move -160 -240
+                |> List.singleton
+                |> group
+                |> rotate 200
+                |> scale 4.5
+
         data =
             dude
                 |> List.map
@@ -24,29 +39,19 @@ main =
                         else
                             a |> triangulate |> pointsToTringle |> group
                     )
-
-        newWay =
-            data
-                |> group
-                |> move -160 -240
-                |> List.singleton
-                |> group
-                |> rotate 200
-                |> scale 4.5
     in
-    picture <|
-        [ rectangle red 2 1000
-        , rectangle red 1000 2
-        , rectangle red 100 2 |> moveY 100
-        , rectangle red 100 2 |> moveY -100
-        , rectangle red 2 100 |> moveX 100
-        , rectangle red 2 100 |> moveX -100
-        , newWay
+    [ rectangle red 2 1000
+    , rectangle red 1000 2
+    , rectangle red 100 2 |> moveY 100
+    , rectangle red 100 2 |> moveY -100
+    , rectangle red 2 100 |> moveX 100
+    , rectangle red 2 100 |> moveX -100
+    , newWay
 
-        --, words red "Hello World"
-        --, triangle blue ( vec2 100 -100, vec2 -100 -100, vec2 100 100 )
-        --, triangle red ( vec2 -100 100, vec2 -100 -100, vec2 100 100 )
-        ]
+    --, words red "Hello World"
+    --, triangle blue ( vec2 100 -100, vec2 -100 -100, vec2 100 100 )
+    --, triangle red ( vec2 -100 100, vec2 -100 -100, vec2 100 100 )
+    ]
 
 
 pointsToTringle =

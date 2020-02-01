@@ -1,14 +1,19 @@
-module Font exposing (main)
+module Font exposing (main, view)
 
 import Playground exposing (..)
 
 
+main : Program () Picture Msg
 main =
-    picture
-        [ text
-            |> group
-            |> scale 3
-        ]
+    picture view
+
+
+view : List Shape
+view =
+    [ text
+        |> group
+        |> scale 3
+    ]
 
 
 text =

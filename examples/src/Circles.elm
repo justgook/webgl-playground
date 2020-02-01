@@ -1,4 +1,4 @@
-module Circles exposing (main)
+module Circles exposing (main, view)
 
 import Playground exposing (..)
 
@@ -7,10 +7,12 @@ import Playground exposing (..)
 --https://ellie-app.com/7nQrJm4vRKWa1
 
 
+main : Program () Animation Msg
 main =
     animation view
 
 
+view : Time -> List Shape
 view time =
     [ [ ring 70 darkGreen 5
             |> rotate (spin 20 time)

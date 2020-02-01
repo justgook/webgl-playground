@@ -1,12 +1,14 @@
-module Clock exposing (main)
+module Clock exposing (main, view)
 
 import Playground exposing (..)
 
 
+main : Program () Animation Msg
 main =
     animation view
 
 
+view : Time -> List Shape
 view time =
     let
         h =

@@ -1,16 +1,34 @@
-module HexGrid exposing (main)
+module HexGrid exposing (Memory, init, main, update, view)
 
 --https://ellie-app.com/7pVThGKMKFPa1
 
 import Playground exposing (..)
 
 
+type alias Memory =
+    { r : Float, d : Float }
+
+
+main : Program () (Game Memory) Msg
 main =
-    game view update initialModel
+    game view update init
 
 
-initialModel =
+init : Memory
+init =
     { r = 30, d = 1 }
+
+
+view : Computer -> Memory -> List Shape
+view computer model =
+    explanation computer model ++ hexGrid model
+
+
+update : Computer -> Memory -> Memory
+update computer { r, d } =
+    { r = r + toY computer.keyboard
+    , d = max 1 (d + toX computer.keyboard)
+    }
 
 
 explanation computer { r, d } =
@@ -44,13 +62,3 @@ hexGrid ({ r, d } as model) =
             List.concatMap (\i -> List.map (\j -> ( i, j )) l2) l1
     in
     List.map hexagonAt (cartesianProduct (List.range -2 2) (List.range -2 2))
-
-
-view computer model =
-    explanation computer model ++ hexGrid model
-
-
-update computer { r, d } =
-    { r = r + toY computer.keyboard
-    , d = max 1 (d + toX computer.keyboard)
-    }

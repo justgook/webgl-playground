@@ -1,7 +1,11 @@
 {
   "version": "1.0.0",
   "repository": "https://github.com/justgook/elm-playground",
-  "author": "Romans Potasovs",
+  "author": {
+    "name": "Romāns Potašovs",
+    "email": "justgook@gmail.com",
+    "url": "https://github.com/justgook"
+  },
   "license": "BSD-3-Clause",
   "private": true,
   "scripts": {
@@ -11,12 +15,13 @@
     "glslx": "0.1.26",
     "htmlnano": "0.2.5",
     "jscodeshift": "0.7.0",
-    "posthtml-cli": "0.5.1",
+    "pageres": "5.2.0",
+    "posthtml-cli": "0.5.2",
     "posthtml-content": "0.0.2",
     "posthtml-favicons": "1.3.0",
     "posthtml-head-elements": "0.5.1",
     "posthtml-style-to-file": "0.2.0",
     "prepack": "0.2.54",
-    "uglify-js": "3.7.2"
+    "uglify-js": "3.7.6"
   }
 }

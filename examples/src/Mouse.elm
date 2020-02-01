@@ -1,13 +1,24 @@
-module Mouse exposing (main)
+module Mouse exposing (Memory, init, main, update, view)
 
 import Playground exposing (..)
 
 
+main : Program () (Game Memory) Msg
 main =
     game view update ()
 
 
-view computer memory =
+type alias Memory =
+    ()
+
+
+init : Memory
+init =
+    ()
+
+
+view : Computer -> Memory -> List Shape
+view computer _ =
     [ circle lightPurple 30
         |> moveX computer.mouse.x
         |> moveY computer.mouse.y
@@ -27,5 +38,6 @@ view computer memory =
     ]
 
 
-update computer memory =
+update : Computer -> Memory -> Memory
+update _ memory =
     memory

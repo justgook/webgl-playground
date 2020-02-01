@@ -1,34 +1,46 @@
-module Tree exposing (main)
+module Tree exposing (Memory, init, main, update, view)
 
 --https://ellie-app.com/7nVtFgNfSK4a1
 
 import Playground exposing (..)
 
 
+type alias Memory =
+    { w : Float
+    , h : Number
+    , s : Float
+    , t : Float
+    }
+
+
+main : Program () (Game Memory) Msg
 main =
-    game view update initialModel
+    game view update init
 
 
-colors =
-    [ brown, orange, yellow, red, purple, green, blue, darkGreen, lightPurple, darkCharcoal ]
+init : Memory
+init =
+    { h = 200, s = 40, t = 31, w = 80 }
 
 
-initialModel =
-    { w = 80, h = 200, s = 0, t = 0 }
-
-
+view : Computer -> Memory -> List Shape
 view computer { w, h, s, t } =
     [ fractalTree w h s t colors 10
         |> move -(w / 2) -(computer.screen.height / 3)
     ]
 
 
+update : Computer -> Memory -> Memory
 update computer { w, h, s, t } =
     { w = w + toX computer.keyboard
     , h = h + toY computer.keyboard
     , s = w / 2 + w * 0.5 * computer.mouse.x / computer.screen.width
     , t = 100 * computer.mouse.y / computer.screen.height
     }
+
+
+colors =
+    [ brown, orange, yellow, red, purple, green, blue, darkGreen, lightPurple, darkCharcoal ]
 
 
 fractalTree w h s t colorList n =

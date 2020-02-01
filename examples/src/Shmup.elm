@@ -1,15 +1,20 @@
-module Shmup exposing (State, main)
+module Shmup exposing (Memory, init, main, update, view)
 
 import Playground exposing (..)
 import Random
 
 
-main : Program () (Game State) Msg
+main : Program () (Game Memory) Msg
 main =
     game view update Init
 
 
-view : Computer -> State -> List Shape
+init : Memory
+init =
+    Init
+
+
+view : Computer -> Memory -> List Shape
 view computer phase =
     case phase of
         Play state ->
@@ -68,6 +73,7 @@ view computer phase =
             []
 
 
+update : Computer -> Memory -> Memory
 update computer phase =
     case phase of
         Play state ->
@@ -359,7 +365,7 @@ type alias Object =
     }
 
 
-type State
+type Memory
     = Init
     | Intro
         { mobs : List Object

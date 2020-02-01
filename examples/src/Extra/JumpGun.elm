@@ -1,4 +1,4 @@
-module Extra.Jump exposing (main)
+module Extra.JumpGun exposing (Memory, init, main, update, view)
 
 import AltMath.Vector2 as Vec2 exposing (Vec2, vec2)
 import Extra.Jump.Collision as Collision
@@ -17,14 +17,21 @@ config =
     }
 
 
+main : Program () (Game Memory) Msg
 main =
     game view update Init
+
+
+init : Memory
+init =
+    Init
 
 
 pxSnap =
     round >> toFloat
 
 
+view : Computer -> Memory -> List Shape
 view computer m =
     case m of
         Play ({ player } as memory) ->
@@ -50,6 +57,7 @@ view computer m =
             []
 
 
+update : Computer -> Memory -> Memory
 update computer memory =
     case memory of
         Play m ->
@@ -228,7 +236,7 @@ updateShoot computer state =
         |> (\( a, b ) -> { b | weapon = a })
 
 
-type Phase
+type Memory
     = Init
     | Play
         { player : Player
