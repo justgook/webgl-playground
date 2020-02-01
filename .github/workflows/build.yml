@@ -109,9 +109,6 @@ jobs:
       working-directory: examples
       run: posthtml ./gh-pages/index_template.html -o ./gh-pages/index.html -c posthtml.config.js
 
-
-
-
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@3.2.1
       with:
