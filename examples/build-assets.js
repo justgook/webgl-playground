@@ -1,15 +1,10 @@
 const http = require("http");
 const fs = require("fs");
 const Pageres = require('pageres');
-const packageJson = require("./package.json");
-const revision = require('child_process')
-    .execSync('git rev-parse --short HEAD')
-    .toString().trim();
 const port = 3000;
-require('events').EventEmitter.defaultMaxListeners = 25;
 
 const root = "gh-pages";
-const examples = ["Clock", "HexGrid", "Polygon", "Polygon2", /*"Tree",*/ "Mouse", "Vectors", "Shmup", "Circles", "Font", "MSDF", "JumpGun", "Mario", "Main"];
+const examples = ["Clock", "Polygon", "Polygon2", /*"Tree",*/ "Mouse", "Vectors", "Shmup", "Circles", "Font", "MSDF", "JumpGun", "Mario", "HexGrid", "Main"];
 const server = http.createServer((req, res) => {
     // `${process.env.GAME}_bundle.js`;
     if (req.url === "/") {

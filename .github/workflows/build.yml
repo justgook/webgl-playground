@@ -108,7 +108,6 @@ jobs:
         elm make src/Extra/JumpGun.elm --output=./gh-pages/JumpGun.html
         elm make src/Extra/Mario.elm --output=./gh-pages/Mario.html
         elm make src/Main.elm --output=./gh-pages/Main.html
-
         node build-assets.js
       working-directory: examples
 
