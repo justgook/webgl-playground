@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "name": "Playground Game",
+  "name": "WebGL Playground",
   "description": "A fun way to create pictures,animations and games in WebGL https://git.io/Jv32o",
   "icons": {
     "60": "firefox_app_60x60.png",
