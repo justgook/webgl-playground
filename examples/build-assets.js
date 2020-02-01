@@ -73,7 +73,7 @@ async function stepStepSTEP(page, input) {
     const item = input.pop();
     console.log(`Screenshot for ${item} (${[...input].reverse().join(", ")})`);
     // 3. Navigate to URL
-    await page.goto(`${url}${item}.html`, { waitUntil: item === "Main" ? 'networkidle0' : 'load' });
+    await page.goto(`${url}${item}.html`, { waitUntil: item === "Main" ? 'domcontentloaded' : 'load' });
     // 4. Take screenshot
     await page.screenshot({ omitBackground: true, path: `${__dirname}/gh-pages/${item}.png` });
     if (input.length) {
