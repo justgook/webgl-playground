@@ -51,7 +51,7 @@ function stepScreenshot(input) {
     const url = `http://localhost:${port}/`;
     const item = input.pop();
     console.log(`Screenshot for ${item} (${[...input].reverse().join(", ")})`);
-    return new Pageres({ filename: item, timeout: 5 })
+    return new Pageres({ filename: item, timeout: 120 })
         .src(`${url}${item}.html`, ['800x600'])
         .dest(`${__dirname}/gh-pages`)
         .run()
