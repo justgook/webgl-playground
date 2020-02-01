@@ -83,14 +83,6 @@ jobs:
 #      with:
 #        file: ./examples/gh-pages/jump.js
 #        transform: ./examples/transform.js
-
-    - name: Building HTML
-      env:
-        NODE_ENV: production
-        BUNDLE_JS: jump.js
-      working-directory: examples
-      run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
-
     - name: Building assets
       run: |
         elm make src/Clock.elm --output=./gh-pages/Clock.html
@@ -110,6 +102,14 @@ jobs:
         elm make src/Main.elm --output=./gh-pages/Main.html
         node build-assets.js
       working-directory: examples
+    - name: Building HTML
+      env:
+        NODE_ENV: production
+        BUNDLE_JS: jump.js
+      working-directory: examples
+      run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
+
+
 
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@3.2.1

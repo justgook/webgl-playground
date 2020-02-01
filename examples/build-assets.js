@@ -4,7 +4,22 @@ const Pageres = require('pageres');
 const port = 3000;
 
 const root = "gh-pages";
-const examples = ["Clock", "Polygon", "Polygon2", /*"Tree",*/ "Mouse", "Vectors", "Shmup", "Circles", "Font", "MSDF", "JumpGun", "Mario", "HexGrid", "Main"];
+const examples = [
+    "Clock",
+    "Polygon",
+    "Polygon2",
+    //"Tree",
+    "Mouse",
+    "Vectors",
+    "Shmup",
+    "Circles",
+    "Font",
+    "MSDF",
+    "JumpGun",
+    "Mario",
+    //"HexGrid",
+    "Main"
+];
 const server = http.createServer((req, res) => {
     // `${process.env.GAME}_bundle.js`;
     if (req.url === "/") {
@@ -46,8 +61,8 @@ function stepScreenshot(input) {
     const url = `http://localhost:${port}/`;
     const item = input.pop();
     console.log(`Screenshot for ${item} (${[...input].reverse().join(", ")})`);
-    return new Pageres({ filename: item, timeout: 120 })
-        .src(`${url}${item}.html`, ['800x600'])
+    return new Pageres({ filename: item, timeout: 30 })
+        .src(`${url}${item}.html`, ['640x480'])
         .dest(`${__dirname}/gh-pages`)
         .run()
         .catch((err) => {
