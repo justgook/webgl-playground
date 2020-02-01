@@ -1,6 +1,5 @@
 const http = require("http");
 const fs = require("fs");
-const Pageres = require('pageres');
 const port = 3000;
 
 const root = "gh-pages";
