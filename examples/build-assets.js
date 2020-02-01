@@ -5,19 +5,19 @@ const port = 3000;
 
 const root = "gh-pages";
 const examples = [
+    "Shmup",
+    "Tree",
     "Clock",
     "Polygon",
     "Polygon2",
-    //"Tree",
     "Mouse",
     "Vectors",
-    // "Shmup",
     "Circles",
     "Font",
     "MSDF",
     "JumpGun",
     "Mario",
-    //"HexGrid",
+    "HexGrid",
     "Main"
 ];
 const server = http.createServer((req, res) => {
@@ -57,22 +57,31 @@ function screenshot(done) {
         .then(done);
 }
 
-function stepScreenshot(input) {
-    const url = `http://localhost:${port}/`;
-    const item = input.pop();
-    console.log(`Screenshot for ${item} (${[...input].reverse().join(", ")})`);
-    return new Pageres({ filename: item, timeout: 30 })
-        .src(`${url}${item}.html`, ['640x480'])
-        .dest(`${__dirname}/gh-pages`)
-        .run()
-        .catch((err) => {
-            console.log(`Fail ${item} (${err})`);
-            process.exit(-1)
-        })
-        .then(() => input.length
-            ? stepScreenshot(input)
-            : Promise.resolve()
-        )
+async function stepScreenshot(input) {
+    const puppeteer = require('puppeteer');
+
+
+    // 1. Launch the browser
+    const browser = await puppeteer.launch();
+    // 2. Open a new page
+    const page = await browser.newPage();
+    await stepStepSTEP(page, input);
+
+    await browser.close();
 
 }
 
+async function stepStepSTEP(page, input) {
+    const url = `http://localhost:${port}/`;
+    const item = input.pop();
+    console.log(`Screenshot for ${item} (${[...input].reverse().join(", ")})`);
+
+    // 3. Navigate to URL
+    await page.goto(`${url}${item}.html`);
+    // 4. Take screenshot
+    await page.screenshot({ omitBackground: true, path: `${__dirname}/gh-pages/${item}.png` });
+    if (input.length) {
+        await stepStepSTEP(page, input);
+    }
+
+}

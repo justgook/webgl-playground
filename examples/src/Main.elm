@@ -272,7 +272,7 @@ initialMemory =
         , { img = Just "Polygon.png", name = "Polygon", run = PictureExample Polygon.view }
         , { img = Just "Shmup.png", name = "Shmup", run = GameExample <| ShmupGame { view = Shmup.view, update = Shmup.update, memory = Shmup.init } }
         , { img = Just "Polygon2.png", name = "Polygon2", run = PictureExample MulticolorPolygon.view }
-        , { img = Nothing, name = "Tree", run = GameExample <| TreeGame { view = Tree.view, update = Tree.update, memory = Tree.init } }
+        , { img = Just "Tree.png", name = "Tree", run = GameExample <| TreeGame { view = Tree.view, update = Tree.update, memory = Tree.init } }
         , { img = Just "Vectors.png", name = "Vectors", run = GameExample <| VectorsGame { view = Vectors.view, update = Vectors.update, memory = Vectors.init } }
         , { img = Just "JumpGun.png", name = "JumpGun(E)", run = GameExample <| JumpGunGame { view = JumpGun.view, update = JumpGun.update, memory = JumpGun.init } }
         , { img = Just "Mario.png", name = "Mario(E)", run = GameExample <| MarioGame { view = Mario.view, update = Mario.update, memory = Mario.init } }
