@@ -55,15 +55,6 @@ letters =
     , [ '≡', '±', '≥', '≤', '⌠', '⌡', '÷', '≈', '°', '∙', '·', '√', 'ⁿ', '²', '■', '\u{00A0}' ]
     ]
         |> List.concat
-        |> (\a ->
-                let
-                    _ =
-                        a
-                            |> String.fromList
-                            |> Debug.log "Strin.fr"
-                in
-                a
-           )
         |> List.indexedMap (\a b -> ( b, a ))
         |> Dict.fromList
 
