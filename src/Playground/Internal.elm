@@ -76,6 +76,7 @@ type alias Render =
     -> WebGL.Entity
 
 
+{-| -}
 game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
 game viewMemory updateMemory initialMemory =
     let
@@ -141,6 +142,7 @@ type alias TextureManager =
 type TextureData
     = Loading
     | Success { texture : Texture, size : Math.Vector2.Vec2 }
+    | Fail Texture.Error
 
 
 type Game memory
@@ -161,12 +163,19 @@ requestTexture missing textures =
                 ( Dict.insert url Loading acc1
                 , (Texture.loadWith textureOption url
                     |> Task.map (Tuple.pair url)
+                    |> Task.mapError (Tuple.pair url)
+                    |> Task.attempt GotTexture
                   )
                     :: acc2
                 )
             )
             ( textures, [] )
-        |> Tuple.mapSecond (Task.sequence >> Task.attempt GotTexture)
+        |> Tuple.mapSecond Cmd.batch
+
+
+
+--|> Tuple.mapSecond
+--    (Task.sequence >> Task.attempt GotTexture)
 
 
 textureOption : Texture.Options
@@ -180,25 +189,22 @@ textureOption =
     }
 
 
-gotTextures : Result error (List ( String, Texture )) -> TextureManager -> TextureManager
+gotTextures : Result ( String, Texture.Error ) ( String, Texture ) -> TextureManager -> TextureManager
 gotTextures r textures =
     case r of
-        Ok texturesList ->
-            List.foldl
-                (\( name, t ) ->
-                    { texture = t
-                    , size =
-                        Texture.size t
-                            |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
-                    }
-                        |> Success
-                        |> Dict.insert name
-                )
+        Ok ( name, t ) ->
+            ({ texture = t
+             , size =
+                Texture.size t
+                    |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
+             }
+                |> Success
+                |> Dict.insert name
+            )
                 textures
-                texturesList
 
-        Err _ ->
-            textures
+        Err ( name, err ) ->
+            Dict.insert name (Fail err) textures
 
 
 gameUpdate : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> Msg -> Game memory -> ( Game memory, Cmd Msg )
@@ -453,7 +459,7 @@ resize w h =
     Resized (toScreen (toFloat w) (toFloat h))
 
 
-setTexture : List ( String, Texture ) -> Msg
+setTexture : ( String, Texture ) -> Msg
 setTexture =
     Ok >> GotTexture
 
@@ -543,7 +549,7 @@ type Msg
     | MouseMove Float Float
     | MouseClick
     | MouseButton Bool
-    | GotTexture (Result Texture.Error (List ( String, Texture )))
+    | GotTexture (Result ( String, Texture.Error ) ( String, Texture ))
 
 
 type Time

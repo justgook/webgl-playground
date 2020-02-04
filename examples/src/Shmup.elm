@@ -53,9 +53,10 @@ view computer phase =
 
         Intro state ->
             [ group
-                [ words white "SHMUP"
-                    |> scale 2
-                    |> moveY (wave 3 7 3 computer.time)
+                [ [ words black "SHMUP" |> move 1 -1, words white "SHMUP" ]
+                    |> group
+                    |> scale 3
+                    |> moveY (wave 15 25 3 computer.time)
                 , words white "> Press SPACE <"
                     |> moveY -20
                 , "Highscore "
@@ -63,7 +64,7 @@ view computer phase =
                     |> words white
                     |> moveY -40
                 ]
-                |> scale 5
+                |> scale 3
             ]
                 |> andFold state.mobs (\mob -> (::) (meteor_big |> rotate mob.a |> scale (mob.r * 2 / 96) |> move mob.x mob.y))
                 |> andFold state.explosions (\{ current, x, y } -> (::) (current |> move x y |> scale 2))

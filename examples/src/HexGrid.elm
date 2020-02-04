@@ -32,8 +32,8 @@ update computer { r, d } =
 
 
 explanation computer { r, d } =
-    [ "radius: " ++ String.fromFloat r ++ " Use Up/Down Arrow Keys" |> words white |> moveY (computer.screen.top - 20) |> scale 2
-    , "distance: " ++ String.fromFloat d ++ " Use Left/Right Arrow Keys" |> words white |> moveY (computer.screen.top - 52) |> scale 2
+    [ "radius: " ++ String.fromFloat r ++ " Use Up/Down Arrow Keys" |> words black |> moveY (computer.screen.top - 20) |> scale 2
+    , "distance: " ++ String.fromFloat d ++ " Use Left/Right Arrow Keys" |> words black |> moveY (computer.screen.top - 52) |> scale 2
     ]
 
 

@@ -109,7 +109,7 @@ viewMemory ({ screen, time } as computer) memory =
                 |> fade (bezier 0 1 0 1 t)
             ]
     )
-        |> (::) (words white "WebGL Playground" |> scale 3 |> move (screen.left + 225) (screen.top - 35))
+        |> (::) (words black "WebGL Playground" |> scale 3 |> move (screen.left + 256 * 3 / 2) (screen.top - 35))
 
 
 viewExample : Run -> Computer -> List Shape
@@ -128,7 +128,7 @@ viewExample example ({ screen } as computer) =
     )
         ++ [ words orange "Press Escape to go back to menu"
                 |> moveY (screen.bottom + 30)
-                |> scale 3
+                |> scale 2
            ]
 
 
@@ -171,10 +171,13 @@ viewMenu { grid, w, h, hover } time =
                     )
                     example.img
                     |> Maybe.withDefault (rectangle blue w h)
-                , words white example.name
+                , [ words darkCharcoal example.name |> move 2 -2
+                  , words white example.name
+                  ]
+                    |> group
                     |> moveY (h * -0.5 + 30)
-                    |> scale (h / 14 * 0.2)
-                    |> applyIf (i == hover) (moveY (wave 20 0 3 time))
+                    |> scale (h / 16 * 0.15)
+                    |> applyIf (i == hover) (moveY (wave 3 -3 1 time))
                 ]
                     |> group
                     |> move x y

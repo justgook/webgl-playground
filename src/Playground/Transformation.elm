@@ -70,7 +70,7 @@ scale sx sy b =
 -}
 makeRotate : Float -> Transformation
 makeRotate angle =
-    Transformation (cos angle) (sin angle * -1) 0 (sin angle) (cos angle) 0
+    Transformation (cos angle) (sin -angle) 0 (sin angle) (cos angle) 0
 
 
 {-| Creates a transformation matrix for scaling each of the x and y by the amount.

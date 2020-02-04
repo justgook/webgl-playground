@@ -101,8 +101,7 @@ import Browser.Events
 import Dict exposing (Dict)
 import Math.Vector2 exposing (vec2)
 import Math.Vector3
-import Math.Vector4 exposing (vec4)
-import Playground.Font.GoodNeighbors as Font
+import Playground.Font.SimpleMood as SimpleMood
 import Playground.Internal as Internal exposing (Form(..), Game(..), Msg(..), Number, Shape(..), TextureData(..), TextureManager)
 import Playground.Polygon exposing (signedArea, triangulate)
 import Playground.Render as Render
@@ -110,7 +109,7 @@ import Set exposing (Set)
 import Task exposing (Task)
 import Time
 import WebGL exposing (Entity)
-import WebGL.Texture as Texture exposing (nonPowerOfTwoOptions)
+import WebGL.Texture as Texture
 
 
 
@@ -552,15 +551,18 @@ zigzag lo hi period time =
 Here is an example of a green square that
 just moves to the right precisely 1px per second,
 independent from frame rate:
-import Playground exposing (..)
-main =
-game view update 0
-view computer offset =
-[ square green 40
-|> moveRight offset
-]
-update computer offset =
-offset + 1 \* (delta computer.time)
+
+    import Playground exposing (..)
+
+    main =
+        game view update 0
+
+    view computer offset =
+        [ square green 40 |> moveRight offset ]
+
+    update computer offset =
+        offset + 1 * delta computer.time
+
 -}
 delta : Time -> Int
 delta (Internal.Time _ d) =
@@ -569,16 +571,20 @@ delta (Internal.Time _ d) =
 
 {-| Turn a `Time` time into the number of milliseconds since 1970 January 1 at 00:00:00 UTC. It was a Thursday.
 Here is example of text that shows current seconds:
-import Playground exposing (..)
-main =
-animation view
-view time =
-let
-s =
-remainderBy (now time // 1000) 60
-|> String.fromInt
-in
-words black s
+
+    import Playground exposing (..)
+
+    main =
+        animation view
+
+    view time =
+        let
+            s =
+                remainderBy (now time // 1000) 60
+                    |> String.fromInt
+        in
+        words black s
+
 -}
 now : Time -> Int
 now (Internal.Time posix _) =
@@ -982,8 +988,8 @@ hexagon color radius =
         { x = 0
         , y = 0
         , a = 0
-        , sx = 1
-        , sy = 1
+        , sx = 1.75
+        , sy = 1.75
         , o = 1
         , form = Form (radius * 2) (radius * 2) (Render.ngon 6 color)
         }
@@ -1111,10 +1117,6 @@ You can use [`scale`](#scale) to make the words bigger or smaller.
 -}
 words : Color -> String -> Shape
 words color string =
-    let
-        config =
-            Font.config
-    in
     Shape
         { x = 0
         , y = 0
@@ -1123,7 +1125,7 @@ words color string =
         , sy = 1
         , o = 1
         , form =
-            Textured config.image
+            Textured SimpleMood.image
                 (\t ->
                     let
                         ( imgW, imgH ) =
@@ -1134,27 +1136,38 @@ words color string =
                         imgSize =
                             Math.Vector2.vec2 imgW imgH
 
-                        ( chars, width ) =
+                        tileW =
+                            16
+
+                        tileH =
+                            16
+
+                        simpleMoodChar =
+                            char t imgSize color tileW tileH
+
+                        output =
                             String.toList string
                                 |> List.foldl
-                                    (\a ( l, w ) ->
-                                        let
-                                            c =
-                                                config.letters a
+                                    (\c { chars, x, y, width } ->
+                                        if c == '\n' then
+                                            { chars = chars
+                                            , x = tileW
+                                            , y = y - tileH
+                                            , width = max width x
+                                            }
 
-                                            uv =
-                                                vec4 (c.x / imgW) (c.y / imgH) (c.w / imgW) (c.h / imgH)
-                                        in
-                                        ( char color t imgSize c (w + 0.5 * c.w) c.o uv :: l, w + c.w + config.spacing )
+                                        else
+                                            { chars = simpleMoodChar x y (SimpleMood.letters c) :: chars, x = x + tileW, y = y, width = width }
                                     )
-                                    ( [], 0 )
+                                    { chars = [], x = tileW, y = tileH, width = 0 }
                     in
-                    Shape { x = (width - config.spacing) * -0.5, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group chars }
+                    Shape { x = max output.x output.width * -0.5, y = output.y * -0.5 + 0.5 * -tileH, a = 0, sx = 1, sy = 1, o = 1, form = Group output.chars }
                 )
         }
 
 
-char color t imgSize { w, h } x y uv =
+char : Texture.Texture -> Math.Vector2.Vec2 -> Math.Vector3.Vec3 -> Number -> Number -> Number -> Number -> Float -> Shape
+char spriteSheet imageSize color w h x y index =
     Shape
         { x = x
         , y = y
@@ -1162,7 +1175,7 @@ char color t imgSize { w, h } x y uv =
         , sx = 1
         , sy = 1
         , o = 1
-        , form = Form w h (Render.spriteWithColor t imgSize color uv)
+        , form = Form w h <| Render.tileWithColor spriteSheet (vec2 w h) imageSize color index
         }
 
 

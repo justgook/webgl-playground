@@ -69,9 +69,10 @@ vertSprite =
             uniform vec2 uP;
             varying vec2 uv;
             uniform vec4 uUV;
+            vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
                 vec2 aP_ = aP * .5 + 0.5;
-                uv = uUV.xy + (aP_ * uUV.zw);
+                uv = uUV.xy + (aP_ * uUV.zw) + edgeFix;
                 gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
             }
         |]
@@ -86,8 +87,9 @@ vertImage =
             uniform vec4 uT;
             uniform vec2 uP;
             varying vec2 uv;
+            vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
-                uv = aP * .5 + 0.5;
+                uv = aP * .5 + 0.5 + edgeFix;
                 gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
             }
         |]
@@ -116,8 +118,9 @@ vertRect =
             uniform vec4 uT;
             uniform vec2 uP;
             varying vec2 uv;
+            vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
-                uv = aP;
+                uv = aP + edgeFix;
                 gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
             }
         |]
@@ -144,13 +147,14 @@ vertTile =
             uniform vec2 spriteSize;
             uniform vec2 uImgSize;
             varying vec2 uv;
+            vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
                 vec2 ratio = spriteSize / uImgSize;
-                float row = floor(index * ratio.x);
-                float column = index - row * (ratio.x);
+                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);
+                float column = mod(index, uImgSize.x / spriteSize.x);
                 vec2 offset = vec2(column, row) * ratio;
-                uv = (aP * .5 + 0.5) * ratio + offset;
-                gl_Position = vec4(aP * mat2(uT) + uP, 0.5, 1.0);
+                uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;
+                gl_Position = vec4(aP * mat2(uT) + uP, 1.0, 1.0);
             }
         |]
 
@@ -187,7 +191,7 @@ fragImageColor =
         uniform sampler2D uImg;
         uniform vec4 color;
         void main () {
-            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
+            vec2 pixel = ((floor(uv * uImgSize) + 0.5) * 2.0 ) / uImgSize / 2.0;
             gl_FragColor = texture2D(uImg, pixel) * color;
         }
     |]
@@ -232,7 +236,7 @@ fragNgon =
         uniform float n;
         varying vec2 uv;
         void main () {
-            float angle = 3.1415926535897932384626433832795;
+            float angle = 3.1415926535897932384626433832795 / n * 3.0;
             float a = atan(uv.x,uv.y) + angle;
             float b = 6.28319 / n;
             float f = smoothstep(0.5,.5,cos(floor(.5 + a/b)*b-a)*length(uv));

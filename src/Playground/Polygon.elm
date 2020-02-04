@@ -40,15 +40,6 @@ triangulateEar lastEar points =
 
         a :: x :: c :: xs ->
             let
-                earFound =
-                    convex && noPointInTriangle
-
-                noPointInTriangle =
-                    not <| isAnyPointInTriangle ( a, x, c ) xs
-
-                convex =
-                    isConvex a x c
-
                 --TODO get rid of size in each step
                 size =
                     3 + List.length xs
@@ -56,12 +47,23 @@ triangulateEar lastEar points =
             if lastEar > 2 * size then
                 [ ( a, x, c ) ]
 
-            else if earFound then
-                -- TODO make me tail safe
-                ( a, x, c ) :: triangulateEar 0 ([ a ] ++ [ c ] ++ xs)
-
             else
-                triangulateEar (lastEar + 1) ([ x, c ] ++ xs ++ [ a ])
+                let
+                    noPointInTriangle =
+                        not <| isAnyPointInTriangle ( a, x, c ) xs
+
+                    earFound =
+                        convex && noPointInTriangle
+
+                    convex =
+                        isConvex a x c
+                in
+                if earFound then
+                    -- TODO make me tail safe
+                    ( a, x, c ) :: triangulateEar 0 ([ a ] ++ [ c ] ++ xs)
+
+                else
+                    triangulateEar (lastEar + 1) ([ x, c ] ++ xs ++ [ a ])
 
 
 {-| Check if given point is in given triangle.

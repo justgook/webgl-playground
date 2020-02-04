@@ -139,7 +139,7 @@ with slow network that can take some time,
 but for more advanced games and more smooth transition you can cache textures for later use,
 so when you need show new image - texture already there.
 -}
-cacheTextures : List ( String, Texture ) -> Internal.Msg
+cacheTextures : ( String, Texture ) -> Internal.Msg
 cacheTextures =
     Internal.setTexture
 

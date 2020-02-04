@@ -1,6 +1,7 @@
 module Playground.Render exposing
     ( triangle, rect, circle, image, ngon, tile, sprite, spriteWithColor
     , defaultEntitySettings
+    , tileWithColor
     )
 
 {-|
@@ -153,6 +154,29 @@ sprite image_ imageSize uv translate scaleRotateSkew opacity =
         , uImg = image_
         , uImgSize = imageSize
         , uUV = uv
+        }
+
+
+{-| Render tile from symmetrical tileset.
+
+Same as [`tile`](#tile), but with color blending.
+
+-}
+tileWithColor : Texture -> Vec2 -> Vec2 -> Vec3 -> Float -> Vec2 -> Vec4 -> Float -> WebGL.Entity
+tileWithColor spriteSheet spriteSize imageSize color index translate scaleRotateSkew opacity =
+    WebGL.entityWith
+        defaultEntitySettings
+        Shader.vertTile
+        Shader.fragImageColor
+        Shader.mesh
+        { uP = translate
+        , uT = scaleRotateSkew
+        , index = index
+        , spriteSize = spriteSize
+        , uImg = spriteSheet
+        , uImgSize = imageSize
+        , uA = opacity
+        , color = setAlpha color opacity
         }
 
 

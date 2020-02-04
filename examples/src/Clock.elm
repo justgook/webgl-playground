@@ -23,7 +23,11 @@ view time =
     (List.range 0 11
         |> List.map
             (\i ->
-                [ words white (String.fromInt (12 - i))
+                [ [ words black (String.fromInt (12 - i))
+                        |> move 1 -1
+                  , words grey (String.fromInt (12 - i))
+                  ]
+                    |> group
                     |> scale 3
                     |> rotate (-360 / 12 * toFloat i)
                     |> moveY 250

@@ -2,6 +2,7 @@ module Playground.Extra exposing
     ( scaleX, scaleY
     , tile, sprite
     , tilemap
+    , colorTile
     )
 
 {-|
@@ -25,7 +26,7 @@ module Playground.Extra exposing
 
 import Math.Vector2 exposing (vec2)
 import Math.Vector4 exposing (Vec4)
-import Playground exposing (Number, Shape)
+import Playground exposing (Color, Number, Shape)
 import Playground.Advanced exposing (Render, custom, useTexture)
 import Playground.Batch.Tilemap
 import Playground.Internal exposing (Form(..), Number, Shape(..))
@@ -89,6 +90,13 @@ sprite tileW tileH atlas uv =
     useTexture atlas <|
         \t ->
             custom tileW tileH <| Render.sprite t (size t) uv
+
+
+colorTile : Number -> Number -> String -> Color -> Int -> Shape
+colorTile tileW tileH tileset color index =
+    useTexture tileset <|
+        \t ->
+            custom tileW tileH <| Render.tileWithColor t (vec2 tileW tileH) (size t) color (toFloat index)
 
 
 {-| Show tilemap from symmetrical tileset and a corresponding lookup table stored as a texture.
