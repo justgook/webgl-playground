@@ -6840,6 +6840,9 @@ var $elm$browser$Browser$document = _Browser_document;
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$browser$Browser$Dom$getViewport = _Browser_withWindow(_Browser_getViewport);
+var $author$project$Playground$Internal$Fail = function (a) {
+	return {$: 'Fail', a: a};
+};
 var $author$project$Playground$Internal$Success = function (a) {
 	return {$: 'Success', a: a};
 };
@@ -6962,30 +6965,31 @@ var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
 var $author$project$Playground$Internal$gotTextures = F2(
 	function (r, textures) {
 		if (r.$ === 'Ok') {
-			var texturesList = r.a;
-			return A3(
-				$elm$core$List$foldl,
-				function (_v1) {
-					var name = _v1.a;
-					var t = _v1.b;
-					return A2(
-						$elm$core$Dict$insert,
-						name,
-						$author$project$Playground$Internal$Success(
-							{
-								size: function (_v2) {
-									var w = _v2.a;
-									var h = _v2.b;
-									return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
-								}(
-									$elm_explorations$webgl$WebGL$Texture$size(t)),
-								texture: t
-							}));
-				},
-				textures,
-				texturesList);
+			var _v1 = r.a;
+			var name = _v1.a;
+			var t = _v1.b;
+			return A2(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Success(
+					{
+						size: function (_v2) {
+							var w = _v2.a;
+							var h = _v2.b;
+							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
+						}(
+							$elm_explorations$webgl$WebGL$Texture$size(t)),
+						texture: t
+					}))(textures);
 		} else {
-			return textures;
+			var _v3 = r.a;
+			var name = _v3.a;
+			var err = _v3.b;
+			return A3(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Fail(err),
+				textures);
 		}
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
@@ -7227,11 +7231,6 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
 var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 	function (_v0, url) {
 		var magnify = _v0.magnify;
@@ -7248,6 +7247,14 @@ var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 				return A6(_Texture_load, mag, min, hor, vert, flipY, url);
 			});
 		return A4(expand, magnify, minify, horizontalWrap, verticalWrap);
+	});
+var $elm$core$Task$fail = _Scheduler_fail;
+var $elm$core$Task$mapError = F2(
+	function (convert, task) {
+		return A2(
+			$elm$core$Task$onError,
+			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
+			task);
 	});
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
@@ -7270,10 +7277,7 @@ var $author$project$Playground$Internal$requestTexture = F2(
 	function (missing, textures) {
 		return A2(
 			$elm$core$Tuple$mapSecond,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$core$Task$sequence,
-				$elm$core$Task$attempt($author$project$Playground$Internal$GotTexture)),
+			$elm$core$Platform$Cmd$batch,
 			A3(
 				$elm$core$List$foldl,
 				F2(
@@ -7285,9 +7289,15 @@ var $author$project$Playground$Internal$requestTexture = F2(
 							A2(
 								$elm$core$List$cons,
 								A2(
-									$elm$core$Task$map,
-									$elm$core$Tuple$pair(url),
-									A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)),
+									$elm$core$Task$attempt,
+									$author$project$Playground$Internal$GotTexture,
+									A2(
+										$elm$core$Task$mapError,
+										$elm$core$Tuple$pair(url),
+										A2(
+											$elm$core$Task$map,
+											$elm$core$Tuple$pair(url),
+											A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)))),
 								acc2));
 					}),
 				_Utils_Tuple2(textures, _List_Nil),
@@ -8618,18 +8628,18 @@ var $author$project$Playground$Polygon$triangulateEar = F2(
 							var c = _v5.a;
 							var xs = _v5.b;
 							var size = 3 + $elm$core$List$length(xs);
-							var noPointInTriangle = !A2(
-								$author$project$Playground$Polygon$isAnyPointInTriangle,
-								_Utils_Tuple3(a, x, c),
-								xs);
-							var convex = A3($author$project$Playground$Polygon$isConvex, a, x, c);
-							var earFound = convex && noPointInTriangle;
 							if (_Utils_cmp(lastEar, 2 * size) > 0) {
 								return _List_fromArray(
 									[
 										_Utils_Tuple3(a, x, c)
 									]);
 							} else {
+								var noPointInTriangle = !A2(
+									$author$project$Playground$Polygon$isAnyPointInTriangle,
+									_Utils_Tuple3(a, x, c),
+									xs);
+								var convex = A3($author$project$Playground$Polygon$isConvex, a, x, c);
+								var earFound = convex && noPointInTriangle;
 								if (earFound) {
 									return A2(
 										$elm$core$List$cons,

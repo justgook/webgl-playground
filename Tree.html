@@ -6855,6 +6855,9 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 };
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $author$project$Playground$Internal$emptyKeyboard = {backspace: false, down: false, enter: false, keys: $elm$core$Set$empty, left: false, right: false, shift: false, space: false, up: false};
+var $author$project$Playground$Internal$Fail = function (a) {
+	return {$: 'Fail', a: a};
+};
 var $author$project$Playground$Internal$Success = function (a) {
 	return {$: 'Success', a: a};
 };
@@ -6977,30 +6980,31 @@ var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
 var $author$project$Playground$Internal$gotTextures = F2(
 	function (r, textures) {
 		if (r.$ === 'Ok') {
-			var texturesList = r.a;
-			return A3(
-				$elm$core$List$foldl,
-				function (_v1) {
-					var name = _v1.a;
-					var t = _v1.b;
-					return A2(
-						$elm$core$Dict$insert,
-						name,
-						$author$project$Playground$Internal$Success(
-							{
-								size: function (_v2) {
-									var w = _v2.a;
-									var h = _v2.b;
-									return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
-								}(
-									$elm_explorations$webgl$WebGL$Texture$size(t)),
-								texture: t
-							}));
-				},
-				textures,
-				texturesList);
+			var _v1 = r.a;
+			var name = _v1.a;
+			var t = _v1.b;
+			return A2(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Success(
+					{
+						size: function (_v2) {
+							var w = _v2.a;
+							var h = _v2.b;
+							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
+						}(
+							$elm_explorations$webgl$WebGL$Texture$size(t)),
+						texture: t
+					}))(textures);
 		} else {
-			return textures;
+			var _v3 = r.a;
+			var name = _v3.a;
+			var err = _v3.b;
+			return A3(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Fail(err),
+				textures);
 		}
 	});
 var $elm$core$Tuple$mapFirst = F2(
@@ -7268,11 +7272,6 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
 var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 	function (_v0, url) {
 		var magnify = _v0.magnify;
@@ -7289,6 +7288,14 @@ var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 				return A6(_Texture_load, mag, min, hor, vert, flipY, url);
 			});
 		return A4(expand, magnify, minify, horizontalWrap, verticalWrap);
+	});
+var $elm$core$Task$fail = _Scheduler_fail;
+var $elm$core$Task$mapError = F2(
+	function (convert, task) {
+		return A2(
+			$elm$core$Task$onError,
+			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
+			task);
 	});
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
@@ -7311,10 +7318,7 @@ var $author$project$Playground$Internal$requestTexture = F2(
 	function (missing, textures) {
 		return A2(
 			$elm$core$Tuple$mapSecond,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$core$Task$sequence,
-				$elm$core$Task$attempt($author$project$Playground$Internal$GotTexture)),
+			$elm$core$Platform$Cmd$batch,
 			A3(
 				$elm$core$List$foldl,
 				F2(
@@ -7326,9 +7330,15 @@ var $author$project$Playground$Internal$requestTexture = F2(
 							A2(
 								$elm$core$List$cons,
 								A2(
-									$elm$core$Task$map,
-									$elm$core$Tuple$pair(url),
-									A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)),
+									$elm$core$Task$attempt,
+									$author$project$Playground$Internal$GotTexture,
+									A2(
+										$elm$core$Task$mapError,
+										$elm$core$Tuple$pair(url),
+										A2(
+											$elm$core$Task$map,
+											$elm$core$Tuple$pair(url),
+											A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)))),
 								acc2));
 					}),
 				_Utils_Tuple2(textures, _List_Nil),

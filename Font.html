@@ -6840,6 +6840,9 @@ var $elm$browser$Browser$document = _Browser_document;
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$browser$Browser$Dom$getViewport = _Browser_withWindow(_Browser_getViewport);
+var $author$project$Playground$Internal$Fail = function (a) {
+	return {$: 'Fail', a: a};
+};
 var $author$project$Playground$Internal$Success = function (a) {
 	return {$: 'Success', a: a};
 };
@@ -6962,30 +6965,31 @@ var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
 var $author$project$Playground$Internal$gotTextures = F2(
 	function (r, textures) {
 		if (r.$ === 'Ok') {
-			var texturesList = r.a;
-			return A3(
-				$elm$core$List$foldl,
-				function (_v1) {
-					var name = _v1.a;
-					var t = _v1.b;
-					return A2(
-						$elm$core$Dict$insert,
-						name,
-						$author$project$Playground$Internal$Success(
-							{
-								size: function (_v2) {
-									var w = _v2.a;
-									var h = _v2.b;
-									return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
-								}(
-									$elm_explorations$webgl$WebGL$Texture$size(t)),
-								texture: t
-							}));
-				},
-				textures,
-				texturesList);
+			var _v1 = r.a;
+			var name = _v1.a;
+			var t = _v1.b;
+			return A2(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Success(
+					{
+						size: function (_v2) {
+							var w = _v2.a;
+							var h = _v2.b;
+							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
+						}(
+							$elm_explorations$webgl$WebGL$Texture$size(t)),
+						texture: t
+					}))(textures);
 		} else {
-			return textures;
+			var _v3 = r.a;
+			var name = _v3.a;
+			var err = _v3.b;
+			return A3(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Fail(err),
+				textures);
 		}
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
@@ -7227,11 +7231,6 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
 var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 	function (_v0, url) {
 		var magnify = _v0.magnify;
@@ -7248,6 +7247,14 @@ var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 				return A6(_Texture_load, mag, min, hor, vert, flipY, url);
 			});
 		return A4(expand, magnify, minify, horizontalWrap, verticalWrap);
+	});
+var $elm$core$Task$fail = _Scheduler_fail;
+var $elm$core$Task$mapError = F2(
+	function (convert, task) {
+		return A2(
+			$elm$core$Task$onError,
+			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
+			task);
 	});
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
@@ -7270,10 +7277,7 @@ var $author$project$Playground$Internal$requestTexture = F2(
 	function (missing, textures) {
 		return A2(
 			$elm$core$Tuple$mapSecond,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$core$Task$sequence,
-				$elm$core$Task$attempt($author$project$Playground$Internal$GotTexture)),
+			$elm$core$Platform$Cmd$batch,
 			A3(
 				$elm$core$List$foldl,
 				F2(
@@ -7285,9 +7289,15 @@ var $author$project$Playground$Internal$requestTexture = F2(
 							A2(
 								$elm$core$List$cons,
 								A2(
-									$elm$core$Task$map,
-									$elm$core$Tuple$pair(url),
-									A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)),
+									$elm$core$Task$attempt,
+									$author$project$Playground$Internal$GotTexture,
+									A2(
+										$elm$core$Task$mapError,
+										$elm$core$Tuple$pair(url),
+										A2(
+											$elm$core$Task$map,
+											$elm$core$Tuple$pair(url),
+											A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)))),
 								acc2));
 					}),
 				_Utils_Tuple2(textures, _List_Nil),
@@ -8050,54 +8060,6 @@ var $author$project$Playground$picture = function (shapes) {
 			view: view
 		});
 };
-var $author$project$Playground$Internal$Group = function (a) {
-	return {$: 'Group', a: a};
-};
-var $author$project$Playground$Internal$Shape = function (a) {
-	return {$: 'Shape', a: a};
-};
-var $author$project$Playground$group = function (shapes) {
-	return $author$project$Playground$Internal$Shape(
-		{
-			a: 0,
-			form: $author$project$Playground$Internal$Group(shapes),
-			o: 1,
-			sx: 1,
-			sy: 1,
-			x: 0,
-			y: 0
-		});
-};
-var $author$project$Playground$scale = F2(
-	function (ns, _v0) {
-		var shape = _v0.a;
-		var x = shape.x;
-		var y = shape.y;
-		var a = shape.a;
-		var sx = shape.sx;
-		var sy = shape.sy;
-		var o = shape.o;
-		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
-			_Utils_update(
-				shape,
-				{sx: sx * ns, sy: sy * ns}));
-	});
-var $author$project$Playground$moveDown = F2(
-	function (dy, _v0) {
-		var shape = _v0.a;
-		var x = shape.x;
-		var y = shape.y;
-		var a = shape.a;
-		var sx = shape.sx;
-		var sy = shape.sy;
-		var o = shape.o;
-		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
-			_Utils_update(
-				shape,
-				{y: y - dy}));
-	});
 var $author$project$Playground$intFromHexChar = function (s) {
 	switch (s.valueOf()) {
 		case '0':
@@ -8216,10 +8178,90 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
+var $author$project$Playground$blue = A2(
+	$elm$core$Maybe$withDefault,
+	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
+	$author$project$Playground$hexColor2Vec3('#3465a4'));
+var $author$project$Playground$Internal$Group = function (a) {
+	return {$: 'Group', a: a};
+};
+var $author$project$Playground$Internal$Shape = function (a) {
+	return {$: 'Shape', a: a};
+};
+var $author$project$Playground$group = function (shapes) {
+	return $author$project$Playground$Internal$Shape(
+		{
+			a: 0,
+			form: $author$project$Playground$Internal$Group(shapes),
+			o: 1,
+			sx: 1,
+			sy: 1,
+			x: 0,
+			y: 0
+		});
+};
+var $author$project$Playground$moveDown = F2(
+	function (dy, _v0) {
+		var shape = _v0.a;
+		var x = shape.x;
+		var y = shape.y;
+		var a = shape.a;
+		var sx = shape.sx;
+		var sy = shape.sy;
+		var o = shape.o;
+		var form = shape.form;
+		return $author$project$Playground$Internal$Shape(
+			_Utils_update(
+				shape,
+				{y: y - dy}));
+	});
+var $author$project$Playground$moveY = F2(
+	function (dy, _v0) {
+		var shape = _v0.a;
+		var x = shape.x;
+		var y = shape.y;
+		var a = shape.a;
+		var sx = shape.sx;
+		var sy = shape.sy;
+		var o = shape.o;
+		var form = shape.form;
+		return $author$project$Playground$Internal$Shape(
+			_Utils_update(
+				shape,
+				{y: y + dy}));
+	});
+var $author$project$Playground$moveUp = $author$project$Playground$moveY;
+var $author$project$Playground$purple = A2(
+	$elm$core$Maybe$withDefault,
+	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
+	$author$project$Playground$hexColor2Vec3('#75507b'));
 var $author$project$Playground$red = A2(
 	$elm$core$Maybe$withDefault,
 	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
 	$author$project$Playground$hexColor2Vec3('#cc0000'));
+var $elm$core$Basics$pi = _Basics_pi;
+var $elm$core$Basics$degrees = function (angleInDegrees) {
+	return (angleInDegrees * $elm$core$Basics$pi) / 180;
+};
+var $author$project$Playground$rotate = F2(
+	function (da, _v0) {
+		var shape = _v0.a;
+		var x = shape.x;
+		var y = shape.y;
+		var a = shape.a;
+		var sx = shape.sx;
+		var sy = shape.sy;
+		var o = shape.o;
+		var form = shape.form;
+		return $author$project$Playground$Internal$Shape(
+			_Utils_update(
+				shape,
+				{
+					a: a + $elm$core$Basics$degrees(da)
+				}));
+	});
+var $author$project$Font$text1 = _List_fromArray(
+	['\u0000☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼ !\"#$%&\'()', '*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]', '^_`abcdefghijklmnopqrstuvwxyz{|}~⌂ÇüéâäàåçêëèïîìÄÅÉæÆô', 'öòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼', '╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■\u00A0', 'The quick brown fox jumps over the lazy dog']);
 var $author$project$Playground$Internal$Textured = F2(
 	function (a, b) {
 		return {$: 'Textured', a: a, b: b};
@@ -8307,7 +8349,7 @@ var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragImageColor = {
-	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform vec4 color;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel) * color;\n        }\n    ',
+	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform vec4 color;\n        void main () {\n            vec2 pixel = ((floor(uv * uImgSize) + 0.5) * 2.0 ) / uImgSize / 2.0;\n            gl_FragColor = texture2D(uImg, pixel) * color;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color', uImg: 'uImg', uImgSize: 'uImgSize'}
 };
@@ -8341,32 +8383,32 @@ var $author$project$Playground$Render$setAlpha = function (c) {
 	}(
 		$elm_explorations$linear_algebra$Math$Vector3$toRecord(c));
 };
-var $author$project$Playground$Shader$vertSprite = {
-	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            uniform vec4 uUV;\n            void main () {\n                vec2 aP_ = aP * .5 + 0.5;\n                uv = uUV.xy + (aP_ * uUV.zw);\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
+var $author$project$Playground$Shader$vertTile = {
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float index;\n            uniform vec2 spriteSize;\n            uniform vec2 uImgSize;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                vec2 ratio = spriteSize / uImgSize;\n                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);\n                float column = mod(index, uImgSize.x / spriteSize.x);\n                vec2 offset = vec2(column, row) * ratio;\n                uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, 1.0, 1.0);\n            }\n        ',
 	attributes: {aP: 'aP'},
-	uniforms: {uP: 'uP', uT: 'uT', uUV: 'uUV'}
+	uniforms: {index: 'index', spriteSize: 'spriteSize', uImgSize: 'uImgSize', uP: 'uP', uT: 'uT'}
 };
-var $author$project$Playground$Render$spriteWithColor = F7(
-	function (t, imgSize, color, uv, translate, scaleRotateSkew, opacity) {
+var $author$project$Playground$Render$tileWithColor = F8(
+	function (spriteSheet, spriteSize, imageSize, color, index, translate, scaleRotateSkew, opacity) {
 		return A5(
 			$elm_explorations$webgl$WebGL$entityWith,
 			$author$project$Playground$Render$defaultEntitySettings,
-			$author$project$Playground$Shader$vertSprite,
+			$author$project$Playground$Shader$vertTile,
 			$author$project$Playground$Shader$fragImageColor,
 			$author$project$Playground$Shader$mesh,
 			{
 				color: A2($author$project$Playground$Render$setAlpha, color, opacity),
-				uImg: t,
-				uImgSize: imgSize,
+				index: index,
+				spriteSize: spriteSize,
+				uA: opacity,
+				uImg: spriteSheet,
+				uImgSize: imageSize,
 				uP: translate,
-				uT: scaleRotateSkew,
-				uUV: uv
+				uT: scaleRotateSkew
 			});
 	});
-var $author$project$Playground$char = F7(
-	function (color, t, imgSize, _v0, x, y, uv) {
-		var w = _v0.w;
-		var h = _v0.h;
+var $author$project$Playground$char = F8(
+	function (spriteSheet, imageSize, color, w, h, x, y, index) {
 		return $author$project$Playground$Internal$Shape(
 			{
 				a: 0,
@@ -8374,7 +8416,13 @@ var $author$project$Playground$char = F7(
 					$author$project$Playground$Internal$Form,
 					w,
 					h,
-					A4($author$project$Playground$Render$spriteWithColor, t, imgSize, color, uv)),
+					A5(
+						$author$project$Playground$Render$tileWithColor,
+						spriteSheet,
+						A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h),
+						imageSize,
+						color,
+						index)),
 				o: 1,
 				sx: 1,
 				sy: 1,
@@ -8382,305 +8430,339 @@ var $author$project$Playground$char = F7(
 				y: y
 			});
 	});
-var $author$project$Playground$Font$GoodNeighbors$image = 'data:image/png;base64,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';
-var $author$project$Playground$Font$GoodNeighbors$letters = function (c) {
+var $author$project$Playground$Font$SimpleMood$image = 'data:image/png;base64,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';
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $author$project$Playground$Font$SimpleMood$letters_ = $elm$core$Dict$fromList(
+	A2(
+		$elm$core$List$indexedMap,
+		F2(
+			function (a, b) {
+				return _Utils_Tuple2(b, a);
+			}),
+		$elm$core$List$concat(
+			_List_fromArray(
+				[
+					_List_fromArray(
+					[
+						_Utils_chr('\u0000'),
+						_Utils_chr('☺'),
+						_Utils_chr('☻'),
+						_Utils_chr('♥'),
+						_Utils_chr('♦'),
+						_Utils_chr('♣'),
+						_Utils_chr('♠'),
+						_Utils_chr('•'),
+						_Utils_chr('◘'),
+						_Utils_chr('○'),
+						_Utils_chr('◙'),
+						_Utils_chr('♂'),
+						_Utils_chr('♀'),
+						_Utils_chr('♪'),
+						_Utils_chr('♫'),
+						_Utils_chr('☼')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('►'),
+						_Utils_chr('◄'),
+						_Utils_chr('↕'),
+						_Utils_chr('‼'),
+						_Utils_chr('¶'),
+						_Utils_chr('§'),
+						_Utils_chr('▬'),
+						_Utils_chr('↨'),
+						_Utils_chr('↑'),
+						_Utils_chr('↓'),
+						_Utils_chr('→'),
+						_Utils_chr('←'),
+						_Utils_chr('∟'),
+						_Utils_chr('↔'),
+						_Utils_chr('▲'),
+						_Utils_chr('▼')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr(' '),
+						_Utils_chr('!'),
+						_Utils_chr('\"'),
+						_Utils_chr('#'),
+						_Utils_chr('$'),
+						_Utils_chr('%'),
+						_Utils_chr('&'),
+						_Utils_chr('\''),
+						_Utils_chr('('),
+						_Utils_chr(')'),
+						_Utils_chr('*'),
+						_Utils_chr('+'),
+						_Utils_chr(','),
+						_Utils_chr('-'),
+						_Utils_chr('.'),
+						_Utils_chr('/')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('0'),
+						_Utils_chr('1'),
+						_Utils_chr('2'),
+						_Utils_chr('3'),
+						_Utils_chr('4'),
+						_Utils_chr('5'),
+						_Utils_chr('6'),
+						_Utils_chr('7'),
+						_Utils_chr('8'),
+						_Utils_chr('9'),
+						_Utils_chr(':'),
+						_Utils_chr(';'),
+						_Utils_chr('<'),
+						_Utils_chr('='),
+						_Utils_chr('>'),
+						_Utils_chr('?')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('@'),
+						_Utils_chr('A'),
+						_Utils_chr('B'),
+						_Utils_chr('C'),
+						_Utils_chr('D'),
+						_Utils_chr('E'),
+						_Utils_chr('F'),
+						_Utils_chr('G'),
+						_Utils_chr('H'),
+						_Utils_chr('I'),
+						_Utils_chr('J'),
+						_Utils_chr('K'),
+						_Utils_chr('L'),
+						_Utils_chr('M'),
+						_Utils_chr('N'),
+						_Utils_chr('O')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('P'),
+						_Utils_chr('Q'),
+						_Utils_chr('R'),
+						_Utils_chr('S'),
+						_Utils_chr('T'),
+						_Utils_chr('U'),
+						_Utils_chr('V'),
+						_Utils_chr('W'),
+						_Utils_chr('X'),
+						_Utils_chr('Y'),
+						_Utils_chr('Z'),
+						_Utils_chr('['),
+						_Utils_chr('\\'),
+						_Utils_chr(']'),
+						_Utils_chr('^'),
+						_Utils_chr('_')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('`'),
+						_Utils_chr('a'),
+						_Utils_chr('b'),
+						_Utils_chr('c'),
+						_Utils_chr('d'),
+						_Utils_chr('e'),
+						_Utils_chr('f'),
+						_Utils_chr('g'),
+						_Utils_chr('h'),
+						_Utils_chr('i'),
+						_Utils_chr('j'),
+						_Utils_chr('k'),
+						_Utils_chr('l'),
+						_Utils_chr('m'),
+						_Utils_chr('n'),
+						_Utils_chr('o')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('p'),
+						_Utils_chr('q'),
+						_Utils_chr('r'),
+						_Utils_chr('s'),
+						_Utils_chr('t'),
+						_Utils_chr('u'),
+						_Utils_chr('v'),
+						_Utils_chr('w'),
+						_Utils_chr('x'),
+						_Utils_chr('y'),
+						_Utils_chr('z'),
+						_Utils_chr('{'),
+						_Utils_chr('|'),
+						_Utils_chr('}'),
+						_Utils_chr('~'),
+						_Utils_chr('⌂')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('Ç'),
+						_Utils_chr('ü'),
+						_Utils_chr('é'),
+						_Utils_chr('â'),
+						_Utils_chr('ä'),
+						_Utils_chr('à'),
+						_Utils_chr('å'),
+						_Utils_chr('ç'),
+						_Utils_chr('ê'),
+						_Utils_chr('ë'),
+						_Utils_chr('è'),
+						_Utils_chr('ï'),
+						_Utils_chr('î'),
+						_Utils_chr('ì'),
+						_Utils_chr('Ä'),
+						_Utils_chr('Å')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('É'),
+						_Utils_chr('æ'),
+						_Utils_chr('Æ'),
+						_Utils_chr('ô'),
+						_Utils_chr('ö'),
+						_Utils_chr('ò'),
+						_Utils_chr('û'),
+						_Utils_chr('ù'),
+						_Utils_chr('ÿ'),
+						_Utils_chr('Ö'),
+						_Utils_chr('Ü'),
+						_Utils_chr('¢'),
+						_Utils_chr('£'),
+						_Utils_chr('¥'),
+						_Utils_chr('₧'),
+						_Utils_chr('ƒ')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('á'),
+						_Utils_chr('í'),
+						_Utils_chr('ó'),
+						_Utils_chr('ú'),
+						_Utils_chr('ñ'),
+						_Utils_chr('Ñ'),
+						_Utils_chr('ª'),
+						_Utils_chr('º'),
+						_Utils_chr('¿'),
+						_Utils_chr('⌐'),
+						_Utils_chr('¬'),
+						_Utils_chr('½'),
+						_Utils_chr('¼'),
+						_Utils_chr('¡'),
+						_Utils_chr('«'),
+						_Utils_chr('»')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('░'),
+						_Utils_chr('▒'),
+						_Utils_chr('▓'),
+						_Utils_chr('│'),
+						_Utils_chr('┤'),
+						_Utils_chr('╡'),
+						_Utils_chr('╢'),
+						_Utils_chr('╖'),
+						_Utils_chr('╕'),
+						_Utils_chr('╣'),
+						_Utils_chr('║'),
+						_Utils_chr('╗'),
+						_Utils_chr('╝'),
+						_Utils_chr('╜'),
+						_Utils_chr('╛'),
+						_Utils_chr('┐')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('└'),
+						_Utils_chr('┴'),
+						_Utils_chr('┬'),
+						_Utils_chr('├'),
+						_Utils_chr('─'),
+						_Utils_chr('┼'),
+						_Utils_chr('╞'),
+						_Utils_chr('╟'),
+						_Utils_chr('╚'),
+						_Utils_chr('╔'),
+						_Utils_chr('╩'),
+						_Utils_chr('╦'),
+						_Utils_chr('╠'),
+						_Utils_chr('═'),
+						_Utils_chr('╬'),
+						_Utils_chr('╧')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('╨'),
+						_Utils_chr('╤'),
+						_Utils_chr('╥'),
+						_Utils_chr('╙'),
+						_Utils_chr('╘'),
+						_Utils_chr('╒'),
+						_Utils_chr('╓'),
+						_Utils_chr('╫'),
+						_Utils_chr('╪'),
+						_Utils_chr('┘'),
+						_Utils_chr('┌'),
+						_Utils_chr('█'),
+						_Utils_chr('▄'),
+						_Utils_chr('▌'),
+						_Utils_chr('▐'),
+						_Utils_chr('▀')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('α'),
+						_Utils_chr('ß'),
+						_Utils_chr('Γ'),
+						_Utils_chr('π'),
+						_Utils_chr('Σ'),
+						_Utils_chr('σ'),
+						_Utils_chr('µ'),
+						_Utils_chr('τ'),
+						_Utils_chr('Φ'),
+						_Utils_chr('Θ'),
+						_Utils_chr('Ω'),
+						_Utils_chr('δ'),
+						_Utils_chr('∞'),
+						_Utils_chr('φ'),
+						_Utils_chr('ε'),
+						_Utils_chr('∩')
+					]),
+					_List_fromArray(
+					[
+						_Utils_chr('≡'),
+						_Utils_chr('±'),
+						_Utils_chr('≥'),
+						_Utils_chr('≤'),
+						_Utils_chr('⌠'),
+						_Utils_chr('⌡'),
+						_Utils_chr('÷'),
+						_Utils_chr('≈'),
+						_Utils_chr('°'),
+						_Utils_chr('∙'),
+						_Utils_chr('·'),
+						_Utils_chr('√'),
+						_Utils_chr('ⁿ'),
+						_Utils_chr('²'),
+						_Utils_chr('■'),
+						_Utils_chr('\u00A0')
+					])
+				]))));
+var $author$project$Playground$Font$SimpleMood$letters = function (c) {
 	return A2(
 		$elm$core$Maybe$withDefault,
-		{h: 12, o: 0, w: 6, x: 102, y: (115 - 16) - 12},
-		A2(
-			$elm$core$Dict$get,
-			c,
-			$elm$core$Dict$fromList(
-				_List_fromArray(
-					[
-						_Utils_Tuple2(
-						_Utils_chr('!'),
-						{h: 12, o: 0, w: 6, x: 102, y: 87}),
-						_Utils_Tuple2(
-						_Utils_chr('\"'),
-						{h: 7, o: 2.5, w: 7, x: 85, y: 108}),
-						_Utils_Tuple2(
-						_Utils_chr('#'),
-						{h: 10, o: 0, w: 10, x: 0, y: 51}),
-						_Utils_Tuple2(
-						_Utils_chr('$'),
-						{h: 14, o: 0, w: 10, x: 0, y: 63}),
-						_Utils_Tuple2(
-						_Utils_chr('%'),
-						{h: 12, o: 0, w: 11, x: 0, y: 79}),
-						_Utils_Tuple2(
-						_Utils_chr('&'),
-						{h: 12, o: 0, w: 11, x: 0, y: 93}),
-						_Utils_Tuple2(
-						_Utils_chr('\''),
-						{h: 7, o: 2.5, w: 4, x: 94, y: 46}),
-						_Utils_Tuple2(
-						_Utils_chr('('),
-						{h: 14, o: 0, w: 6, x: 94, y: 101}),
-						_Utils_Tuple2(
-						_Utils_chr(')'),
-						{h: 14, o: 0, w: 6, x: 102, y: 101}),
-						_Utils_Tuple2(
-						_Utils_chr('*'),
-						{h: 11, o: 1.5, w: 10, x: 0, y: 2}),
-						_Utils_Tuple2(
-						_Utils_chr('+'),
-						{h: 9, o: -0.5, w: 8, x: 34, y: 46}),
-						_Utils_Tuple2(
-						_Utils_chr(','),
-						{h: 7, o: -4.5, w: 4, x: 93, y: 6}),
-						_Utils_Tuple2(
-						_Utils_chr('-'),
-						{h: 5, o: -0.5, w: 9, x: 12, y: 2}),
-						_Utils_Tuple2(
-						_Utils_chr('.'),
-						{h: 5, o: -3.5, w: 4, x: 74, y: 2}),
-						_Utils_Tuple2(
-						_Utils_chr('/'),
-						{h: 14, o: 0, w: 8, x: 24, y: 69}),
-						_Utils_Tuple2(
-						_Utils_chr('0'),
-						{h: 12, o: 0, w: 8, x: 54, y: 22}),
-						_Utils_Tuple2(
-						_Utils_chr('1'),
-						{h: 12, o: 0, w: 6, x: 102, y: 73}),
-						_Utils_Tuple2(
-						_Utils_chr('2'),
-						{h: 12, o: 0, w: 8, x: 24, y: 55}),
-						_Utils_Tuple2(
-						_Utils_chr('3'),
-						{h: 12, o: 0, w: 8, x: 44, y: 61}),
-						_Utils_Tuple2(
-						_Utils_chr('4'),
-						{h: 12, o: 0, w: 9, x: 23, y: 23}),
-						_Utils_Tuple2(
-						_Utils_chr('5'),
-						{h: 12, o: 0, w: 8, x: 45, y: 103}),
-						_Utils_Tuple2(
-						_Utils_chr('6'),
-						{h: 12, o: 0, w: 8, x: 34, y: 71}),
-						_Utils_Tuple2(
-						_Utils_chr('7'),
-						{h: 12, o: 0, w: 8, x: 34, y: 57}),
-						_Utils_Tuple2(
-						_Utils_chr('8'),
-						{h: 12, o: 0, w: 8, x: 34, y: 32}),
-						_Utils_Tuple2(
-						_Utils_chr('9'),
-						{h: 12, o: 0, w: 8, x: 34, y: 4}),
-						_Utils_Tuple2(
-						_Utils_chr(':'),
-						{h: 8, o: -1, w: 4, x: 99, y: 2}),
-						_Utils_Tuple2(
-						_Utils_chr(';'),
-						{h: 10, o: -3, w: 4, x: 102, y: 31}),
-						_Utils_Tuple2(
-						_Utils_chr('<'),
-						{h: 14, o: 0, w: 9, x: 24, y: 101}),
-						_Utils_Tuple2(
-						_Utils_chr('='),
-						{h: 8, o: -1, w: 7, x: 84, y: 35}),
-						_Utils_Tuple2(
-						_Utils_chr('>'),
-						{h: 14, o: 0, w: 9, x: 24, y: 85}),
-						_Utils_Tuple2(
-						_Utils_chr('?'),
-						{h: 12, o: 0, w: 8, x: 34, y: 18}),
-						_Utils_Tuple2(
-						_Utils_chr('@'),
-						{h: 12, o: 0, w: 10, x: 0, y: 37}),
-						_Utils_Tuple2(
-						_Utils_chr('A'),
-						{h: 12, o: 0, w: 8, x: 35, y: 103}),
-						_Utils_Tuple2(
-						_Utils_chr('B'),
-						{h: 12, o: 0, w: 8, x: 35, y: 89}),
-						_Utils_Tuple2(
-						_Utils_chr('C'),
-						{h: 12, o: 0, w: 8, x: 44, y: 75}),
-						_Utils_Tuple2(
-						_Utils_chr('D'),
-						{h: 12, o: 0, w: 9, x: 23, y: 37}),
-						_Utils_Tuple2(
-						_Utils_chr('E'),
-						{h: 12, o: 0, w: 8, x: 44, y: 47}),
-						_Utils_Tuple2(
-						_Utils_chr('F'),
-						{h: 12, o: 0, w: 8, x: 44, y: 33}),
-						_Utils_Tuple2(
-						_Utils_chr('G'),
-						{h: 12, o: 0, w: 8, x: 44, y: 19}),
-						_Utils_Tuple2(
-						_Utils_chr('H'),
-						{h: 12, o: 0, w: 8, x: 44, y: 5}),
-						_Utils_Tuple2(
-						_Utils_chr('I'),
-						{h: 12, o: 0, w: 6, x: 94, y: 87}),
-						_Utils_Tuple2(
-						_Utils_chr('J'),
-						{h: 12, o: 0, w: 9, x: 23, y: 9}),
-						_Utils_Tuple2(
-						_Utils_chr('K'),
-						{h: 12, o: 0, w: 8, x: 54, y: 75}),
-						_Utils_Tuple2(
-						_Utils_chr('L'),
-						{h: 12, o: 0, w: 8, x: 54, y: 61}),
-						_Utils_Tuple2(
-						_Utils_chr('M'),
-						{h: 12, o: 0, w: 10, x: 12, y: 65}),
-						_Utils_Tuple2(
-						_Utils_chr('N'),
-						{h: 12, o: 0, w: 9, x: 13, y: 88}),
-						_Utils_Tuple2(
-						_Utils_chr('O'),
-						{h: 12, o: 0, w: 8, x: 54, y: 22}),
-						_Utils_Tuple2(
-						_Utils_chr('P'),
-						{h: 12, o: 0, w: 8, x: 45, y: 89}),
-						_Utils_Tuple2(
-						_Utils_chr('Q'),
-						{h: 13, o: -0.5, w: 9, x: 13, y: 102}),
-						_Utils_Tuple2(
-						_Utils_chr('R'),
-						{h: 12, o: 0, w: 9, x: 12, y: 9}),
-						_Utils_Tuple2(
-						_Utils_chr('S'),
-						{h: 12, o: 0, w: 8, x: 64, y: 81}),
-						_Utils_Tuple2(
-						_Utils_chr('T'),
-						{h: 12, o: 0, w: 8, x: 64, y: 67}),
-						_Utils_Tuple2(
-						_Utils_chr('U'),
-						{h: 12, o: 0, w: 8, x: 64, y: 53}),
-						_Utils_Tuple2(
-						_Utils_chr('V'),
-						{h: 12, o: 0, w: 8, x: 64, y: 39}),
-						_Utils_Tuple2(
-						_Utils_chr('W'),
-						{h: 12, o: 0, w: 10, x: 12, y: 51}),
-						_Utils_Tuple2(
-						_Utils_chr('X'),
-						{h: 12, o: 0, w: 9, x: 12, y: 37}),
-						_Utils_Tuple2(
-						_Utils_chr('Y'),
-						{h: 12, o: 0, w: 8, x: 65, y: 103}),
-						_Utils_Tuple2(
-						_Utils_chr('Z'),
-						{h: 12, o: 0, w: 8, x: 74, y: 89}),
-						_Utils_Tuple2(
-						_Utils_chr('['),
-						{h: 14, o: 0, w: 6, x: 94, y: 55}),
-						_Utils_Tuple2(
-						_Utils_chr('a'),
-						{h: 9, o: -1.5, w: 8, x: 74, y: 23}),
-						_Utils_Tuple2(
-						_Utils_chr('b'),
-						{h: 12, o: 0, w: 8, x: 74, y: 9}),
-						_Utils_Tuple2(
-						_Utils_chr('c'),
-						{h: 9, o: -1.5, w: 8, x: 75, y: 106}),
-						_Utils_Tuple2(
-						_Utils_chr('d'),
-						{h: 12, o: 0, w: 8, x: 54, y: 47}),
-						_Utils_Tuple2(
-						_Utils_chr('e'),
-						{h: 9, o: -1.5, w: 8, x: 84, y: 84}),
-						_Utils_Tuple2(
-						_Utils_chr('f'),
-						{h: 12, o: 0, w: 7, x: 84, y: 21}),
-						_Utils_Tuple2(
-						_Utils_chr('g'),
-						{h: 12, o: -3, w: 8, x: 84, y: 59}),
-						_Utils_Tuple2(
-						_Utils_chr('h'),
-						{h: 12, o: 0, w: 8, x: 84, y: 45}),
-						_Utils_Tuple2(
-						_Utils_chr('i'),
-						{h: 12, o: 0, w: 6, x: 93, y: 15}),
-						_Utils_Tuple2(
-						_Utils_chr('j'),
-						{h: 15, o: -1.5, w: 6, x: 101, y: 12}),
-						_Utils_Tuple2(
-						_Utils_chr('k'),
-						{h: 12, o: 0, w: 8, x: 74, y: 75}),
-						_Utils_Tuple2(
-						_Utils_chr('l'),
-						{h: 12, o: 0, w: 5, x: 102, y: 59}),
-						_Utils_Tuple2(
-						_Utils_chr('m'),
-						{h: 9, o: -1.5, w: 10, x: 0, y: 26}),
-						_Utils_Tuple2(
-						_Utils_chr('n'),
-						{h: 9, o: -1.5, w: 8, x: 84, y: 95}),
-						_Utils_Tuple2(
-						_Utils_chr('o'),
-						{h: 9, o: -1.5, w: 8, x: 74, y: 34}),
-						_Utils_Tuple2(
-						_Utils_chr('p'),
-						{h: 12, o: -3, w: 8, x: 74, y: 45}),
-						_Utils_Tuple2(
-						_Utils_chr('q'),
-						{h: 12, o: -3, w: 9, x: 12, y: 23}),
-						_Utils_Tuple2(
-						_Utils_chr('r'),
-						{h: 9, o: -1.5, w: 8, x: 64, y: 4}),
-						_Utils_Tuple2(
-						_Utils_chr('s'),
-						{h: 9, o: -1.5, w: 8, x: 84, y: 73}),
-						_Utils_Tuple2(
-						_Utils_chr('t'),
-						{h: 11, o: -0.5, w: 8, x: 64, y: 15}),
-						_Utils_Tuple2(
-						_Utils_chr('u'),
-						{h: 9, o: -1.5, w: 8, x: 64, y: 28}),
-						_Utils_Tuple2(
-						_Utils_chr('v'),
-						{h: 9, o: -1.5, w: 8, x: 55, y: 95}),
-						_Utils_Tuple2(
-						_Utils_chr('w'),
-						{h: 9, o: -1.5, w: 10, x: 0, y: 15}),
-						_Utils_Tuple2(
-						_Utils_chr('x'),
-						{h: 9, o: -1.5, w: 8, x: 55, y: 106}),
-						_Utils_Tuple2(
-						_Utils_chr('y'),
-						{h: 12, o: -3, w: 8, x: 54, y: 8}),
-						_Utils_Tuple2(
-						_Utils_chr('z'),
-						{h: 9, o: -1.5, w: 8, x: 54, y: 36}),
-						_Utils_Tuple2(
-						_Utils_chr('{'),
-						{h: 14, o: 0, w: 7, x: 93, y: 29}),
-						_Utils_Tuple2(
-						_Utils_chr('|'),
-						{h: 14, o: 0, w: 4, x: 102, y: 43}),
-						_Utils_Tuple2(
-						_Utils_chr('}'),
-						{h: 14, o: 0, w: 7, x: 84, y: 5}),
-						_Utils_Tuple2(
-						_Utils_chr('~'),
-						{h: 6, o: 3, w: 9, x: 13, y: 80}),
-						_Utils_Tuple2(
-						_Utils_chr(']'),
-						{h: 14, o: 0, w: 6, x: 94, y: 71}),
-						_Utils_Tuple2(
-						_Utils_chr('\\'),
-						{h: 14, o: 0, w: 8, x: 74, y: 59}),
-						_Utils_Tuple2(
-						_Utils_chr('^'),
-						{h: 8, o: 3, w: 11, x: 0, y: 107}),
-						_Utils_Tuple2(
-						_Utils_chr('_'),
-						{h: 5, o: -4.5, w: 8, x: 23, y: 2}),
-						_Utils_Tuple2(
-						_Utils_chr('`'),
-						{h: 6, o: 3, w: 6, x: 65, y: 95}),
-						_Utils_Tuple2(
-						_Utils_chr(' '),
-						{h: 0, o: 0, w: 6, x: 0, y: 0})
-					]))));
+		0,
+		A2($elm$core$Dict$get, c, $author$project$Playground$Font$SimpleMood$letters_));
 };
-var $author$project$Playground$Font$GoodNeighbors$config = {image: $author$project$Playground$Font$GoodNeighbors$image, letters: $author$project$Playground$Font$GoodNeighbors$letters, size: 14, spacing: 0.5};
 var $elm$core$Tuple$mapBoth = F3(
 	function (funcA, funcB, _v0) {
 		var x = _v0.a;
@@ -8691,14 +8773,15 @@ var $elm$core$Tuple$mapBoth = F3(
 	});
 var $author$project$Playground$words = F2(
 	function (color, string) {
-		var config = $author$project$Playground$Font$GoodNeighbors$config;
 		return $author$project$Playground$Internal$Shape(
 			{
 				a: 0,
 				form: A2(
 					$author$project$Playground$Internal$Textured,
-					config.image,
+					$author$project$Playground$Font$SimpleMood$image,
 					function (t) {
+						var tileW = 16;
+						var tileH = 16;
 						var _v0 = A3(
 							$elm$core$Tuple$mapBoth,
 							$elm$core$Basics$toFloat,
@@ -8707,34 +8790,47 @@ var $author$project$Playground$words = F2(
 						var imgW = _v0.a;
 						var imgH = _v0.b;
 						var imgSize = A2($elm_explorations$linear_algebra$Math$Vector2$vec2, imgW, imgH);
-						var _v1 = A3(
+						var simpleMoodChar = A5($author$project$Playground$char, t, imgSize, color, tileW, tileH);
+						var output = A3(
 							$elm$core$List$foldl,
 							F2(
-								function (a, _v2) {
-									var l = _v2.a;
-									var w = _v2.b;
-									var c = config.letters(a);
-									var uv = A4($elm_explorations$linear_algebra$Math$Vector4$vec4, c.x / imgW, c.y / imgH, c.w / imgW, c.h / imgH);
-									return _Utils_Tuple2(
-										A2(
+								function (c, _v1) {
+									var chars = _v1.chars;
+									var x = _v1.x;
+									var y = _v1.y;
+									var width = _v1.width;
+									return _Utils_eq(
+										c,
+										_Utils_chr('\n')) ? {
+										chars: chars,
+										width: A2($elm$core$Basics$max, width, x),
+										x: tileW,
+										y: y - tileH
+									} : {
+										chars: A2(
 											$elm$core$List$cons,
-											A7($author$project$Playground$char, color, t, imgSize, c, w + (0.5 * c.w), c.o, uv),
-											l),
-										(w + c.w) + config.spacing);
+											A3(
+												simpleMoodChar,
+												x,
+												y,
+												$author$project$Playground$Font$SimpleMood$letters(c)),
+											chars),
+										width: width,
+										x: x + tileW,
+										y: y
+									};
 								}),
-							_Utils_Tuple2(_List_Nil, 0),
+							{chars: _List_Nil, width: 0, x: tileW, y: tileH},
 							$elm$core$String$toList(string));
-						var chars = _v1.a;
-						var width = _v1.b;
 						return $author$project$Playground$Internal$Shape(
 							{
 								a: 0,
-								form: $author$project$Playground$Internal$Group(chars),
+								form: $author$project$Playground$Internal$Group(output.chars),
 								o: 1,
 								sx: 1,
 								sy: 1,
-								x: (width - config.spacing) * (-0.5),
-								y: 0
+								x: A2($elm$core$Basics$max, output.x, output.width) * (-0.5),
+								y: (output.y * (-0.5)) + (0.5 * (-tileH))
 							});
 					}),
 				o: 1,
@@ -8744,27 +8840,37 @@ var $author$project$Playground$words = F2(
 				y: 0
 			});
 	});
-var $author$project$Font$text = A2(
-	$elm$core$List$indexedMap,
-	F2(
-		function (i, a) {
-			return A2($author$project$Playground$moveDown, i * 16, a);
-		}),
-	_List_fromArray(
-		[
-			A2($author$project$Playground$words, $author$project$Playground$red, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
-			A2($author$project$Playground$words, $author$project$Playground$red, 'abcdefghijklmnopqrstuvwxyz'),
-			A2($author$project$Playground$words, $author$project$Playground$red, '0123456789'),
-			A2($author$project$Playground$words, $author$project$Playground$red, '!\"#$%&\'()*+,-./'),
-			A2($author$project$Playground$words, $author$project$Playground$red, ':;<=>?[\\]^_`{|}~')
-		]));
+var $author$project$Font$text = function (l) {
+	return A2(
+		$author$project$Playground$moveUp,
+		8 * $elm$core$List$length(l),
+		$author$project$Playground$group(l));
+}(
+	A2(
+		$elm$core$List$indexedMap,
+		F2(
+			function (i, a) {
+				return A2($author$project$Playground$moveDown, i * 16, a);
+			}),
+		_Utils_ap(
+			_List_fromArray(
+				[
+					A2(
+					$author$project$Playground$rotate,
+					0.005,
+					A2($author$project$Playground$words, $author$project$Playground$red, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')),
+					A2($author$project$Playground$words, $author$project$Playground$red, 'abcdefghijklmnopqrstuvwxyz'),
+					A2($author$project$Playground$words, $author$project$Playground$red, '0123456789'),
+					A2($author$project$Playground$words, $author$project$Playground$red, '!\"#$%&\'()*+,-./'),
+					A2($author$project$Playground$words, $author$project$Playground$red, ':;<=>?[\\]^_`{|}~'),
+					A2($author$project$Playground$words, $author$project$Playground$purple, '1234567890')
+				]),
+			A2(
+				$elm$core$List$map,
+				$author$project$Playground$words($author$project$Playground$blue),
+				$author$project$Font$text1))));
 var $author$project$Font$view = _List_fromArray(
-	[
-		A2(
-		$author$project$Playground$scale,
-		3,
-		$author$project$Playground$group($author$project$Font$text))
-	]);
+	[$author$project$Font$text]);
 var $author$project$Font$main = $author$project$Playground$picture($author$project$Font$view);
 _Platform_export({'Font':{'init':$author$project$Font$main(
 	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
