@@ -8671,7 +8671,10 @@ var $author$project$HexGrid$update = F2(
 				$elm$core$Basics$max,
 				1,
 				d + $author$project$Playground$toX(computer.keyboard)),
-			r: r + $author$project$Playground$toY(computer.keyboard)
+			r: A2(
+				$elm$core$Basics$max,
+				1,
+				r + $author$project$Playground$toY(computer.keyboard))
 		};
 	});
 var $author$project$Playground$intFromHexChar = function (s) {
@@ -8814,21 +8817,6 @@ var $author$project$Playground$moveY = F2(
 			_Utils_update(
 				shape,
 				{y: y + dy}));
-	});
-var $author$project$Playground$scale = F2(
-	function (ns, _v0) {
-		var shape = _v0.a;
-		var x = shape.x;
-		var y = shape.y;
-		var a = shape.a;
-		var sx = shape.sx;
-		var sy = shape.sy;
-		var o = shape.o;
-		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
-			_Utils_update(
-				shape,
-				{sx: sx * ns, sy: sy * ns}));
 	});
 var $author$project$Playground$Internal$Group = function (a) {
 	return {$: 'Group', a: a};
@@ -9418,25 +9406,19 @@ var $author$project$HexGrid$explanation = F2(
 		return _List_fromArray(
 			[
 				A2(
-				$author$project$Playground$scale,
-				2,
+				$author$project$Playground$moveY,
+				computer.screen.top - 20,
 				A2(
-					$author$project$Playground$moveY,
-					computer.screen.top - 20,
-					A2(
-						$author$project$Playground$words,
-						$author$project$Playground$black,
-						'radius: ' + ($elm$core$String$fromFloat(r) + ' Use Up/Down Arrow Keys')))),
+					$author$project$Playground$words,
+					$author$project$Playground$black,
+					'radius: ' + ($elm$core$String$fromFloat(r) + ' Use Up/Down Arrow Keys'))),
 				A2(
-				$author$project$Playground$scale,
-				2,
+				$author$project$Playground$moveY,
+				computer.screen.top - 40,
 				A2(
-					$author$project$Playground$moveY,
-					computer.screen.top - 52,
-					A2(
-						$author$project$Playground$words,
-						$author$project$Playground$black,
-						'distance: ' + ($elm$core$String$fromFloat(d) + ' Use Left/Right Arrow Keys'))))
+					$author$project$Playground$words,
+					$author$project$Playground$black,
+					'distance: ' + ($elm$core$String$fromFloat(d) + ' Use Left/Right Arrow Keys')))
 			]);
 	});
 var $elm$core$List$concatMap = F2(
@@ -9509,9 +9491,9 @@ var $author$project$Playground$moveX = F2(
 var $author$project$HexGrid$hexGrid = function (model) {
 	var r = model.r;
 	var d = model.d;
-	var verticalDistance = (r + ($elm$core$Basics$sin(
-		$elm$core$Basics$degrees(30)) * r)) + (d / $elm$core$Basics$cos(
-		$elm$core$Basics$degrees(30)));
+	var verticalDistance = $elm$core$Basics$cos(
+		$elm$core$Basics$degrees(30)) * (((2 * r) * $elm$core$Basics$cos(
+		$elm$core$Basics$degrees(30))) + d);
 	var horizontalDistance = ((2 * r) * $elm$core$Basics$cos(
 		$elm$core$Basics$degrees(30))) + d;
 	var shiftIfEven = function (j) {
