@@ -111,24 +111,23 @@ lineCircle wall player =
                     }
                 )
             |> Maybe.withDefault player
-
-    else if isLeft wall.p1 wall.p2 player.p then
-        --TODO find better solution for check of overlap fix
-        intersectionVec2 player.p point wall.p1 wall.p2
-            |> Maybe.map
-                (\( t, u ) ->
-                    { player
-                        | v =
-                            player.v
-                                |> Vec2.scale 0.4
-                                |> Vec2.add
-                                    (Vec2.scale t (normal |> Vec2.scale player.r)
-                                        |> Vec2.add (Vec2.scale -player.r normal)
-                                    )
-                        , contact = Vec2.max normal player.contact
-                    }
-                )
-            |> Maybe.withDefault player
+        --else if isLeft wall.p1 wall.p2 player.p then
+        --    --TODO find better solution for check of overlap fix
+        --    intersectionVec2 player.p point wall.p1 wall.p2
+        --        |> Maybe.map
+        --            (\( t, u ) ->
+        --                { player
+        --                    | v =
+        --                        player.v
+        --                            |> Vec2.scale 0.4
+        --                            |> Vec2.add
+        --                                (Vec2.scale t (normal |> Vec2.scale player.r)
+        --                                    |> Vec2.add (Vec2.scale -player.r normal)
+        --                                )
+        --                    , contact = Vec2.max normal player.contact
+        --                }
+        --            )
+        --        |> Maybe.withDefault player
 
     else
         player

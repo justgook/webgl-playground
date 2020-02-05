@@ -25,7 +25,7 @@ module Playground.Extra exposing
 -}
 
 import Math.Vector2 exposing (vec2)
-import Math.Vector4 exposing (Vec4)
+import Math.Vector4 exposing (Vec4, vec4)
 import Playground exposing (Color, Number, Shape)
 import Playground.Advanced exposing (Render, custom, useTexture)
 import Playground.Batch.Tilemap
@@ -82,14 +82,34 @@ tile tileW tileH tileset index =
 
 {-| Show sprite from asymmetrical sprite sheet.
 
-Sprites can be placed anywhere in tileset and each have different size
+Sprites can be placed anywhere in atlas and each have different size
 
 -}
-sprite : Number -> Number -> String -> Vec4 -> Shape
-sprite tileW tileH atlas uv =
+sprite : String -> { xmin : Number, xmax : Number, ymin : Number, ymax : Number } -> Shape
+sprite atlas { xmin, xmax, ymin, ymax } =
+    let
+        w =
+            abs (xmax - xmin) + 1
+
+        h =
+            abs (ymax - ymin) + 1
+    in
     useTexture atlas <|
         \t ->
-            custom tileW tileH <| Render.sprite t (size t) uv
+            let
+                ( tW_, tH_ ) =
+                    WebGL.Texture.size t
+
+                tW =
+                    toFloat tW_
+
+                tH =
+                    toFloat tH_
+
+                uv =
+                    vec4 (xmin / tW) (1 - ymin / tH - (h / tH)) (w / tW) (h / tH)
+            in
+            custom w h <| Render.sprite t (vec2 tW tH) uv
 
 
 colorTile : Number -> Number -> String -> Color -> Int -> Shape
