@@ -8634,20 +8634,36 @@ var $author$project$Extra$JumpGun$initGame = function (_v0) {
 				p2: {x: -120, y: 72}
 			},
 				{
-				p1: {x: -76, y: 108},
-				p2: {x: -76, y: -40}
+				p1: {x: -80, y: 104},
+				p2: {x: -80, y: -40}
 			},
 				{
 				p1: {x: 76, y: 104},
 				p2: {x: -82, y: 104}
 			},
 				{
-				p1: {x: -124, y: 56},
-				p2: {x: -124, y: 120}
+				p1: {x: -120, y: 56},
+				p2: {x: -120, y: 112}
 			},
 				{
 				p1: {x: -120, y: 112},
-				p2: {x: -224, y: 112}
+				p2: {x: -136, y: 112}
+			},
+				{
+				p1: {x: -136, y: 112},
+				p2: {x: -136, y: 104}
+			},
+				{
+				p1: {x: -136, y: 104},
+				p2: {x: -144, y: 104}
+			},
+				{
+				p1: {x: -144, y: 104},
+				p2: {x: -144, y: 96}
+			},
+				{
+				p1: {x: -144, y: 96},
+				p2: {x: -224, y: 96}
 			},
 				{
 				p1: {x: -136, y: 16},
@@ -8674,7 +8690,7 @@ var $author$project$Extra$JumpGun$initGame = function (_v0) {
 					},
 					v: A2($author$project$AltMath$Vector2$vec2, 4, 4),
 					x: 3,
-					y: 0
+					y: 6
 				},
 				counter: 5,
 				interval: 15
@@ -8692,10 +8708,6 @@ var $author$project$Extra$JumpGun$config = {
 var $author$project$AltMath$Vector2$add = F2(
 	function (a, b) {
 		return A2($author$project$AltMath$Vector2$Vec2, a.x + b.x, a.y + b.y);
-	});
-var $author$project$Extra$Jump$Collision$applyIf = F3(
-	function (bool, f, world) {
-		return bool ? f(world) : world;
 	});
 var $elm$core$Basics$ge = _Utils_ge;
 var $author$project$Extra$Jump$Collision$intersection = F8(
@@ -8754,6 +8766,9 @@ var $author$project$AltMath$Vector2$max = F2(
 			$author$project$AltMath$Vector2$lengthSquared(a),
 			$author$project$AltMath$Vector2$lengthSquared(b)) > 0) ? a : b;
 	});
+var $author$project$AltMath$Vector2$negate = function (a) {
+	return A2($author$project$AltMath$Vector2$Vec2, -a.x, -a.y);
+};
 var $author$project$AltMath$Vector2$dot = F2(
 	function (a, b) {
 		return (a.x * b.x) + (a.y * b.y);
@@ -8769,28 +8784,25 @@ var $author$project$AltMath$Vector2$scalarProjection = F2(
 			A2($author$project$AltMath$Vector2$dot, a, b) / $author$project$AltMath$Vector2$lengthSquared(b),
 			b);
 	});
-var $author$project$Extra$Jump$Collision$slopeFix = 1 / 32;
 var $author$project$AltMath$Vector2$sub = F2(
 	function (a, b) {
 		return A2($author$project$AltMath$Vector2$Vec2, a.x - b.x, a.y - b.y);
 	});
 var $author$project$Extra$Jump$Collision$lineCircle = F2(
 	function (wall, player) {
-		var zeroedWall = A2($author$project$AltMath$Vector2$sub, wall.p2, wall.p1);
-		var normal = $author$project$Extra$Jump$Collision$leftNormal(zeroedWall);
-		var point = A2(
-			$author$project$AltMath$Vector2$add,
-			player.p,
-			A2($author$project$AltMath$Vector2$scale, player.r + $author$project$Extra$Jump$Collision$slopeFix, normal));
-		return A3($author$project$Extra$Jump$Collision$isLeft, wall.p1, wall.p2, point) ? A2(
+		var fix = $author$project$AltMath$Vector2$negate(
+			$author$project$AltMath$Vector2$normalize(player.v));
+		var startPoint = A2($author$project$AltMath$Vector2$add, fix, player.p);
+		return A3($author$project$Extra$Jump$Collision$isLeft, wall.p1, wall.p2, startPoint) ? A2(
 			$elm$core$Maybe$withDefault,
 			player,
 			A2(
 				$elm$core$Maybe$map,
 				function (_v0) {
 					var t = _v0.a;
-					var u = _v0.b;
+					var zeroedWall = A2($author$project$AltMath$Vector2$sub, wall.p2, wall.p1);
 					var restV = A2($author$project$AltMath$Vector2$scale, 1 - t, player.v);
+					var normal = $author$project$Extra$Jump$Collision$leftNormal(zeroedWall);
 					var calcRest = A2($author$project$AltMath$Vector2$scalarProjection, restV, zeroedWall);
 					return _Utils_update(
 						player,
@@ -8798,17 +8810,14 @@ var $author$project$Extra$Jump$Collision$lineCircle = F2(
 							contact: A2($author$project$AltMath$Vector2$max, normal, player.contact),
 							v: A2(
 								$author$project$AltMath$Vector2$add,
-								A2($author$project$AltMath$Vector2$scale, -$author$project$Extra$Jump$Collision$slopeFix, normal),
-								A2(
-									$author$project$AltMath$Vector2$add,
-									calcRest,
-									A2($author$project$AltMath$Vector2$scale, t, player.v)))
+								calcRest,
+								A2($author$project$AltMath$Vector2$scale, t, player.v))
 						});
 				},
 				A4(
 					$author$project$Extra$Jump$Collision$intersectionVec2,
-					point,
-					A2($author$project$AltMath$Vector2$add, point, player.v),
+					player.p,
+					A2($author$project$AltMath$Vector2$add, player.p, player.v),
 					wall.p1,
 					wall.p2))) : player;
 	});
@@ -8816,47 +8825,30 @@ var $author$project$AltMath$Vector2$mul = F2(
 	function (a, b) {
 		return {x: a.x * b.x, y: a.y * b.y};
 	});
-var $author$project$Extra$Jump$Collision$precision = 1.0e10;
-var $author$project$Extra$Jump$Collision$roundVec = function (_v0) {
-	var x = _v0.x;
-	var y = _v0.y;
-	return {
-		x: $elm$core$Basics$round(x * $author$project$Extra$Jump$Collision$precision) / $author$project$Extra$Jump$Collision$precision,
-		y: $elm$core$Basics$round(y * $author$project$Extra$Jump$Collision$precision) / $author$project$Extra$Jump$Collision$precision
-	};
-};
 var $author$project$Extra$Jump$Collision$zero = A2($author$project$AltMath$Vector2$vec2, 0, 0);
 var $author$project$Extra$Jump$Collision$simulate = F3(
 	function (config, player, _static) {
-		var acc = $author$project$Extra$Jump$Collision$roundVec(
+		var acc = A2(
+			$author$project$AltMath$Vector2$add,
+			config.gravity,
 			A2(
 				$author$project$AltMath$Vector2$add,
-				config.gravity,
-				A2(
-					$author$project$AltMath$Vector2$add,
-					A2($author$project$AltMath$Vector2$mul, config.friction, player.v),
-					player.acc)));
+				A2($author$project$AltMath$Vector2$mul, config.friction, player.v),
+				player.acc));
 		var forceApplied = _Utils_update(
 			player,
 			{
 				contact: $author$project$Extra$Jump$Collision$zero,
-				v: A2(
-					$author$project$AltMath$Vector2$add,
-					A2($author$project$AltMath$Vector2$scale, 1.5, acc),
-					player.v)
+				v: A2($author$project$AltMath$Vector2$add, acc, player.v)
 			});
-		var newPlayer = A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, forceApplied, _static);
+		var newPlayer = function (a) {
+			return A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, a, _static);
+		}(
+			A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, forceApplied, _static));
 		return _Utils_update(
 			newPlayer,
 			{
-				p: A2($author$project$AltMath$Vector2$add, newPlayer.p, newPlayer.v),
-				v: $author$project$Extra$Jump$Collision$roundVec(
-					A3(
-						$author$project$Extra$Jump$Collision$applyIf,
-						_Utils_eq(newPlayer.v, forceApplied.v),
-						$author$project$AltMath$Vector2$add(
-							A2($author$project$AltMath$Vector2$scale, -0.5, acc)),
-						newPlayer.v))
+				p: A2($author$project$AltMath$Vector2$add, newPlayer.p, newPlayer.v)
 			});
 	});
 var $author$project$Extra$JumpGun$simulate = function (memory) {
@@ -8910,9 +8902,6 @@ var $author$project$Extra$JumpGun$updateMovement = F2(
 					{acc: acc, v: v})
 			});
 	});
-var $author$project$AltMath$Vector2$negate = function (a) {
-	return A2($author$project$AltMath$Vector2$Vec2, -a.x, -a.y);
-};
 var $author$project$Extra$Jump$Direction$east = {x: 1, y: 0};
 var $author$project$Extra$Jump$Direction$neither = {x: 0, y: 0};
 var $author$project$Extra$Jump$Direction$north = {x: 0, y: 1};
@@ -11229,8 +11218,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						0,
 						-1,
+						9,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11239,32 +11228,32 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							0,
 							-1,
+							9,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 25, xmin: 14, ymax: 33, ymin: 18})),
 							A3(
 							$author$project$Playground$move,
-							0,
 							-1,
+							9,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 25, xmin: 14, ymax: 33, ymin: 18})),
 							A3(
 							$author$project$Playground$move,
-							0,
 							-1,
+							9,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 25, xmin: 14, ymax: 33, ymin: 18})),
 							A3(
 							$author$project$Playground$move,
-							0,
-							-0.5,
+							-1,
+							9.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
@@ -11273,8 +11262,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 		},
 		jump: A3(
 			$author$project$Playground$move,
-			-0.5,
-			0,
+			-1.5,
+			10,
 			A2(
 				$author$project$Playground$Extra$sprite,
 				$author$project$Extra$Jump$Sprite$image,
@@ -11286,8 +11275,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						1,
-						0,
+						-1,
+						9,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11296,56 +11285,56 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							1,
-							0.5,
+							-1,
+							9.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 38, xmin: 27, ymax: 32, ymin: 18})),
 							A3(
 							$author$project$Playground$move,
-							1,
 							-1,
+							8,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 38, xmin: 27, ymax: 16, ymin: 1})),
 							A3(
 							$author$project$Playground$move,
-							2,
-							-1.5,
+							-1,
+							7.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 10, xmin: 1, ymax: 50, ymin: 36})),
 							A3(
 							$author$project$Playground$move,
-							2,
-							0,
+							-0.5,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 23, xmin: 13, ymax: 49, ymin: 35})),
 							A3(
 							$author$project$Playground$move,
-							2.5,
-							0.5,
+							-0.5,
+							9.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 49, xmin: 39, ymax: 49, ymin: 35})),
 							A3(
 							$author$project$Playground$move,
-							2.5,
-							-1,
+							-0.5,
+							8,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 50, xmin: 40, ymax: 33, ymin: 18})),
 							A3(
 							$author$project$Playground$move,
-							0.5,
-							-1,
+							-1.5,
+							8,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
@@ -11356,8 +11345,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 	gund: {
 		jump: A3(
 			$author$project$Playground$move,
-			2,
-			-5.5,
+			1,
+			4.5,
 			A2(
 				$author$project$Playground$Extra$sprite,
 				$author$project$Extra$Jump$Sprite$image,
@@ -11366,8 +11355,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 	gundf: {
 		jump: A3(
 			$author$project$Playground$move,
-			3.5,
-			-5,
+			2.5,
+			6,
 			A2(
 				$author$project$Playground$Extra$sprite,
 				$author$project$Extra$Jump$Sprite$image,
@@ -11381,8 +11370,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						2,
-						-6,
+						1,
+						4,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11391,38 +11380,46 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							2,
-							-5,
+							1,
+							5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							2,
-							-5,
+							1,
+							5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							2,
-							-5,
+							1,
+							5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							2,
-							-5,
+							1,
+							5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51}))
 						])));
 		},
+		jump: A3(
+			$author$project$Playground$move,
+			1,
+			5,
+			A2(
+				$author$project$Playground$Extra$sprite,
+				$author$project$Extra$Jump$Sprite$image,
+				{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 		run: function (i) {
 			return A2(
 				$author$project$Extra$Jump$Sprite$get,
@@ -11430,8 +11427,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						3,
-						-4,
+						1,
+						5,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11440,64 +11437,56 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							3,
-							-3,
+							1,
+							6,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							3,
-							-5,
-							A2(
-								$author$project$Playground$Extra$sprite,
-								$author$project$Extra$Jump$Sprite$image,
-								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
-							A3(
-							$author$project$Playground$move,
-							3,
-							-5,
-							A2(
-								$author$project$Playground$Extra$sprite,
-								$author$project$Extra$Jump$Sprite$image,
-								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
-							A3(
-							$author$project$Playground$move,
+							1,
 							4,
-							-5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
+							1,
+							4,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
+							A3(
+							$author$project$Playground$move,
+							2,
+							4,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
+							A3(
+							$author$project$Playground$move,
+							2,
 							5,
-							-4,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
+							2,
 							5,
-							-4,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
+							2,
 							4,
-							-5,
-							A2(
-								$author$project$Playground$Extra$sprite,
-								$author$project$Extra$Jump$Sprite$image,
-								{xmax: 21, xmin: 12, ymax: 58, ymin: 51})),
-							A3(
-							$author$project$Playground$move,
-							4,
-							-5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
@@ -11513,8 +11502,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						5,
-						0,
+						4,
+						9,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11523,32 +11512,113 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							5,
-							1,
+							4,
+							10,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
 							A3(
 							$author$project$Playground$move,
-							5,
-							1,
+							4,
+							10,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
 							A3(
 							$author$project$Playground$move,
-							5,
-							1,
+							4,
+							10,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
 							A3(
 							$author$project$Playground$move,
-							5,
-							1,
+							4,
+							9,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35}))
+						])));
+		},
+		jump: A3(
+			$author$project$Playground$move,
+			4,
+			9,
+			A2(
+				$author$project$Playground$Extra$sprite,
+				$author$project$Extra$Jump$Sprite$image,
+				{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+		run: function (i) {
+			return A2(
+				$author$project$Extra$Jump$Sprite$get,
+				i,
+				_Utils_Tuple2(
+					A3(
+						$author$project$Playground$move,
+						3,
+						11,
+						A2(
+							$author$project$Playground$Extra$sprite,
+							$author$project$Extra$Jump$Sprite$image,
+							{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+					_List_fromArray(
+						[
+							A3(
+							$author$project$Playground$move,
+							3,
+							12,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+							A3(
+							$author$project$Playground$move,
+							3,
+							10,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+							A3(
+							$author$project$Playground$move,
+							3,
+							10,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+							A3(
+							$author$project$Playground$move,
+							4,
+							10,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+							A3(
+							$author$project$Playground$move,
+							4,
+							10,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+							A3(
+							$author$project$Playground$move,
+							4,
+							11,
+							A2(
+								$author$project$Playground$Extra$sprite,
+								$author$project$Extra$Jump$Sprite$image,
+								{xmax: 58, xmin: 51, ymax: 44, ymin: 35})),
+							A3(
+							$author$project$Playground$move,
+							4,
+							10,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
@@ -11564,8 +11634,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						4,
-						-2.5,
+						3,
+						7.5,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11574,32 +11644,32 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							4,
-							-1.5,
+							3,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							4,
-							-1.5,
+							3,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							4,
-							-1.5,
+							3,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							4,
-							-1.5,
+							3,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
@@ -11609,7 +11679,7 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 		jump: A3(
 			$author$project$Playground$move,
 			3,
-			0.5,
+			9.5,
 			A2(
 				$author$project$Playground$Extra$sprite,
 				$author$project$Extra$Jump$Sprite$image,
@@ -11621,8 +11691,8 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 				_Utils_Tuple2(
 					A3(
 						$author$project$Playground$move,
-						5,
-						0.5,
+						3,
+						8.5,
 						A2(
 							$author$project$Playground$Extra$sprite,
 							$author$project$Extra$Jump$Sprite$image,
@@ -11631,56 +11701,56 @@ var $author$project$Extra$Jump$Sprite$sprites = {
 						[
 							A3(
 							$author$project$Playground$move,
-							5,
-							1.5,
+							3,
+							9.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							5,
-							0.5,
+							3,
+							7.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							6,
-							0.5,
+							4,
+							7.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							6,
-							0.5,
+							4,
+							7.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							6,
-							1.5,
+							4,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							6,
-							1.5,
+							4,
+							8.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
 								{xmax: 40, xmin: 33, ymax: 59, ymin: 51})),
 							A3(
 							$author$project$Playground$move,
-							5,
-							1.5,
+							4,
+							7.5,
 							A2(
 								$author$project$Playground$Extra$sprite,
 								$author$project$Extra$Jump$Sprite$image,
@@ -11694,7 +11764,7 @@ var $author$project$Extra$Jump$Sprite$idle = F2(
 		var frame = A2(
 			$elm$core$Basics$modBy,
 			20,
-			$elm$core$Basics$round(frame_ / 4));
+			$elm$core$Basics$round(frame_ / 5));
 		return function () {
 			switch (dir.$) {
 				case 'North':
@@ -11968,11 +12038,11 @@ var $author$project$Extra$JumpGun$view = F2(
 										},
 										_List_fromArray(
 											[
-												A3(
+												((player.v.x > 0.5) || (_Utils_cmp(player.v.x, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.dir, player.frame) : A3(
 												$author$project$Playground$move,
 												$author$project$Extra$JumpGun$pxSnap(player.p.x),
 												$author$project$Extra$JumpGun$pxSnap(player.p.y),
-												((player.v.x > 0.5) || (_Utils_cmp(player.v.x, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.dir, player.frame) : A2($author$project$Extra$Jump$Sprite$idle, player.dir, player.frame)),
+												A2($author$project$Extra$Jump$Sprite$idle, player.dir, player.frame)),
 												A2($author$project$Extra$JumpGun$debug, computer, memory)
 											]))))))));
 		} else {
