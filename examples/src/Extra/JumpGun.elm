@@ -35,12 +35,13 @@ view : Computer -> Memory -> List Shape
 view computer m =
     case m of
         Play ({ player } as memory) ->
-            [ if player.v.x > 0.5 || player.v.x < -0.5 then
+            [ (if player.v.x > 0.5 || player.v.x < -0.5 then
                 Sprite.run player.dir player.frame
 
-              else
+               else
                 Sprite.idle player.dir player.frame
-                    |> move (pxSnap player.p.x) (pxSnap player.p.y)
+              )
+                |> move (pxSnap player.p.x) (pxSnap player.p.y)
             , debug computer memory
             ]
                 |> andFold memory.bullets (\bullet -> (::) (bullet.shape computer.time |> move bullet.x bullet.y))

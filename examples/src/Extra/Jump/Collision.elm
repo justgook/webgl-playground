@@ -1,4 +1,4 @@
-module Extra.Jump.Collision exposing (intersection, lineCircle, simulate)
+module Extra.Jump.Collision exposing (intersection, linePoint, simulate)
 
 import AltMath.Vector2 as Vec2 exposing (vec2)
 
@@ -27,8 +27,8 @@ simulate config player static =
         {- double check as character over velocity can hit second wall (corner case) -}
         newPlayer =
             --TODO add broad phase
-            List.foldl lineCircle forceApplied static
-                |> (\a -> List.foldl lineCircle a static)
+            List.foldl linePoint forceApplied static
+                |> (\a -> List.foldl linePoint a static)
     in
     { newPlayer | p = Vec2.add newPlayer.p newPlayer.v }
 
@@ -61,7 +61,7 @@ intersection x1 y1 x2 y2 x3 y3 x4 y4 =
             Nothing
 
 
-lineCircle wall player =
+linePoint wall player =
     let
         fix =
             player.v |> Vec2.normalize |> Vec2.negate
