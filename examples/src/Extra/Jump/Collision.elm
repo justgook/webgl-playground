@@ -17,40 +17,24 @@ simulate config player static =
             player.acc
                 |> Vec2.add (Vec2.mul config.friction player.v)
                 |> Vec2.add config.gravity
-                |> roundVec
 
         forceApplied =
             { player
-                | v = player.v |> Vec2.add (Vec2.scale 1.5 acc)
+                | v = player.v |> Vec2.add acc
                 , contact = zero
             }
 
+        {- double check as character over velocity can hit second wall (corner case) -}
         newPlayer =
+            --TODO add broad phase
             List.foldl lineCircle forceApplied static
+                |> (\a -> List.foldl lineCircle a static)
     in
-    { newPlayer
-        | p = Vec2.add newPlayer.p newPlayer.v
-        , v =
-            applyIf (newPlayer.v == forceApplied.v) (Vec2.add (Vec2.scale -0.5 acc)) newPlayer.v
-                |> roundVec
-    }
+    { newPlayer | p = Vec2.add newPlayer.p newPlayer.v }
 
 
 zero =
     Vec2.vec2 0 0
-
-
-roundVec { x, y } =
-    { x = toFloat (round (x * precision)) / precision, y = toFloat (round (y * precision)) / precision }
-
-
-applyIf : Bool -> (a -> a) -> a -> a
-applyIf bool f world =
-    if bool then
-        f world
-
-    else
-        world
 
 
 intersection : Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> Maybe ( Float, Float )
@@ -79,22 +63,24 @@ intersection x1 y1 x2 y2 x3 y3 x4 y4 =
 
 lineCircle wall player =
     let
-        zeroedWall =
-            Vec2.sub wall.p2 wall.p1
+        fix =
+            player.v |> Vec2.normalize |> Vec2.negate
 
-        normal =
-            leftNormal zeroedWall
-
-        point =
-            normal
-                |> Vec2.scale (player.r + slopeFix)
-                |> Vec2.add player.p
+        startPoint =
+            player.p
+                |> Vec2.add fix
     in
-    if isLeft wall.p1 wall.p2 point then
-        intersectionVec2 point (Vec2.add point player.v) wall.p1 wall.p2
+    if isLeft wall.p1 wall.p2 startPoint then
+        intersectionVec2 player.p (Vec2.add player.p player.v) wall.p1 wall.p2
             |> Maybe.map
-                (\( t, u ) ->
+                (\( t, _ ) ->
                     let
+                        zeroedWall =
+                            Vec2.sub wall.p2 wall.p1
+
+                        normal =
+                            leftNormal zeroedWall
+
                         restV =
                             Vec2.scale (1 - t) player.v
 
@@ -106,28 +92,10 @@ lineCircle wall player =
                             player.v
                                 |> Vec2.scale t
                                 |> Vec2.add calcRest
-                                |> Vec2.add (normal |> Vec2.scale -slopeFix)
                         , contact = Vec2.max normal player.contact
                     }
                 )
             |> Maybe.withDefault player
-        --else if isLeft wall.p1 wall.p2 player.p then
-        --    --TODO find better solution for check of overlap fix
-        --    intersectionVec2 player.p point wall.p1 wall.p2
-        --        |> Maybe.map
-        --            (\( t, u ) ->
-        --                { player
-        --                    | v =
-        --                        player.v
-        --                            |> Vec2.scale 0.4
-        --                            |> Vec2.add
-        --                                (Vec2.scale t (normal |> Vec2.scale player.r)
-        --                                    |> Vec2.add (Vec2.scale -player.r normal)
-        --                                )
-        --                    , contact = Vec2.max normal player.contact
-        --                }
-        --            )
-        --        |> Maybe.withDefault player
 
     else
         player

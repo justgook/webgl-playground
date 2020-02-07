@@ -35,13 +35,12 @@ view : Computer -> Memory -> List Shape
 view computer m =
     case m of
         Play ({ player } as memory) ->
-            [ (if player.v.x > 0.5 || player.v.x < -0.5 then
+            [ if player.v.x > 0.5 || player.v.x < -0.5 then
                 Sprite.run player.dir player.frame
 
-               else
+              else
                 Sprite.idle player.dir player.frame
-              )
-                |> move (pxSnap player.p.x) (pxSnap player.p.y)
+                    |> move (pxSnap player.p.x) (pxSnap player.p.y)
             , debug computer memory
             ]
                 |> andFold memory.bullets (\bullet -> (::) (bullet.shape computer.time |> move bullet.x bullet.y))
@@ -50,7 +49,6 @@ view computer m =
                 |> group
                 |> move (-player.p.x * config.viewScale) (-16 * config.viewScale)
                 |> scale config.viewScale
-                --|> scale (wave 3 5 1 computer.time)
                 |> List.singleton
 
         Init ->
@@ -276,16 +274,20 @@ initGame { screen } =
         , { p1 = { x = 90, y = 140 }, p2 = { x = 90, y = -40 } }
         , { p1 = { x = 120, y = -40 }, p2 = { x = -3000, y = -40 } }
 
-        ----
+        --
         , { p1 = { x = -80, y = -24 }, p2 = { x = -88, y = -24 } }
         , { p1 = { x = -80, y = 8 }, p2 = { x = -88, y = 8 } }
         , { p1 = { x = -80, y = 40 }, p2 = { x = -88, y = 40 } }
         , { p1 = { x = -80, y = 72 }, p2 = { x = -88, y = 72 } }
         , { p1 = { x = -112, y = 72 }, p2 = { x = -120, y = 72 } }
-        , { p1 = { x = -76, y = 108 }, p2 = { x = -76, y = -40 } }
+        , { p1 = { x = -80, y = 104 }, p2 = { x = -80, y = -40 } }
         , { p1 = { x = 76, y = 104 }, p2 = { x = -82, y = 104 } }
-        , { p1 = { x = -124, y = 56 }, p2 = { x = -124, y = 120 } }
-        , { p1 = { x = -120, y = 112 }, p2 = { x = -224, y = 112 } }
+        , { p1 = { x = -120, y = 56 }, p2 = { x = -120, y = 112 } }
+        , { p1 = { x = -120, y = 112 }, p2 = { x = -136, y = 112 } }
+        , { p1 = { x = -136, y = 112 }, p2 = { x = -136, y = 104 } }
+        , { p1 = { x = -136, y = 104 }, p2 = { x = -144, y = 104 } }
+        , { p1 = { x = -144, y = 104 }, p2 = { x = -144, y = 96 } }
+        , { p1 = { x = -144, y = 96 }, p2 = { x = -224, y = 96 } }
 
         --
         , { p1 = { x = -136, y = 16 }, p2 = { x = -176, y = 16 } }
@@ -301,7 +303,7 @@ initGame { screen } =
           , interval = 15
           , bullet =
                 { x = 3
-                , y = 0
+                , y = 6
                 , r = 10
                 , a = 30
                 , v = vec2 4 4

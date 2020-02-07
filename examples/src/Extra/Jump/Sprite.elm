@@ -64,7 +64,7 @@ run dir frame_ =
 idle dir frame_ =
     let
         frame =
-            round (frame_ / 4)
+            round (frame_ / 5)
                 |> modBy 20
     in
     sprites.body.idle frame
@@ -127,83 +127,84 @@ sprites =
         { run =
             \i ->
                 get i
-                    ( sprite image { xmin = 14, xmax = 25, ymin = 1, ymax = 16 } |> move 1 0
-                    , [ sprite image { xmin = 27, xmax = 38, ymin = 18, ymax = 32 } |> move 1 0.5
-                      , sprite image { xmin = 27, xmax = 38, ymin = 1, ymax = 16 } |> move 1 -1
-                      , sprite image { xmin = 1, xmax = 10, ymin = 36, ymax = 50 } |> move 2 -1.5
-                      , sprite image { xmin = 13, xmax = 23, ymin = 35, ymax = 49 } |> move 2 0
-                      , sprite image { xmin = 39, xmax = 49, ymin = 35, ymax = 49 } |> move 2.5 0.5
-                      , sprite image { xmin = 40, xmax = 50, ymin = 18, ymax = 33 } |> move 2.5 -1
-                      , sprite image { xmin = 1, xmax = 11, ymin = 19, ymax = 34 } |> move 0.5 -1
+                    ( sprite image { xmin = 14, xmax = 25, ymin = 1, ymax = 16 } |> move -1 9
+                    , [ sprite image { xmin = 27, xmax = 38, ymin = 18, ymax = 32 } |> move -1 9.5
+                      , sprite image { xmin = 27, xmax = 38, ymin = 1, ymax = 16 } |> move -1 8
+                      , sprite image { xmin = 1, xmax = 10, ymin = 36, ymax = 50 } |> move -1 7.5
+                      , sprite image { xmin = 13, xmax = 23, ymin = 35, ymax = 49 } |> move -0.5 8.5
+                      , sprite image { xmin = 39, xmax = 49, ymin = 35, ymax = 49 } |> move -0.5 9.5
+                      , sprite image { xmin = 40, xmax = 50, ymin = 18, ymax = 33 } |> move -0.5 8
+                      , sprite image { xmin = 1, xmax = 11, ymin = 19, ymax = 34 } |> move -1.5 8
                       ]
                     )
-        , jump = sprite image { xmin = 27, xmax = 37, ymin = 34, ymax = 49 } |> move -0.5 0
+        , jump = sprite image { xmin = 27, xmax = 37, ymin = 34, ymax = 49 } |> move -1.5 10
         , idle =
             \i ->
                 get i
-                    ( sprite image { xmin = 40, xmax = 51, ymin = 1, ymax = 16 } |> move 0 -1
-                    , [ sprite image { xmin = 14, xmax = 25, ymin = 18, ymax = 33 } |> move 0 -1
-                      , sprite image { xmin = 14, xmax = 25, ymin = 18, ymax = 33 } |> move 0 -1
-                      , sprite image { xmin = 14, xmax = 25, ymin = 18, ymax = 33 } |> move 0 -1
-                      , sprite image { xmin = 1, xmax = 12, ymin = 1, ymax = 17 } |> move 0 -0.5
+                    ( sprite image { xmin = 40, xmax = 51, ymin = 1, ymax = 16 } |> move -1 9
+                    , [ sprite image { xmin = 14, xmax = 25, ymin = 18, ymax = 33 } |> move -1 9
+                      , sprite image { xmin = 14, xmax = 25, ymin = 18, ymax = 33 } |> move -1 9
+                      , sprite image { xmin = 14, xmax = 25, ymin = 18, ymax = 33 } |> move -1 9
+                      , sprite image { xmin = 1, xmax = 12, ymin = 1, ymax = 17 } |> move -1 9.5
                       ]
                     )
         }
-    , gundf = { jump = sprite image { xmin = 23, xmax = 31, ymin = 51, ymax = 58 } |> move 3.5 -5 }
-    , gund = { jump = sprite image { xmin = 51, xmax = 58, ymin = 46, ymax = 54 } |> move 2 -5.5 }
+    , gundf =
+        { jump = sprite image { xmin = 23, xmax = 31, ymin = 51, ymax = 58 } |> move 2.5 6
+        }
+    , gund =
+        { jump = sprite image { xmin = 51, xmax = 58, ymin = 46, ymax = 54 } |> move 1 4.5
+        }
     , gunf =
         { run =
             \i ->
                 get i
-                    ( sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 3 -4
-                    , [ sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 3 -3
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 3 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 3 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 4 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 5 -4
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 5 -4
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 4 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 4 -5
+                    ( sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 5
+                    , [ sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 6
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 4
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 4
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 4
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 5
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 5
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 4
                       ]
                     )
-
-        --, jump =
-        --    sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 }  |> move 4 1
+        , jump =
+            sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 5
         , idle =
             \i ->
                 get i
-                    ( sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 -6
-                    , [ sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 -5
-                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 2 -5
+                    ( sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 4
+                    , [ sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 5
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 5
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 5
+                      , sprite image { xmin = 12, xmax = 21, ymin = 51, ymax = 58 } |> move 1 5
                       ]
                     )
         }
     , gunu =
-        { --run =
-          --    \i ->
-          --        get i
-          --            ( sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 7 6
-          --            , [ sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 7 7
-          --              , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 7 5
-          --              , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 7 5
-          --              , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 8 5
-          --              , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 8 5
-          --              , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 8 6
-          --              , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 8 5
-          --              ]
-          --            )
-          --, jump = sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 }  |> move 8 4
-          --,
-          idle =
+        { run =
             \i ->
                 get i
-                    ( sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 5 0
-                    , [ sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 5 1
-                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 5 1
-                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 5 1
-                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 5 1
+                    ( sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 3 11
+                    , [ sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 3 12
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 3 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 3 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 11
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 10
+                      ]
+                    )
+        , jump = sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 9
+        , idle =
+            \i ->
+                get i
+                    ( sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 9
+                    , [ sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 10
+                      , sprite image { xmin = 51, xmax = 58, ymin = 35, ymax = 44 } |> move 4 9
                       ]
                     )
         }
@@ -211,26 +212,26 @@ sprites =
         { run =
             \i ->
                 get i
-                    ( sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 5 0.5
-                    , [ sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 5 1.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 5 0.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 6 0.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 6 0.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 6 1.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 6 1.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 5 1.5
+                    ( sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 8.5
+                    , [ sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 9.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 7.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 7.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 7.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 8.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 8.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 7.5
                       ]
                     )
         , jump =
-            sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 0.5
+            sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 9.5
         , idle =
             \i ->
                 get i
-                    ( sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 -2.5
-                    , [ sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 -1.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 -1.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 -1.5
-                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 4 -1.5
+                    ( sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 7.5
+                    , [ sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 8.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 8.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 8.5
+                      , sprite image { xmin = 33, xmax = 40, ymin = 51, ymax = 59 } |> move 3 8.5
                       ]
                     )
         }
@@ -267,10 +268,12 @@ get i ( x, xs ) =
        result[name[1]] = result[name[1]] || {};
        result[name[1]][name[2]] = result[name[1]][name[2]] || [];
        const { x, y, w, h } = item.frame;
+       const { x: sx, y: sy } = item.spriteSourceSize;
+       const { w: sw, h: sh } = item.sourceSize;
        result[name[1]][name[2]].push(
-           `sprite { xmin = ${x}, xmax = ${x + w - 1}, ymin = ${y}, ymax = ${y + h - 1} } image`
+           `sprite image { xmin = ${x}, xmax = ${x + w - 1}, ymin = ${y}, ymax = ${y + h - 1} }  |> move ${w * 0.5 + sx - (sw * 0.5)} ${h * 0.5 + (sh - h - sy)}`
        );
        return result;
-   }, {});
+   }, {})
 
 -}
