@@ -9253,7 +9253,7 @@ var $author$project$AltMath$Vector2$sub = F2(
 	function (a, b) {
 		return A2($author$project$AltMath$Vector2$Vec2, a.x - b.x, a.y - b.y);
 	});
-var $author$project$Extra$Jump$Collision$lineCircle = F2(
+var $author$project$Extra$Jump$Collision$linePoint = F2(
 	function (wall, player) {
 		var fix = $author$project$AltMath$Vector2$negate(
 			$author$project$AltMath$Vector2$normalize(player.v));
@@ -9307,9 +9307,9 @@ var $author$project$Extra$Jump$Collision$simulate = F3(
 				v: A2($author$project$AltMath$Vector2$add, acc, player.v)
 			});
 		var newPlayer = function (a) {
-			return A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, a, _static);
+			return A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$linePoint, a, _static);
 		}(
-			A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$lineCircle, forceApplied, _static));
+			A3($elm$core$List$foldl, $author$project$Extra$Jump$Collision$linePoint, forceApplied, _static));
 		return _Utils_update(
 			newPlayer,
 			{
@@ -10797,11 +10797,11 @@ var $author$project$Extra$JumpGun$view = F2(
 										},
 										_List_fromArray(
 											[
-												((player.v.x > 0.5) || (_Utils_cmp(player.v.x, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.dir, player.frame) : A3(
+												A3(
 												$author$project$Playground$move,
 												$author$project$Extra$JumpGun$pxSnap(player.p.x),
 												$author$project$Extra$JumpGun$pxSnap(player.p.y),
-												A2($author$project$Extra$Jump$Sprite$idle, player.dir, player.frame)),
+												((player.v.x > 0.5) || (_Utils_cmp(player.v.x, -0.5) < 0)) ? A2($author$project$Extra$Jump$Sprite$run, player.dir, player.frame) : A2($author$project$Extra$Jump$Sprite$idle, player.dir, player.frame)),
 												A2($author$project$Extra$JumpGun$debug, computer, memory)
 											]))))))));
 		} else {
