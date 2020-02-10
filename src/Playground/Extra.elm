@@ -2,7 +2,6 @@ module Playground.Extra exposing
     ( scaleX, scaleY
     , tile, sprite
     , tilemap
-    , colorTile
     )
 
 {-|
@@ -60,7 +59,7 @@ scaleY sy (Shape shape) =
 
 {-| Show tile from a tileset.
 
-All tiles are fixed size and placed into a grid, where the first tile has a **0** index 
+All tiles are fixed size and placed into a grid, where the first tile has a **0** index
 increasing left to right and top to bottom.
 
 Example: having a 3x3 tileset with each tile of 16x24 pixels
@@ -85,10 +84,11 @@ tile tileW tileH tileset index =
 
 Sprites can be placed anywhere in atlas and each can have different size.
 
-Example: this draws a sprite of 16x24 pixels taking it from a sprite sheet, 
-starting at position `16,0` up to _including_ pixels at `31,23`  
-    
+Example: this draws a sprite of 16x24 pixels taking it from a sprite sheet,
+starting at position `16,0` up to _including_ pixels at `31,23`
+
     sprite "sprites.png" { xmin = 16, xmax = 31, ymin = 0, ymax = 23 }
+
 -}
 sprite : String -> { xmin : Number, xmax : Number, ymin : Number, ymax : Number } -> Shape
 sprite atlas { xmin, xmax, ymin, ymax } =
@@ -145,32 +145,32 @@ which in turn uses this 3x3 tileset with each tile 16x24px
 
 ## Why
 
-For tiny maps `tile` function is enough. However, when the game map grows in size performance issues creep in. 
+For tiny maps `tile` function is enough. However, when the game map grows in size performance issues creep in.
 The underlying issue is that for each `tile` the WebGL rendering engine uses what is called an [Entity][1].
-WebGL can handle a few thousands of such entities thus having a map with 100x100 tiles means to draw 10.000 
+WebGL can handle a few thousands of such entities thus having a map with 100x100 tiles means to draw 10.000
 entities for each frame - that’s way too much for WebGL.
 
 
 ## How it works
 
-To avoid performance issues the idea is to draw a single WebGL `Entity` for each `tilemap` call by pushing 
+To avoid performance issues the idea is to draw a single WebGL `Entity` for each `tilemap` call by pushing
 the composition of the map down the rendering pipeline.
 
-To do that we need to pass to playground both the tileset and a 2D array of tile indices. The latter will 
+To do that we need to pass to playground both the tileset and a 2D array of tile indices. The latter will
 be used to look-up the correct tile.
 
-You can visualize the lookup table like those mini-maps you see on video games HUD’s. Each lookup table pixel 
-represents a tile in the final tilemap, while the color _value_ of that pixel is an index telling which tile 
+You can visualize the lookup table like those mini-maps you see on video games HUD’s. Each lookup table pixel
+represents a tile in the final tilemap, while the color _value_ of that pixel is an index telling which tile
 to pick from the tileset.
 
-All tiles are fixed size and placed into a grid, with indices increasing left to right and top to bottom. Notice 
-that a fully black but transparent pixel (`0x00000000`) means "no tile here" and nothing is rendered. 
+All tiles are fixed size and placed into a grid, with indices increasing left to right and top to bottom. Notice
+that a fully black but transparent pixel (`0x00000000`) means "no tile here" and nothing is rendered.
 Unlike `tile`, this makes the lookup table indices to start from **1**.
 
 More details about this rendering technique can be found in [Brandon Jones’ blog][2].
 
-[1]: <https://package.elm-lang.org/packages/elm-community/webgl/latest/WebGL#Entity>
-[2]: <https://blog.tojicode.com/2012/07/sprite-tile-maps-on-gpu.html>
+[1]: https://package.elm-lang.org/packages/elm-community/webgl/latest/WebGL#Entity
+[2]: https://blog.tojicode.com/2012/07/sprite-tile-maps-on-gpu.html
 
 -}
 tilemap : Number -> Number -> String -> String -> Shape
