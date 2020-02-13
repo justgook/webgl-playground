@@ -1,7 +1,7 @@
 module Playground.Advanced exposing
     ( custom, useTexture
     , Render, Opacity, ScaleRotateSkew, Translate
-    , embed, subscriptions, resize, cacheTextures
+    , embed, edit, subscriptions, resize, cacheTextures
     )
 
 {-| Advanced user section, for:
@@ -23,7 +23,7 @@ module Playground.Advanced exposing
 
 # Embedding
 
-@docs embed, subscriptions, resize, cacheTextures
+@docs embed, edit, subscriptions, resize, cacheTextures
 
 -}
 
@@ -87,7 +87,7 @@ embed :
 embed viewMemory updateMemory initialMemory =
     let
         { init, update } =
-            Internal.embed viewMemory updateMemory initialMemory
+            Internal.create viewMemory updateMemory initialMemory
 
         view (Game { computer, entities }) =
             Internal.embedViewWrap computer.screen entities
@@ -96,6 +96,13 @@ embed viewMemory updateMemory initialMemory =
     , view = view
     , update = update
     }
+
+
+{-| Modify game memory from the outside world
+-}
+edit : (Internal.Computer -> memory -> memory) -> Game memory -> Game memory
+edit fn (Game ({ memory, computer } as model)) =
+    Game { model | memory = fn computer memory }
 
 
 {-| Playground have different subscriptions:

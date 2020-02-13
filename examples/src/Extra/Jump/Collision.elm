@@ -1,14 +1,18 @@
-module Extra.Jump.Collision exposing (intersection, linePoint, simulate)
+module Extra.Jump.Collision exposing (intersection, lineToMovingPoint, simulate)
 
 import AltMath.Vector2 as Vec2 exposing (vec2)
 
 
 
---https://github.com/shakiba/planck.js
+{- http://twistedoakstudios.com/blog/Post554_minkowski-sums-and-differences -}
+{- <https://cp-algorithms.com/geometry/circle-line-intersection.html>
+   Line to circle
+   CAPSULE!!! - https://stackoverflow.com/questions/43615547/collision-detection-for-2d-capsule-or-swept-sphere
+   https://github.com/shakiba/planck.js
 
-
-precision =
-    1.0e10
+   Wolfenstein 3D Textures
+   https://lodev.org/cgtutor/raycasting.html
+-}
 
 
 simulate config player static =
@@ -24,17 +28,74 @@ simulate config player static =
                 , contact = zero
             }
 
-        {- double check as character over velocity can hit second wall (corner case) -}
         newPlayer =
             --TODO add broad phase
-            List.foldl linePoint forceApplied static
-                |> (\a -> List.foldl linePoint a static)
+            iterate lineToMovingPoint 5 static forceApplied
     in
     { newPlayer | p = Vec2.add newPlayer.p newPlayer.v }
 
 
+iterate fn iterations walls acc =
+    iterate_ fn iterations 0 walls acc
+
+
+iterate_ fn iterations attempt walls acc =
+    List.foldl fn acc walls
+        |> (\({ contact, v, p } as acc2) ->
+                let
+                    adding =
+                        acc2.contact
+                            |> applyIf (acc2.contact.x /= 0 && acc2.contact.y /= 0) Vec2.normalize
+                            |> Vec2.negate
+                            |> Vec2.scale pushOut
+                in
+                if attempt < iterations && acc /= acc2 then
+                    iterate_ fn iterations (attempt + 1) walls { acc2 | v = v |> Vec2.add adding }
+
+                else if attempt >= iterations then
+                    -- TODO add some validation to not reach that point at all
+                    { acc2 | v = zero }
+
+                else
+                    { acc2 | v = v |> Vec2.add adding }
+           )
+
+
 zero =
     Vec2.vec2 0 0
+
+
+lineToMovingPoint wall player =
+    if isLeft wall.p1 wall.p2 player.p then
+        intersectionVec2 player.p (Vec2.add player.p player.v) wall.p1 wall.p2
+            |> Maybe.map
+                (\( t, _ ) ->
+                    if t < 1 then
+                        let
+                            zeroedWall =
+                                Vec2.sub wall.p2 wall.p1
+
+                            normal =
+                                leftNormal zeroedWall
+
+                            restV =
+                                Vec2.scale (1 - t) player.v
+                        in
+                        { player
+                            | v =
+                                player.v
+                                    |> Vec2.scale t
+                                    |> Vec2.add (Vec2.scalarProjection restV zeroedWall)
+                            , contact = Vec2.add normal player.contact
+                        }
+
+                    else
+                        player
+                )
+            |> Maybe.withDefault player
+
+    else
+        player
 
 
 intersection : Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> Maybe ( Float, Float )
@@ -61,52 +122,12 @@ intersection x1 y1 x2 y2 x3 y3 x4 y4 =
             Nothing
 
 
-linePoint wall player =
-    let
-        fix =
-            player.v |> Vec2.normalize |> Vec2.negate
-
-        startPoint =
-            player.p
-                |> Vec2.add fix
-    in
-    if isLeft wall.p1 wall.p2 startPoint then
-        intersectionVec2 player.p (Vec2.add player.p player.v) wall.p1 wall.p2
-            |> Maybe.map
-                (\( t, _ ) ->
-                    let
-                        zeroedWall =
-                            Vec2.sub wall.p2 wall.p1
-
-                        normal =
-                            leftNormal zeroedWall
-
-                        restV =
-                            Vec2.scale (1 - t) player.v
-
-                        calcRest =
-                            Vec2.scalarProjection restV zeroedWall
-                    in
-                    { player
-                        | v =
-                            player.v
-                                |> Vec2.scale t
-                                |> Vec2.add calcRest
-                        , contact = Vec2.max normal player.contact
-                    }
-                )
-            |> Maybe.withDefault player
-
-    else
-        player
-
-
 intersectionVec2 p1 p2 p3 p4 =
     intersection p1.x p1.y p2.x p2.y p3.x p3.y p4.x p4.y
 
 
-slopeFix =
-    1 / 32
+pushOut =
+    2 ^ -30
 
 
 leftNormal vec =
@@ -122,100 +143,70 @@ isLeft a b c =
     (b.x - a.x) * (c.y - a.y) < (b.y - a.y) * (c.x - a.x)
 
 
+applyIf : Bool -> (a -> a) -> a -> a
+applyIf bool f world =
+    if bool then
+        f world
 
-{- http://twistedoakstudios.com/blog/Post554_minkowski-sums-and-differences -}
-{- <https://cp-algorithms.com/geometry/circle-line-intersection.html>
-   Line to circle
--}
-{- <https://stackoverflow.com/questions/37224912/circle-line-segment-collision>
-   The function returns an array of up to two point on the line segment. If no points found returns an empty array.
+    else
+        world
 
-       function inteceptCircleLineSeg(circle, line){
-           var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
-           v1 = {};
-           v2 = {};
-           v1.x = line.p2.x - line.p1.x;
-           v1.y = line.p2.y - line.p1.y;
-           v2.x = line.p1.x - circle.center.x;
-           v2.y = line.p1.y - circle.center.y;
-           b = (v1.x * v2.x + v1.y * v2.y);
-           c = 2 * (v1.x * v1.x + v1.y * v1.y);
-           b *= -2;
-           d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - circle.radius * circle.radius));
-           if(isNaN(d)){ // no intercept
-               return [];
+
+
+---BROAD PHASE https://gamedev.stackexchange.com/questions/20103/finding-which-tiles-are-intersected-by-a-line-without-looping-through-all-of-th
+{-
+   void rayCast()
+   {
+       if (!isComponentComplete())
+           return;
+
+       mTiles.clear();
+       mTiles.fill(QColor::fromRgb(255, 222, 173), mSizeInTiles.width() * mSizeInTiles.height());
+
+       const QPoint startTile = startTilePos();
+       const QPoint endTile = endTilePos();
+       // http://playtechs.blogspot.com/2007/03/raytracing-on-grid.html
+       int x0 = startTile.x();
+       int y0 = startTile.y();
+       int x1 = endTile.x();
+       int y1 = endTile.y();
+
+       int dx = abs(x1 - x0);
+       int dy = abs(y1 - y0);
+       int x = x0;
+       int y = y0;
+       int n = 1 + dx + dy;
+       int x_inc = (x1 > x0) ? 1 : -1;
+       int y_inc = (y1 > y0) ? 1 : -1;
+       int error = dx - dy;
+       dx *= 2;
+       dy *= 2;
+
+       for (; n > 0; --n)
+       {
+           visit(x, y);
+
+           if (error > 0)
+           {
+               x += x_inc;
+               error -= dy;
            }
-           u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
-           u2 = (b + d) / c;
-           retP1 = {};   // return points
-           retP2 = {}
-           ret = []; // return array
-           if(u1 <= 1 && u1 >= 0){  // add point if on the line segment
-               retP1.x = line.p1.x + v1.x * u1;
-               retP1.y = line.p1.y + v1.y * u1;
-               ret[0] = retP1;
+           else if (error < 0)
+           {
+               y += y_inc;
+               error += dx;
            }
-           if(u2 <= 1 && u2 >= 0){  // second add point if on the line segment
-               retP2.x = line.p1.x + v1.x * u2;
-               retP2.y = line.p1.y + v1.y * u2;
-               ret[ret.length] = retP2;
+           else if (error == 0) {
+               // Ensure that perfectly diagonal lines don't take up more tiles than necessary.
+               // http://playtechs.blogspot.com/2007/03/raytracing-on-grid.html?showComment=1281448902099#c3785285092830049685
+               x += x_inc;
+               y += y_inc;
+               error -= dy;
+               error += dx;
+               --n;
            }
-           return ret;
        }
 
-
-   # Lift Line
-
-   Move line along its normal
-
-       function liftLine(line,dist){
-           var v1,l
-           v1 = {};
-           v1.x = line.p2.x - line.p1.x; // convert line to vector
-           v1.y = line.p2.y - line.p1.y;
-           l = Math.sqrt(v1.x * v1.x + v1.y * v1.y); // get length;
-           v1.x /= l;  // Assuming you never pass zero length lines
-           v1.y /= l;
-           v1.x *= dist; // set the length
-           v1.y *= dist;
-           // move the line along its normal the required distance
-           line.p1.x -= v1.y;
-           line.p1.y += v1.x;
-           line.p2.x -= v1.y;
-           line.p2.y += v1.x;
-
-           return line; // if needed
-       }
-
-   #Distance circle (or point) to a line segment
-
-   Returns the closest distance to the line segment. It is just the circle center that I am using. So you can replace circle with a point
-
-       function circleDistFromLineSeg(circle,line){
-           var v1, v2, v3, u;
-           v1 = {};
-           v2 = {};
-           v3 = {};
-           v1.x = line.p2.x - line.p1.x;
-           v1.y = line.p2.y - line.p1.y;
-           v2.x = circle.center.x - line.p1.x;
-           v2.y = circle.center.y - line.p1.y;
-           u = (v2.x * v1.x + v2.y * v1.y) / (v1.y * v1.y + v1.x * v1.x); // unit dist of point on line
-           if(u >= 0 && u <= 1){
-               v3.x = (v1.x * u + line.p1.x) - circle.center.x;
-               v3.y = (v1.y * u + line.p1.y) - circle.center.y;
-               v3.x *= v3.x;
-               v3.y *= v3.y;
-               return Math.sqrt(v3.y + v3.x); // return distance from line
-           }
-           // get distance from end points
-           v3.x = circle.center.x - line.p2.x;
-           v3.y = circle.center.y - line.p2.y;
-           v3.x *= v3.x;  // square vectors
-           v3.y *= v3.y;
-           v2.x *= v2.x;
-           v2.y *= v2.y;
-           return Math.min(Math.sqrt(v2.y + v2.x), Math.sqrt(v3.y + v3.x)); // return smaller of two distances as the result
-       }
-
+       update();
+   }
 -}

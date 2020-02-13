@@ -36,7 +36,7 @@ animationTime =
 main : Program () (Game Memory) Msg
 main =
     Browser.document
-        { init = init
+        { init = \flags -> playground.init
         , view =
             \memory ->
                 { title = "WebGL Playground Demo"
@@ -46,13 +46,8 @@ main =
                     ]
                 }
         , update = playground.update
-        , subscriptions = \m -> subscriptions.all
+        , subscriptions = \_ -> subscriptions.all
         }
-
-
-init : () -> ( Game Memory, Cmd Msg )
-init =
-    \flags -> playground.init
 
 
 viewMemory : Computer -> Memory -> List Shape

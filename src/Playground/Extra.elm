@@ -80,9 +80,9 @@ tile tileW tileH tileset index =
             custom tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
 
 
-{-| Show sprite from sprite sheet.
+{-| Show sprite from a sprite sheet.
 
-Sprites can be placed anywhere in atlas and each can have different size.
+Sprites can be placed anywhere in the atlas and each can have different sizes.
 
 Example: this draws a sprite of 16x24 pixels taking it from a sprite sheet,
 starting at position `16,0` up to _including_ pixels at `31,23`
@@ -159,7 +159,7 @@ the composition of the map down the rendering pipeline.
 To do that we need to pass to playground both the tileset and a 2D array of tile indices. The latter will
 be used to look-up the correct tile.
 
-You can visualize the lookup table like those mini-maps you see on video games HUD’s. Each lookup table pixel
+You can visualize the lookup table like those mini-maps you see on video games HUD. Each lookup table pixel
 represents a tile in the final tilemap, while the color _value_ of that pixel is an index telling which tile
 to pick from the tileset.
 

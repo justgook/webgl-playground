@@ -570,7 +570,7 @@ delta (Internal.Time _ d) =
 
 
 {-| Turn a `Time` time into the number of milliseconds since 1970 January 1 at 00:00:00 UTC. It was a Thursday.
-Here is example of text that shows current seconds:
+Here is an example of the text that shows the current seconds:
 
     import Playground exposing (..)
 
@@ -821,7 +821,7 @@ type alias Shape =
     sun =
         circle yellow 300
 
-You give a color and then the radius. So the higher the number, the larger
+You give color and then the radius. So the higher the number, the larger
 the circle.
 
 -}
@@ -843,8 +843,7 @@ circle color radius =
     football =
         oval brown 200 100
 
-You give the color, and then the width and height. So our `football` example
-is 200 pixels wide and 100 pixels tall.
+You give the color, and then the width and height. So our `football` example is 200 pixels wide and 100 pixels tall
 
 -}
 oval : Color -> Number -> Number -> Shape
@@ -995,7 +994,7 @@ hexagon color radius =
         }
 
 
-{-| Make octogons:
+{-| Make octagons:
 
     import Playground exposing (..)
 
@@ -1310,7 +1309,7 @@ moveRight =
     moveX
 
 
-{-| Move the `x` coordinate of a shape by some amount. Here is a square that
+{-| Move the `x` coordinate of shape by some amount. Here is a square that
 moves back and forth:
 
     import Playground exposing (..)
@@ -1331,8 +1330,7 @@ moveX dx (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
     Shape { shape | x = x + dx }
 
 
-{-| Move the `y` coordinate of a shape by some amount. Maybe you want to make
-grass along the bottom of the screen:
+{-| Move the `y` coordinate of shape by some amount. Maybe you want to make grass along the bottom of the screen:
 
     import Playground exposing (..)
 

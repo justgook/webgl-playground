@@ -294,7 +294,9 @@ initGame { screen } =
         , { p1 = { x = -136, y = 16 }, p2 = { x = -176, y = 16 } }
         , { p1 = { x = -176, y = 56 }, p2 = { x = -120, y = 56 } }
 
-        --, { p1 = { x = -78, y = 8 }, p2 = { x = -88, y = 8 } }
+        --SLOPES
+        --, { p1 = { x = -120, y = -36 }, p2 = { x = -276, y = 56 } }
+        --, { p1 = { x = -276, y = 166 }, p2 = { x = -120, y = -40 } }
         ]
     , bullets = []
 
@@ -374,7 +376,8 @@ debug computer ({ player, static } as memory) =
             )
                 :: acc
         )
-        (List.indexedMap (\i a -> drawSegment a (randomColor i) (randomColor i) (randomColor i)) player.debug)
+        []
+        --(List.indexedMap (\i a -> drawSegment a (randomColor i) (randomColor i) (randomColor i)) player.debug)
         static
         |> group
 

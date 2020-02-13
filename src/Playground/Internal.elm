@@ -9,7 +9,7 @@ module Playground.Internal exposing
     , TextureData(..)
     , TextureManager
     , Time(..)
-    , embed
+    , create
     , embedViewWrap
     , game
     , gotTextures
@@ -81,7 +81,7 @@ game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> m
 game viewMemory updateMemory initialMemory =
     let
         { init, update } =
-            embed viewMemory updateMemory initialMemory
+            create viewMemory updateMemory initialMemory
 
         subs (Game { visibility, computer }) =
             case visibility of
@@ -104,7 +104,7 @@ game viewMemory updateMemory initialMemory =
         }
 
 
-embed :
+create :
     (Computer -> memory -> List Shape)
     -> (Computer -> memory -> memory)
     -> memory
@@ -113,7 +113,7 @@ embed :
         , view : Game memory -> List Entity
         , update : Msg -> Game memory -> ( Game memory, Cmd Msg )
         }
-embed viewMemory updateMemory initialMemory =
+create viewMemory updateMemory initialMemory =
     let
         init =
             ( Game
