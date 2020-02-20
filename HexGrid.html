@@ -867,6 +867,797 @@ var _Basics_xor = F2(function(a, b) { return a !== b; });
 
 
 
+var _String_cons = F2(function(chr, str)
+{
+	return chr + str;
+});
+
+function _String_uncons(string)
+{
+	var word = string.charCodeAt(0);
+	return word
+		? $elm$core$Maybe$Just(
+			0xD800 <= word && word <= 0xDBFF
+				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
+				: _Utils_Tuple2(_Utils_chr(string[0]), string.slice(1))
+		)
+		: $elm$core$Maybe$Nothing;
+}
+
+var _String_append = F2(function(a, b)
+{
+	return a + b;
+});
+
+function _String_length(str)
+{
+	return str.length;
+}
+
+var _String_map = F2(function(func, string)
+{
+	var len = string.length;
+	var array = new Array(len);
+	var i = 0;
+	while (i < len)
+	{
+		var word = string.charCodeAt(i);
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			array[i] = func(_Utils_chr(string[i] + string[i+1]));
+			i += 2;
+			continue;
+		}
+		array[i] = func(_Utils_chr(string[i]));
+		i++;
+	}
+	return array.join('');
+});
+
+var _String_filter = F2(function(isGood, str)
+{
+	var arr = [];
+	var len = str.length;
+	var i = 0;
+	while (i < len)
+	{
+		var char = str[i];
+		var word = str.charCodeAt(i);
+		i++;
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			char += str[i];
+			i++;
+		}
+
+		if (isGood(_Utils_chr(char)))
+		{
+			arr.push(char);
+		}
+	}
+	return arr.join('');
+});
+
+function _String_reverse(str)
+{
+	var len = str.length;
+	var arr = new Array(len);
+	var i = 0;
+	while (i < len)
+	{
+		var word = str.charCodeAt(i);
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			arr[len - i] = str[i + 1];
+			i++;
+			arr[len - i] = str[i - 1];
+			i++;
+		}
+		else
+		{
+			arr[len - i] = str[i];
+			i++;
+		}
+	}
+	return arr.join('');
+}
+
+var _String_foldl = F3(function(func, state, string)
+{
+	var len = string.length;
+	var i = 0;
+	while (i < len)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		i++;
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			char += string[i];
+			i++;
+		}
+		state = A2(func, _Utils_chr(char), state);
+	}
+	return state;
+});
+
+var _String_foldr = F3(function(func, state, string)
+{
+	var i = string.length;
+	while (i--)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		if (0xDC00 <= word && word <= 0xDFFF)
+		{
+			i--;
+			char = string[i] + char;
+		}
+		state = A2(func, _Utils_chr(char), state);
+	}
+	return state;
+});
+
+var _String_split = F2(function(sep, str)
+{
+	return str.split(sep);
+});
+
+var _String_join = F2(function(sep, strs)
+{
+	return strs.join(sep);
+});
+
+var _String_slice = F3(function(start, end, str) {
+	return str.slice(start, end);
+});
+
+function _String_trim(str)
+{
+	return str.trim();
+}
+
+function _String_trimLeft(str)
+{
+	return str.replace(/^\s+/, '');
+}
+
+function _String_trimRight(str)
+{
+	return str.replace(/\s+$/, '');
+}
+
+function _String_words(str)
+{
+	return _List_fromArray(str.trim().split(/\s+/g));
+}
+
+function _String_lines(str)
+{
+	return _List_fromArray(str.split(/\r\n|\r|\n/g));
+}
+
+function _String_toUpper(str)
+{
+	return str.toUpperCase();
+}
+
+function _String_toLower(str)
+{
+	return str.toLowerCase();
+}
+
+var _String_any = F2(function(isGood, string)
+{
+	var i = string.length;
+	while (i--)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		if (0xDC00 <= word && word <= 0xDFFF)
+		{
+			i--;
+			char = string[i] + char;
+		}
+		if (isGood(_Utils_chr(char)))
+		{
+			return true;
+		}
+	}
+	return false;
+});
+
+var _String_all = F2(function(isGood, string)
+{
+	var i = string.length;
+	while (i--)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		if (0xDC00 <= word && word <= 0xDFFF)
+		{
+			i--;
+			char = string[i] + char;
+		}
+		if (!isGood(_Utils_chr(char)))
+		{
+			return false;
+		}
+	}
+	return true;
+});
+
+var _String_contains = F2(function(sub, str)
+{
+	return str.indexOf(sub) > -1;
+});
+
+var _String_startsWith = F2(function(sub, str)
+{
+	return str.indexOf(sub) === 0;
+});
+
+var _String_endsWith = F2(function(sub, str)
+{
+	return str.length >= sub.length &&
+		str.lastIndexOf(sub) === str.length - sub.length;
+});
+
+var _String_indexes = F2(function(sub, str)
+{
+	var subLen = sub.length;
+
+	if (subLen < 1)
+	{
+		return _List_Nil;
+	}
+
+	var i = 0;
+	var is = [];
+
+	while ((i = str.indexOf(sub, i)) > -1)
+	{
+		is.push(i);
+		i = i + subLen;
+	}
+
+	return _List_fromArray(is);
+});
+
+
+// TO STRING
+
+function _String_fromNumber(number)
+{
+	return number + '';
+}
+
+
+// INT CONVERSIONS
+
+function _String_toInt(str)
+{
+	var total = 0;
+	var code0 = str.charCodeAt(0);
+	var start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
+
+	for (var i = start; i < str.length; ++i)
+	{
+		var code = str.charCodeAt(i);
+		if (code < 0x30 || 0x39 < code)
+		{
+			return $elm$core$Maybe$Nothing;
+		}
+		total = 10 * total + code - 0x30;
+	}
+
+	return i == start
+		? $elm$core$Maybe$Nothing
+		: $elm$core$Maybe$Just(code0 == 0x2D ? -total : total);
+}
+
+
+// FLOAT CONVERSIONS
+
+function _String_toFloat(s)
+{
+	// check if it is a hex, octal, or binary number
+	if (s.length === 0 || /[\sxbo]/.test(s))
+	{
+		return $elm$core$Maybe$Nothing;
+	}
+	var n = +s;
+	// faster isNaN check
+	return n === n ? $elm$core$Maybe$Just(n) : $elm$core$Maybe$Nothing;
+}
+
+function _String_fromList(chars)
+{
+	return _List_toArray(chars).join('');
+}
+
+
+
+
+function _Char_toCode(char)
+{
+	var code = char.charCodeAt(0);
+	if (0xD800 <= code && code <= 0xDBFF)
+	{
+		return (code - 0xD800) * 0x400 + char.charCodeAt(1) - 0xDC00 + 0x10000
+	}
+	return code;
+}
+
+function _Char_fromCode(code)
+{
+	return _Utils_chr(
+		(code < 0 || 0x10FFFF < code)
+			? '\uFFFD'
+			:
+		(code <= 0xFFFF)
+			? String.fromCharCode(code)
+			:
+		(code -= 0x10000,
+			String.fromCharCode(Math.floor(code / 0x400) + 0xD800, code % 0x400 + 0xDC00)
+		)
+	);
+}
+
+function _Char_toUpper(char)
+{
+	return _Utils_chr(char.toUpperCase());
+}
+
+function _Char_toLower(char)
+{
+	return _Utils_chr(char.toLowerCase());
+}
+
+function _Char_toLocaleUpper(char)
+{
+	return _Utils_chr(char.toLocaleUpperCase());
+}
+
+function _Char_toLocaleLower(char)
+{
+	return _Utils_chr(char.toLocaleLowerCase());
+}
+
+
+
+/**/
+function _Json_errorToString(error)
+{
+	return $elm$json$Json$Decode$errorToString(error);
+}
+//*/
+
+
+// CORE DECODERS
+
+function _Json_succeed(msg)
+{
+	return {
+		$: 0,
+		a: msg
+	};
+}
+
+function _Json_fail(msg)
+{
+	return {
+		$: 1,
+		a: msg
+	};
+}
+
+function _Json_decodePrim(decoder)
+{
+	return { $: 2, b: decoder };
+}
+
+var _Json_decodeInt = _Json_decodePrim(function(value) {
+	return (typeof value !== 'number')
+		? _Json_expecting('an INT', value)
+		:
+	(-2147483647 < value && value < 2147483647 && (value | 0) === value)
+		? $elm$core$Result$Ok(value)
+		:
+	(isFinite(value) && !(value % 1))
+		? $elm$core$Result$Ok(value)
+		: _Json_expecting('an INT', value);
+});
+
+var _Json_decodeBool = _Json_decodePrim(function(value) {
+	return (typeof value === 'boolean')
+		? $elm$core$Result$Ok(value)
+		: _Json_expecting('a BOOL', value);
+});
+
+var _Json_decodeFloat = _Json_decodePrim(function(value) {
+	return (typeof value === 'number')
+		? $elm$core$Result$Ok(value)
+		: _Json_expecting('a FLOAT', value);
+});
+
+var _Json_decodeValue = _Json_decodePrim(function(value) {
+	return $elm$core$Result$Ok(_Json_wrap(value));
+});
+
+var _Json_decodeString = _Json_decodePrim(function(value) {
+	return (typeof value === 'string')
+		? $elm$core$Result$Ok(value)
+		: (value instanceof String)
+			? $elm$core$Result$Ok(value + '')
+			: _Json_expecting('a STRING', value);
+});
+
+function _Json_decodeList(decoder) { return { $: 3, b: decoder }; }
+function _Json_decodeArray(decoder) { return { $: 4, b: decoder }; }
+
+function _Json_decodeNull(value) { return { $: 5, c: value }; }
+
+var _Json_decodeField = F2(function(field, decoder)
+{
+	return {
+		$: 6,
+		d: field,
+		b: decoder
+	};
+});
+
+var _Json_decodeIndex = F2(function(index, decoder)
+{
+	return {
+		$: 7,
+		e: index,
+		b: decoder
+	};
+});
+
+function _Json_decodeKeyValuePairs(decoder)
+{
+	return {
+		$: 8,
+		b: decoder
+	};
+}
+
+function _Json_mapMany(f, decoders)
+{
+	return {
+		$: 9,
+		f: f,
+		g: decoders
+	};
+}
+
+var _Json_andThen = F2(function(callback, decoder)
+{
+	return {
+		$: 10,
+		b: decoder,
+		h: callback
+	};
+});
+
+function _Json_oneOf(decoders)
+{
+	return {
+		$: 11,
+		g: decoders
+	};
+}
+
+
+// DECODING OBJECTS
+
+var _Json_map1 = F2(function(f, d1)
+{
+	return _Json_mapMany(f, [d1]);
+});
+
+var _Json_map2 = F3(function(f, d1, d2)
+{
+	return _Json_mapMany(f, [d1, d2]);
+});
+
+var _Json_map3 = F4(function(f, d1, d2, d3)
+{
+	return _Json_mapMany(f, [d1, d2, d3]);
+});
+
+var _Json_map4 = F5(function(f, d1, d2, d3, d4)
+{
+	return _Json_mapMany(f, [d1, d2, d3, d4]);
+});
+
+var _Json_map5 = F6(function(f, d1, d2, d3, d4, d5)
+{
+	return _Json_mapMany(f, [d1, d2, d3, d4, d5]);
+});
+
+var _Json_map6 = F7(function(f, d1, d2, d3, d4, d5, d6)
+{
+	return _Json_mapMany(f, [d1, d2, d3, d4, d5, d6]);
+});
+
+var _Json_map7 = F8(function(f, d1, d2, d3, d4, d5, d6, d7)
+{
+	return _Json_mapMany(f, [d1, d2, d3, d4, d5, d6, d7]);
+});
+
+var _Json_map8 = F9(function(f, d1, d2, d3, d4, d5, d6, d7, d8)
+{
+	return _Json_mapMany(f, [d1, d2, d3, d4, d5, d6, d7, d8]);
+});
+
+
+// DECODE
+
+var _Json_runOnString = F2(function(decoder, string)
+{
+	try
+	{
+		var value = JSON.parse(string);
+		return _Json_runHelp(decoder, value);
+	}
+	catch (e)
+	{
+		return $elm$core$Result$Err(A2($elm$json$Json$Decode$Failure, 'This is not valid JSON! ' + e.message, _Json_wrap(string)));
+	}
+});
+
+var _Json_run = F2(function(decoder, value)
+{
+	return _Json_runHelp(decoder, _Json_unwrap(value));
+});
+
+function _Json_runHelp(decoder, value)
+{
+	switch (decoder.$)
+	{
+		case 2:
+			return decoder.b(value);
+
+		case 5:
+			return (value === null)
+				? $elm$core$Result$Ok(decoder.c)
+				: _Json_expecting('null', value);
+
+		case 3:
+			if (!_Json_isArray(value))
+			{
+				return _Json_expecting('a LIST', value);
+			}
+			return _Json_runArrayDecoder(decoder.b, value, _List_fromArray);
+
+		case 4:
+			if (!_Json_isArray(value))
+			{
+				return _Json_expecting('an ARRAY', value);
+			}
+			return _Json_runArrayDecoder(decoder.b, value, _Json_toElmArray);
+
+		case 6:
+			var field = decoder.d;
+			if (typeof value !== 'object' || value === null || !(field in value))
+			{
+				return _Json_expecting('an OBJECT with a field named `' + field + '`', value);
+			}
+			var result = _Json_runHelp(decoder.b, value[field]);
+			return ($elm$core$Result$isOk(result)) ? result : $elm$core$Result$Err(A2($elm$json$Json$Decode$Field, field, result.a));
+
+		case 7:
+			var index = decoder.e;
+			if (!_Json_isArray(value))
+			{
+				return _Json_expecting('an ARRAY', value);
+			}
+			if (index >= value.length)
+			{
+				return _Json_expecting('a LONGER array. Need index ' + index + ' but only see ' + value.length + ' entries', value);
+			}
+			var result = _Json_runHelp(decoder.b, value[index]);
+			return ($elm$core$Result$isOk(result)) ? result : $elm$core$Result$Err(A2($elm$json$Json$Decode$Index, index, result.a));
+
+		case 8:
+			if (typeof value !== 'object' || value === null || _Json_isArray(value))
+			{
+				return _Json_expecting('an OBJECT', value);
+			}
+
+			var keyValuePairs = _List_Nil;
+			// TODO test perf of Object.keys and switch when support is good enough
+			for (var key in value)
+			{
+				if (value.hasOwnProperty(key))
+				{
+					var result = _Json_runHelp(decoder.b, value[key]);
+					if (!$elm$core$Result$isOk(result))
+					{
+						return $elm$core$Result$Err(A2($elm$json$Json$Decode$Field, key, result.a));
+					}
+					keyValuePairs = _List_Cons(_Utils_Tuple2(key, result.a), keyValuePairs);
+				}
+			}
+			return $elm$core$Result$Ok($elm$core$List$reverse(keyValuePairs));
+
+		case 9:
+			var answer = decoder.f;
+			var decoders = decoder.g;
+			for (var i = 0; i < decoders.length; i++)
+			{
+				var result = _Json_runHelp(decoders[i], value);
+				if (!$elm$core$Result$isOk(result))
+				{
+					return result;
+				}
+				answer = answer(result.a);
+			}
+			return $elm$core$Result$Ok(answer);
+
+		case 10:
+			var result = _Json_runHelp(decoder.b, value);
+			return (!$elm$core$Result$isOk(result))
+				? result
+				: _Json_runHelp(decoder.h(result.a), value);
+
+		case 11:
+			var errors = _List_Nil;
+			for (var temp = decoder.g; temp.b; temp = temp.b) // WHILE_CONS
+			{
+				var result = _Json_runHelp(temp.a, value);
+				if ($elm$core$Result$isOk(result))
+				{
+					return result;
+				}
+				errors = _List_Cons(result.a, errors);
+			}
+			return $elm$core$Result$Err($elm$json$Json$Decode$OneOf($elm$core$List$reverse(errors)));
+
+		case 1:
+			return $elm$core$Result$Err(A2($elm$json$Json$Decode$Failure, decoder.a, _Json_wrap(value)));
+
+		case 0:
+			return $elm$core$Result$Ok(decoder.a);
+	}
+}
+
+function _Json_runArrayDecoder(decoder, value, toElmValue)
+{
+	var len = value.length;
+	var array = new Array(len);
+	for (var i = 0; i < len; i++)
+	{
+		var result = _Json_runHelp(decoder, value[i]);
+		if (!$elm$core$Result$isOk(result))
+		{
+			return $elm$core$Result$Err(A2($elm$json$Json$Decode$Index, i, result.a));
+		}
+		array[i] = result.a;
+	}
+	return $elm$core$Result$Ok(toElmValue(array));
+}
+
+function _Json_isArray(value)
+{
+	return Array.isArray(value) || (typeof FileList !== 'undefined' && value instanceof FileList);
+}
+
+function _Json_toElmArray(array)
+{
+	return A2($elm$core$Array$initialize, array.length, function(i) { return array[i]; });
+}
+
+function _Json_expecting(type, value)
+{
+	return $elm$core$Result$Err(A2($elm$json$Json$Decode$Failure, 'Expecting ' + type, _Json_wrap(value)));
+}
+
+
+// EQUALITY
+
+function _Json_equality(x, y)
+{
+	if (x === y)
+	{
+		return true;
+	}
+
+	if (x.$ !== y.$)
+	{
+		return false;
+	}
+
+	switch (x.$)
+	{
+		case 0:
+		case 1:
+			return x.a === y.a;
+
+		case 2:
+			return x.b === y.b;
+
+		case 5:
+			return x.c === y.c;
+
+		case 3:
+		case 4:
+		case 8:
+			return _Json_equality(x.b, y.b);
+
+		case 6:
+			return x.d === y.d && _Json_equality(x.b, y.b);
+
+		case 7:
+			return x.e === y.e && _Json_equality(x.b, y.b);
+
+		case 9:
+			return x.f === y.f && _Json_listEquality(x.g, y.g);
+
+		case 10:
+			return x.h === y.h && _Json_equality(x.b, y.b);
+
+		case 11:
+			return _Json_listEquality(x.g, y.g);
+	}
+}
+
+function _Json_listEquality(aDecoders, bDecoders)
+{
+	var len = aDecoders.length;
+	if (len !== bDecoders.length)
+	{
+		return false;
+	}
+	for (var i = 0; i < len; i++)
+	{
+		if (!_Json_equality(aDecoders[i], bDecoders[i]))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+// ENCODE
+
+var _Json_encode = F2(function(indentLevel, value)
+{
+	return JSON.stringify(_Json_unwrap(value), null, indentLevel) + '';
+});
+
+function _Json_wrap(value) { return { $: 0, a: value }; }
+function _Json_unwrap(value) { return value.a; }
+
+function _Json_wrap_UNUSED(value) { return value; }
+function _Json_unwrap_UNUSED(value) { return value; }
+
+function _Json_emptyArray() { return []; }
+function _Json_emptyObject() { return {}; }
+
+var _Json_addField = F3(function(key, value, object)
+{
+	object[key] = _Json_unwrap(value);
+	return object;
+});
+
+function _Json_addEntry(func)
+{
+	return F2(function(entry, array)
+	{
+		array.push(_Json_unwrap(func(entry)));
+		return array;
+	});
+}
+
+var _Json_encodeNull = _Json_wrap(null);
+
+
+
 // TASKS
 
 function _Scheduler_succeed(value)
@@ -1057,65 +1848,483 @@ function _Scheduler_step(proc)
 }
 
 
-// eslint-disable-next-line no-unused-vars
-var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap, flipY, url) {
-  var isMipmap = mininify !== 9728 && mininify !== 9729;
-  return _Scheduler_binding(function (callback) {
-    var img = new Image();
-    function createTexture(gl) {
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magnify);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mininify);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, horizontalWrap);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, verticalWrap);
-      if (isMipmap) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-      }
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      return texture;
-    }
-    img.onload = function () {
-      var width = img.width;
-      var height = img.height;
-      var widthPowerOfTwo = (width & (width - 1)) === 0;
-      var heightPowerOfTwo = (height & (height - 1)) === 0;
-      var isSizeValid = (widthPowerOfTwo && heightPowerOfTwo) || (
-        !isMipmap
-        && horizontalWrap === 33071 // clamp to edge
-        && verticalWrap === 33071
-      );
-      if (isSizeValid) {
-        callback(_Scheduler_succeed({
-          $: 0,
-          createTexture: createTexture,
-          a: width,
-          b: height
-        }));
-      } else {
-        callback(_Scheduler_fail(A2(
-          $elm_explorations$webgl$WebGL$Texture$SizeError,
-          width,
-          height
-        )));
-      }
-    };
-    img.onerror = function () {
-      callback(_Scheduler_fail($elm_explorations$webgl$WebGL$Texture$LoadError));
-    };
-    if (url.slice(0, 5) !== 'data:') {
-      img.crossOrigin = 'Anonymous';
-    }
-    img.src = url;
-  });
+
+function _Process_sleep(time)
+{
+	return _Scheduler_binding(function(callback) {
+		var id = setTimeout(function() {
+			callback(_Scheduler_succeed(_Utils_Tuple0));
+		}, time);
+
+		return function() { clearTimeout(id); };
+	});
+}
+
+
+
+
+// PROGRAMS
+
+
+var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
+{
+	return _Platform_initialize(
+		flagDecoder,
+		args,
+		impl.init,
+		impl.update,
+		impl.subscriptions,
+		function() { return function() {} }
+	);
 });
 
-// eslint-disable-next-line no-unused-vars
-var _Texture_size = function (texture) {
-  return _Utils_Tuple2(texture.a, texture.b);
-};
+
+
+// INITIALIZE A PROGRAM
+
+
+function _Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder)
+{
+	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
+	$elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
+	var managers = {};
+	result = init(result.a);
+	var model = result.a;
+	var stepper = stepperBuilder(sendToApp, model);
+	var ports = _Platform_setupEffects(managers, sendToApp);
+
+	function sendToApp(msg, viewMetadata)
+	{
+		result = A2(update, msg, model);
+		stepper(model = result.a, viewMetadata);
+		_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+	}
+
+	_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+
+	return ports ? { ports: ports } : {};
+}
+
+
+
+// TRACK PRELOADS
+//
+// This is used by code in elm/browser and elm/http
+// to register any HTTP requests that are triggered by init.
+//
+
+
+var _Platform_preload;
+
+
+function _Platform_registerPreload(url)
+{
+	_Platform_preload.add(url);
+}
+
+
+
+// EFFECT MANAGERS
+
+
+var _Platform_effectManagers = {};
+
+
+function _Platform_setupEffects(managers, sendToApp)
+{
+	var ports;
+
+	// setup all necessary effect managers
+	for (var key in _Platform_effectManagers)
+	{
+		var manager = _Platform_effectManagers[key];
+
+		if (manager.a)
+		{
+			ports = ports || {};
+			ports[key] = manager.a(key, sendToApp);
+		}
+
+		managers[key] = _Platform_instantiateManager(manager, sendToApp);
+	}
+
+	return ports;
+}
+
+
+function _Platform_createManager(init, onEffects, onSelfMsg, cmdMap, subMap)
+{
+	return {
+		b: init,
+		c: onEffects,
+		d: onSelfMsg,
+		e: cmdMap,
+		f: subMap
+	};
+}
+
+
+function _Platform_instantiateManager(info, sendToApp)
+{
+	var router = {
+		g: sendToApp,
+		h: undefined
+	};
+
+	var onEffects = info.c;
+	var onSelfMsg = info.d;
+	var cmdMap = info.e;
+	var subMap = info.f;
+
+	function loop(state)
+	{
+		return A2(_Scheduler_andThen, loop, _Scheduler_receive(function(msg)
+		{
+			var value = msg.a;
+
+			if (msg.$ === 0)
+			{
+				return A3(onSelfMsg, router, value, state);
+			}
+
+			return cmdMap && subMap
+				? A4(onEffects, router, value.i, value.j, state)
+				: A3(onEffects, router, cmdMap ? value.i : value.j, state);
+		}));
+	}
+
+	return router.h = _Scheduler_rawSpawn(A2(_Scheduler_andThen, loop, info.b));
+}
+
+
+
+// ROUTING
+
+
+var _Platform_sendToApp = F2(function(router, msg)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		router.g(msg);
+		callback(_Scheduler_succeed(_Utils_Tuple0));
+	});
+});
+
+
+var _Platform_sendToSelf = F2(function(router, msg)
+{
+	return A2(_Scheduler_send, router.h, {
+		$: 0,
+		a: msg
+	});
+});
+
+
+
+// BAGS
+
+
+function _Platform_leaf(home)
+{
+	return function(value)
+	{
+		return {
+			$: 1,
+			k: home,
+			l: value
+		};
+	};
+}
+
+
+function _Platform_batch(list)
+{
+	return {
+		$: 2,
+		m: list
+	};
+}
+
+
+var _Platform_map = F2(function(tagger, bag)
+{
+	return {
+		$: 3,
+		n: tagger,
+		o: bag
+	}
+});
+
+
+
+// PIPE BAGS INTO EFFECT MANAGERS
+
+
+function _Platform_dispatchEffects(managers, cmdBag, subBag)
+{
+	var effectsDict = {};
+	_Platform_gatherEffects(true, cmdBag, effectsDict, null);
+	_Platform_gatherEffects(false, subBag, effectsDict, null);
+
+	for (var home in managers)
+	{
+		_Scheduler_rawSend(managers[home], {
+			$: 'fx',
+			a: effectsDict[home] || { i: _List_Nil, j: _List_Nil }
+		});
+	}
+}
+
+
+function _Platform_gatherEffects(isCmd, bag, effectsDict, taggers)
+{
+	switch (bag.$)
+	{
+		case 1:
+			var home = bag.k;
+			var effect = _Platform_toEffect(isCmd, home, taggers, bag.l);
+			effectsDict[home] = _Platform_insert(isCmd, effect, effectsDict[home]);
+			return;
+
+		case 2:
+			for (var list = bag.m; list.b; list = list.b) // WHILE_CONS
+			{
+				_Platform_gatherEffects(isCmd, list.a, effectsDict, taggers);
+			}
+			return;
+
+		case 3:
+			_Platform_gatherEffects(isCmd, bag.o, effectsDict, {
+				p: bag.n,
+				q: taggers
+			});
+			return;
+	}
+}
+
+
+function _Platform_toEffect(isCmd, home, taggers, value)
+{
+	function applyTaggers(x)
+	{
+		for (var temp = taggers; temp; temp = temp.q)
+		{
+			x = temp.p(x);
+		}
+		return x;
+	}
+
+	var map = isCmd
+		? _Platform_effectManagers[home].e
+		: _Platform_effectManagers[home].f;
+
+	return A2(map, applyTaggers, value)
+}
+
+
+function _Platform_insert(isCmd, newEffect, effects)
+{
+	effects = effects || { i: _List_Nil, j: _List_Nil };
+
+	isCmd
+		? (effects.i = _List_Cons(newEffect, effects.i))
+		: (effects.j = _List_Cons(newEffect, effects.j));
+
+	return effects;
+}
+
+
+
+// PORTS
+
+
+function _Platform_checkPortName(name)
+{
+	if (_Platform_effectManagers[name])
+	{
+		_Debug_crash(3, name)
+	}
+}
+
+
+
+// OUTGOING PORTS
+
+
+function _Platform_outgoingPort(name, converter)
+{
+	_Platform_checkPortName(name);
+	_Platform_effectManagers[name] = {
+		e: _Platform_outgoingPortMap,
+		r: converter,
+		a: _Platform_setupOutgoingPort
+	};
+	return _Platform_leaf(name);
+}
+
+
+var _Platform_outgoingPortMap = F2(function(tagger, value) { return value; });
+
+
+function _Platform_setupOutgoingPort(name)
+{
+	var subs = [];
+	var converter = _Platform_effectManagers[name].r;
+
+	// CREATE MANAGER
+
+	var init = _Process_sleep(0);
+
+	_Platform_effectManagers[name].b = init;
+	_Platform_effectManagers[name].c = F3(function(router, cmdList, state)
+	{
+		for ( ; cmdList.b; cmdList = cmdList.b) // WHILE_CONS
+		{
+			// grab a separate reference to subs in case unsubscribe is called
+			var currentSubs = subs;
+			var value = _Json_unwrap(converter(cmdList.a));
+			for (var i = 0; i < currentSubs.length; i++)
+			{
+				currentSubs[i](value);
+			}
+		}
+		return init;
+	});
+
+	// PUBLIC API
+
+	function subscribe(callback)
+	{
+		subs.push(callback);
+	}
+
+	function unsubscribe(callback)
+	{
+		// copy subs into a new array in case unsubscribe is called within a
+		// subscribed callback
+		subs = subs.slice();
+		var index = subs.indexOf(callback);
+		if (index >= 0)
+		{
+			subs.splice(index, 1);
+		}
+	}
+
+	return {
+		subscribe: subscribe,
+		unsubscribe: unsubscribe
+	};
+}
+
+
+
+// INCOMING PORTS
+
+
+function _Platform_incomingPort(name, converter)
+{
+	_Platform_checkPortName(name);
+	_Platform_effectManagers[name] = {
+		f: _Platform_incomingPortMap,
+		r: converter,
+		a: _Platform_setupIncomingPort
+	};
+	return _Platform_leaf(name);
+}
+
+
+var _Platform_incomingPortMap = F2(function(tagger, finalTagger)
+{
+	return function(value)
+	{
+		return tagger(finalTagger(value));
+	};
+});
+
+
+function _Platform_setupIncomingPort(name, sendToApp)
+{
+	var subs = _List_Nil;
+	var converter = _Platform_effectManagers[name].r;
+
+	// CREATE MANAGER
+
+	var init = _Scheduler_succeed(null);
+
+	_Platform_effectManagers[name].b = init;
+	_Platform_effectManagers[name].c = F3(function(router, subList, state)
+	{
+		subs = subList;
+		return init;
+	});
+
+	// PUBLIC API
+
+	function send(incomingValue)
+	{
+		var result = A2(_Json_run, converter, _Json_wrap(incomingValue));
+
+		$elm$core$Result$isOk(result) || _Debug_crash(4, name, result.a);
+
+		var value = result.a;
+		for (var temp = subs; temp.b; temp = temp.b) // WHILE_CONS
+		{
+			sendToApp(temp.a(value));
+		}
+	}
+
+	return { send: send };
+}
+
+
+
+// EXPORT ELM MODULES
+//
+// Have DEBUG and PROD versions so that we can (1) give nicer errors in
+// debug mode and (2) not pay for the bits needed for that in prod mode.
+//
+
+
+function _Platform_export_UNUSED(exports)
+{
+	scope['Elm']
+		? _Platform_mergeExportsProd(scope['Elm'], exports)
+		: scope['Elm'] = exports;
+}
+
+
+function _Platform_mergeExportsProd(obj, exports)
+{
+	for (var name in exports)
+	{
+		(name in obj)
+			? (name == 'init')
+				? _Debug_crash(6)
+				: _Platform_mergeExportsProd(obj[name], exports[name])
+			: (obj[name] = exports[name]);
+	}
+}
+
+
+function _Platform_export(exports)
+{
+	scope['Elm']
+		? _Platform_mergeExportsDebug('Elm', scope['Elm'], exports)
+		: scope['Elm'] = exports;
+}
+
+
+function _Platform_mergeExportsDebug(moduleName, obj, exports)
+{
+	for (var name in exports)
+	{
+		(name in obj)
+			? (name == 'init')
+				? _Debug_crash(6, moduleName)
+				: _Platform_mergeExportsDebug(moduleName + '.' + name, obj[name], exports[name])
+			: (obj[name] = exports[name]);
+	}
+}
 
 
 /*
@@ -2132,1274 +3341,65 @@ var _MJS_m4x4makeBasis = F3(function(vx, vy, vz) {
 });
 
 
-
-var _String_cons = F2(function(chr, str)
-{
-	return chr + str;
+// eslint-disable-next-line no-unused-vars
+var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap, flipY, url) {
+  var isMipmap = mininify !== 9728 && mininify !== 9729;
+  return _Scheduler_binding(function (callback) {
+    var img = new Image();
+    function createTexture(gl) {
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magnify);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mininify);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, horizontalWrap);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, verticalWrap);
+      if (isMipmap) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      return texture;
+    }
+    img.onload = function () {
+      var width = img.width;
+      var height = img.height;
+      var widthPowerOfTwo = (width & (width - 1)) === 0;
+      var heightPowerOfTwo = (height & (height - 1)) === 0;
+      var isSizeValid = (widthPowerOfTwo && heightPowerOfTwo) || (
+        !isMipmap
+        && horizontalWrap === 33071 // clamp to edge
+        && verticalWrap === 33071
+      );
+      if (isSizeValid) {
+        callback(_Scheduler_succeed({
+          $: 0,
+          createTexture: createTexture,
+          a: width,
+          b: height
+        }));
+      } else {
+        callback(_Scheduler_fail(A2(
+          $elm_explorations$webgl$WebGL$Texture$SizeError,
+          width,
+          height
+        )));
+      }
+    };
+    img.onerror = function () {
+      callback(_Scheduler_fail($elm_explorations$webgl$WebGL$Texture$LoadError));
+    };
+    if (url.slice(0, 5) !== 'data:') {
+      img.crossOrigin = 'Anonymous';
+    }
+    img.src = url;
+  });
 });
 
-function _String_uncons(string)
-{
-	var word = string.charCodeAt(0);
-	return word
-		? $elm$core$Maybe$Just(
-			0xD800 <= word && word <= 0xDBFF
-				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
-				: _Utils_Tuple2(_Utils_chr(string[0]), string.slice(1))
-		)
-		: $elm$core$Maybe$Nothing;
-}
-
-var _String_append = F2(function(a, b)
-{
-	return a + b;
-});
-
-function _String_length(str)
-{
-	return str.length;
-}
-
-var _String_map = F2(function(func, string)
-{
-	var len = string.length;
-	var array = new Array(len);
-	var i = 0;
-	while (i < len)
-	{
-		var word = string.charCodeAt(i);
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			array[i] = func(_Utils_chr(string[i] + string[i+1]));
-			i += 2;
-			continue;
-		}
-		array[i] = func(_Utils_chr(string[i]));
-		i++;
-	}
-	return array.join('');
-});
-
-var _String_filter = F2(function(isGood, str)
-{
-	var arr = [];
-	var len = str.length;
-	var i = 0;
-	while (i < len)
-	{
-		var char = str[i];
-		var word = str.charCodeAt(i);
-		i++;
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			char += str[i];
-			i++;
-		}
-
-		if (isGood(_Utils_chr(char)))
-		{
-			arr.push(char);
-		}
-	}
-	return arr.join('');
-});
-
-function _String_reverse(str)
-{
-	var len = str.length;
-	var arr = new Array(len);
-	var i = 0;
-	while (i < len)
-	{
-		var word = str.charCodeAt(i);
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			arr[len - i] = str[i + 1];
-			i++;
-			arr[len - i] = str[i - 1];
-			i++;
-		}
-		else
-		{
-			arr[len - i] = str[i];
-			i++;
-		}
-	}
-	return arr.join('');
-}
-
-var _String_foldl = F3(function(func, state, string)
-{
-	var len = string.length;
-	var i = 0;
-	while (i < len)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		i++;
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			char += string[i];
-			i++;
-		}
-		state = A2(func, _Utils_chr(char), state);
-	}
-	return state;
-});
-
-var _String_foldr = F3(function(func, state, string)
-{
-	var i = string.length;
-	while (i--)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		if (0xDC00 <= word && word <= 0xDFFF)
-		{
-			i--;
-			char = string[i] + char;
-		}
-		state = A2(func, _Utils_chr(char), state);
-	}
-	return state;
-});
-
-var _String_split = F2(function(sep, str)
-{
-	return str.split(sep);
-});
-
-var _String_join = F2(function(sep, strs)
-{
-	return strs.join(sep);
-});
-
-var _String_slice = F3(function(start, end, str) {
-	return str.slice(start, end);
-});
-
-function _String_trim(str)
-{
-	return str.trim();
-}
-
-function _String_trimLeft(str)
-{
-	return str.replace(/^\s+/, '');
-}
-
-function _String_trimRight(str)
-{
-	return str.replace(/\s+$/, '');
-}
-
-function _String_words(str)
-{
-	return _List_fromArray(str.trim().split(/\s+/g));
-}
-
-function _String_lines(str)
-{
-	return _List_fromArray(str.split(/\r\n|\r|\n/g));
-}
-
-function _String_toUpper(str)
-{
-	return str.toUpperCase();
-}
-
-function _String_toLower(str)
-{
-	return str.toLowerCase();
-}
-
-var _String_any = F2(function(isGood, string)
-{
-	var i = string.length;
-	while (i--)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		if (0xDC00 <= word && word <= 0xDFFF)
-		{
-			i--;
-			char = string[i] + char;
-		}
-		if (isGood(_Utils_chr(char)))
-		{
-			return true;
-		}
-	}
-	return false;
-});
-
-var _String_all = F2(function(isGood, string)
-{
-	var i = string.length;
-	while (i--)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		if (0xDC00 <= word && word <= 0xDFFF)
-		{
-			i--;
-			char = string[i] + char;
-		}
-		if (!isGood(_Utils_chr(char)))
-		{
-			return false;
-		}
-	}
-	return true;
-});
-
-var _String_contains = F2(function(sub, str)
-{
-	return str.indexOf(sub) > -1;
-});
-
-var _String_startsWith = F2(function(sub, str)
-{
-	return str.indexOf(sub) === 0;
-});
-
-var _String_endsWith = F2(function(sub, str)
-{
-	return str.length >= sub.length &&
-		str.lastIndexOf(sub) === str.length - sub.length;
-});
-
-var _String_indexes = F2(function(sub, str)
-{
-	var subLen = sub.length;
-
-	if (subLen < 1)
-	{
-		return _List_Nil;
-	}
-
-	var i = 0;
-	var is = [];
-
-	while ((i = str.indexOf(sub, i)) > -1)
-	{
-		is.push(i);
-		i = i + subLen;
-	}
-
-	return _List_fromArray(is);
-});
-
-
-// TO STRING
-
-function _String_fromNumber(number)
-{
-	return number + '';
-}
-
-
-// INT CONVERSIONS
-
-function _String_toInt(str)
-{
-	var total = 0;
-	var code0 = str.charCodeAt(0);
-	var start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
-
-	for (var i = start; i < str.length; ++i)
-	{
-		var code = str.charCodeAt(i);
-		if (code < 0x30 || 0x39 < code)
-		{
-			return $elm$core$Maybe$Nothing;
-		}
-		total = 10 * total + code - 0x30;
-	}
-
-	return i == start
-		? $elm$core$Maybe$Nothing
-		: $elm$core$Maybe$Just(code0 == 0x2D ? -total : total);
-}
-
-
-// FLOAT CONVERSIONS
-
-function _String_toFloat(s)
-{
-	// check if it is a hex, octal, or binary number
-	if (s.length === 0 || /[\sxbo]/.test(s))
-	{
-		return $elm$core$Maybe$Nothing;
-	}
-	var n = +s;
-	// faster isNaN check
-	return n === n ? $elm$core$Maybe$Just(n) : $elm$core$Maybe$Nothing;
-}
-
-function _String_fromList(chars)
-{
-	return _List_toArray(chars).join('');
-}
-
-
-
-
-function _Char_toCode(char)
-{
-	var code = char.charCodeAt(0);
-	if (0xD800 <= code && code <= 0xDBFF)
-	{
-		return (code - 0xD800) * 0x400 + char.charCodeAt(1) - 0xDC00 + 0x10000
-	}
-	return code;
-}
-
-function _Char_fromCode(code)
-{
-	return _Utils_chr(
-		(code < 0 || 0x10FFFF < code)
-			? '\uFFFD'
-			:
-		(code <= 0xFFFF)
-			? String.fromCharCode(code)
-			:
-		(code -= 0x10000,
-			String.fromCharCode(Math.floor(code / 0x400) + 0xD800, code % 0x400 + 0xDC00)
-		)
-	);
-}
-
-function _Char_toUpper(char)
-{
-	return _Utils_chr(char.toUpperCase());
-}
-
-function _Char_toLower(char)
-{
-	return _Utils_chr(char.toLowerCase());
-}
-
-function _Char_toLocaleUpper(char)
-{
-	return _Utils_chr(char.toLocaleUpperCase());
-}
-
-function _Char_toLocaleLower(char)
-{
-	return _Utils_chr(char.toLocaleLowerCase());
-}
-
-
-
-/**/
-function _Json_errorToString(error)
-{
-	return $elm$json$Json$Decode$errorToString(error);
-}
-//*/
-
-
-// CORE DECODERS
-
-function _Json_succeed(msg)
-{
-	return {
-		$: 0,
-		a: msg
-	};
-}
-
-function _Json_fail(msg)
-{
-	return {
-		$: 1,
-		a: msg
-	};
-}
-
-function _Json_decodePrim(decoder)
-{
-	return { $: 2, b: decoder };
-}
-
-var _Json_decodeInt = _Json_decodePrim(function(value) {
-	return (typeof value !== 'number')
-		? _Json_expecting('an INT', value)
-		:
-	(-2147483647 < value && value < 2147483647 && (value | 0) === value)
-		? $elm$core$Result$Ok(value)
-		:
-	(isFinite(value) && !(value % 1))
-		? $elm$core$Result$Ok(value)
-		: _Json_expecting('an INT', value);
-});
-
-var _Json_decodeBool = _Json_decodePrim(function(value) {
-	return (typeof value === 'boolean')
-		? $elm$core$Result$Ok(value)
-		: _Json_expecting('a BOOL', value);
-});
-
-var _Json_decodeFloat = _Json_decodePrim(function(value) {
-	return (typeof value === 'number')
-		? $elm$core$Result$Ok(value)
-		: _Json_expecting('a FLOAT', value);
-});
-
-var _Json_decodeValue = _Json_decodePrim(function(value) {
-	return $elm$core$Result$Ok(_Json_wrap(value));
-});
-
-var _Json_decodeString = _Json_decodePrim(function(value) {
-	return (typeof value === 'string')
-		? $elm$core$Result$Ok(value)
-		: (value instanceof String)
-			? $elm$core$Result$Ok(value + '')
-			: _Json_expecting('a STRING', value);
-});
-
-function _Json_decodeList(decoder) { return { $: 3, b: decoder }; }
-function _Json_decodeArray(decoder) { return { $: 4, b: decoder }; }
-
-function _Json_decodeNull(value) { return { $: 5, c: value }; }
-
-var _Json_decodeField = F2(function(field, decoder)
-{
-	return {
-		$: 6,
-		d: field,
-		b: decoder
-	};
-});
-
-var _Json_decodeIndex = F2(function(index, decoder)
-{
-	return {
-		$: 7,
-		e: index,
-		b: decoder
-	};
-});
-
-function _Json_decodeKeyValuePairs(decoder)
-{
-	return {
-		$: 8,
-		b: decoder
-	};
-}
-
-function _Json_mapMany(f, decoders)
-{
-	return {
-		$: 9,
-		f: f,
-		g: decoders
-	};
-}
-
-var _Json_andThen = F2(function(callback, decoder)
-{
-	return {
-		$: 10,
-		b: decoder,
-		h: callback
-	};
-});
-
-function _Json_oneOf(decoders)
-{
-	return {
-		$: 11,
-		g: decoders
-	};
-}
-
-
-// DECODING OBJECTS
-
-var _Json_map1 = F2(function(f, d1)
-{
-	return _Json_mapMany(f, [d1]);
-});
-
-var _Json_map2 = F3(function(f, d1, d2)
-{
-	return _Json_mapMany(f, [d1, d2]);
-});
-
-var _Json_map3 = F4(function(f, d1, d2, d3)
-{
-	return _Json_mapMany(f, [d1, d2, d3]);
-});
-
-var _Json_map4 = F5(function(f, d1, d2, d3, d4)
-{
-	return _Json_mapMany(f, [d1, d2, d3, d4]);
-});
-
-var _Json_map5 = F6(function(f, d1, d2, d3, d4, d5)
-{
-	return _Json_mapMany(f, [d1, d2, d3, d4, d5]);
-});
-
-var _Json_map6 = F7(function(f, d1, d2, d3, d4, d5, d6)
-{
-	return _Json_mapMany(f, [d1, d2, d3, d4, d5, d6]);
-});
-
-var _Json_map7 = F8(function(f, d1, d2, d3, d4, d5, d6, d7)
-{
-	return _Json_mapMany(f, [d1, d2, d3, d4, d5, d6, d7]);
-});
-
-var _Json_map8 = F9(function(f, d1, d2, d3, d4, d5, d6, d7, d8)
-{
-	return _Json_mapMany(f, [d1, d2, d3, d4, d5, d6, d7, d8]);
-});
-
-
-// DECODE
-
-var _Json_runOnString = F2(function(decoder, string)
-{
-	try
-	{
-		var value = JSON.parse(string);
-		return _Json_runHelp(decoder, value);
-	}
-	catch (e)
-	{
-		return $elm$core$Result$Err(A2($elm$json$Json$Decode$Failure, 'This is not valid JSON! ' + e.message, _Json_wrap(string)));
-	}
-});
-
-var _Json_run = F2(function(decoder, value)
-{
-	return _Json_runHelp(decoder, _Json_unwrap(value));
-});
-
-function _Json_runHelp(decoder, value)
-{
-	switch (decoder.$)
-	{
-		case 2:
-			return decoder.b(value);
-
-		case 5:
-			return (value === null)
-				? $elm$core$Result$Ok(decoder.c)
-				: _Json_expecting('null', value);
-
-		case 3:
-			if (!_Json_isArray(value))
-			{
-				return _Json_expecting('a LIST', value);
-			}
-			return _Json_runArrayDecoder(decoder.b, value, _List_fromArray);
-
-		case 4:
-			if (!_Json_isArray(value))
-			{
-				return _Json_expecting('an ARRAY', value);
-			}
-			return _Json_runArrayDecoder(decoder.b, value, _Json_toElmArray);
-
-		case 6:
-			var field = decoder.d;
-			if (typeof value !== 'object' || value === null || !(field in value))
-			{
-				return _Json_expecting('an OBJECT with a field named `' + field + '`', value);
-			}
-			var result = _Json_runHelp(decoder.b, value[field]);
-			return ($elm$core$Result$isOk(result)) ? result : $elm$core$Result$Err(A2($elm$json$Json$Decode$Field, field, result.a));
-
-		case 7:
-			var index = decoder.e;
-			if (!_Json_isArray(value))
-			{
-				return _Json_expecting('an ARRAY', value);
-			}
-			if (index >= value.length)
-			{
-				return _Json_expecting('a LONGER array. Need index ' + index + ' but only see ' + value.length + ' entries', value);
-			}
-			var result = _Json_runHelp(decoder.b, value[index]);
-			return ($elm$core$Result$isOk(result)) ? result : $elm$core$Result$Err(A2($elm$json$Json$Decode$Index, index, result.a));
-
-		case 8:
-			if (typeof value !== 'object' || value === null || _Json_isArray(value))
-			{
-				return _Json_expecting('an OBJECT', value);
-			}
-
-			var keyValuePairs = _List_Nil;
-			// TODO test perf of Object.keys and switch when support is good enough
-			for (var key in value)
-			{
-				if (value.hasOwnProperty(key))
-				{
-					var result = _Json_runHelp(decoder.b, value[key]);
-					if (!$elm$core$Result$isOk(result))
-					{
-						return $elm$core$Result$Err(A2($elm$json$Json$Decode$Field, key, result.a));
-					}
-					keyValuePairs = _List_Cons(_Utils_Tuple2(key, result.a), keyValuePairs);
-				}
-			}
-			return $elm$core$Result$Ok($elm$core$List$reverse(keyValuePairs));
-
-		case 9:
-			var answer = decoder.f;
-			var decoders = decoder.g;
-			for (var i = 0; i < decoders.length; i++)
-			{
-				var result = _Json_runHelp(decoders[i], value);
-				if (!$elm$core$Result$isOk(result))
-				{
-					return result;
-				}
-				answer = answer(result.a);
-			}
-			return $elm$core$Result$Ok(answer);
-
-		case 10:
-			var result = _Json_runHelp(decoder.b, value);
-			return (!$elm$core$Result$isOk(result))
-				? result
-				: _Json_runHelp(decoder.h(result.a), value);
-
-		case 11:
-			var errors = _List_Nil;
-			for (var temp = decoder.g; temp.b; temp = temp.b) // WHILE_CONS
-			{
-				var result = _Json_runHelp(temp.a, value);
-				if ($elm$core$Result$isOk(result))
-				{
-					return result;
-				}
-				errors = _List_Cons(result.a, errors);
-			}
-			return $elm$core$Result$Err($elm$json$Json$Decode$OneOf($elm$core$List$reverse(errors)));
-
-		case 1:
-			return $elm$core$Result$Err(A2($elm$json$Json$Decode$Failure, decoder.a, _Json_wrap(value)));
-
-		case 0:
-			return $elm$core$Result$Ok(decoder.a);
-	}
-}
-
-function _Json_runArrayDecoder(decoder, value, toElmValue)
-{
-	var len = value.length;
-	var array = new Array(len);
-	for (var i = 0; i < len; i++)
-	{
-		var result = _Json_runHelp(decoder, value[i]);
-		if (!$elm$core$Result$isOk(result))
-		{
-			return $elm$core$Result$Err(A2($elm$json$Json$Decode$Index, i, result.a));
-		}
-		array[i] = result.a;
-	}
-	return $elm$core$Result$Ok(toElmValue(array));
-}
-
-function _Json_isArray(value)
-{
-	return Array.isArray(value) || (typeof FileList !== 'undefined' && value instanceof FileList);
-}
-
-function _Json_toElmArray(array)
-{
-	return A2($elm$core$Array$initialize, array.length, function(i) { return array[i]; });
-}
-
-function _Json_expecting(type, value)
-{
-	return $elm$core$Result$Err(A2($elm$json$Json$Decode$Failure, 'Expecting ' + type, _Json_wrap(value)));
-}
-
-
-// EQUALITY
-
-function _Json_equality(x, y)
-{
-	if (x === y)
-	{
-		return true;
-	}
-
-	if (x.$ !== y.$)
-	{
-		return false;
-	}
-
-	switch (x.$)
-	{
-		case 0:
-		case 1:
-			return x.a === y.a;
-
-		case 2:
-			return x.b === y.b;
-
-		case 5:
-			return x.c === y.c;
-
-		case 3:
-		case 4:
-		case 8:
-			return _Json_equality(x.b, y.b);
-
-		case 6:
-			return x.d === y.d && _Json_equality(x.b, y.b);
-
-		case 7:
-			return x.e === y.e && _Json_equality(x.b, y.b);
-
-		case 9:
-			return x.f === y.f && _Json_listEquality(x.g, y.g);
-
-		case 10:
-			return x.h === y.h && _Json_equality(x.b, y.b);
-
-		case 11:
-			return _Json_listEquality(x.g, y.g);
-	}
-}
-
-function _Json_listEquality(aDecoders, bDecoders)
-{
-	var len = aDecoders.length;
-	if (len !== bDecoders.length)
-	{
-		return false;
-	}
-	for (var i = 0; i < len; i++)
-	{
-		if (!_Json_equality(aDecoders[i], bDecoders[i]))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-
-// ENCODE
-
-var _Json_encode = F2(function(indentLevel, value)
-{
-	return JSON.stringify(_Json_unwrap(value), null, indentLevel) + '';
-});
-
-function _Json_wrap(value) { return { $: 0, a: value }; }
-function _Json_unwrap(value) { return value.a; }
-
-function _Json_wrap_UNUSED(value) { return value; }
-function _Json_unwrap_UNUSED(value) { return value; }
-
-function _Json_emptyArray() { return []; }
-function _Json_emptyObject() { return {}; }
-
-var _Json_addField = F3(function(key, value, object)
-{
-	object[key] = _Json_unwrap(value);
-	return object;
-});
-
-function _Json_addEntry(func)
-{
-	return F2(function(entry, array)
-	{
-		array.push(_Json_unwrap(func(entry)));
-		return array;
-	});
-}
-
-var _Json_encodeNull = _Json_wrap(null);
-
-
-
-function _Process_sleep(time)
-{
-	return _Scheduler_binding(function(callback) {
-		var id = setTimeout(function() {
-			callback(_Scheduler_succeed(_Utils_Tuple0));
-		}, time);
-
-		return function() { clearTimeout(id); };
-	});
-}
-
-
-
-
-// PROGRAMS
-
-
-var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
-{
-	return _Platform_initialize(
-		flagDecoder,
-		args,
-		impl.init,
-		impl.update,
-		impl.subscriptions,
-		function() { return function() {} }
-	);
-});
-
-
-
-// INITIALIZE A PROGRAM
-
-
-function _Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder)
-{
-	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
-	$elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
-	var managers = {};
-	result = init(result.a);
-	var model = result.a;
-	var stepper = stepperBuilder(sendToApp, model);
-	var ports = _Platform_setupEffects(managers, sendToApp);
-
-	function sendToApp(msg, viewMetadata)
-	{
-		result = A2(update, msg, model);
-		stepper(model = result.a, viewMetadata);
-		_Platform_dispatchEffects(managers, result.b, subscriptions(model));
-	}
-
-	_Platform_dispatchEffects(managers, result.b, subscriptions(model));
-
-	return ports ? { ports: ports } : {};
-}
-
-
-
-// TRACK PRELOADS
-//
-// This is used by code in elm/browser and elm/http
-// to register any HTTP requests that are triggered by init.
-//
-
-
-var _Platform_preload;
-
-
-function _Platform_registerPreload(url)
-{
-	_Platform_preload.add(url);
-}
-
-
-
-// EFFECT MANAGERS
-
-
-var _Platform_effectManagers = {};
-
-
-function _Platform_setupEffects(managers, sendToApp)
-{
-	var ports;
-
-	// setup all necessary effect managers
-	for (var key in _Platform_effectManagers)
-	{
-		var manager = _Platform_effectManagers[key];
-
-		if (manager.a)
-		{
-			ports = ports || {};
-			ports[key] = manager.a(key, sendToApp);
-		}
-
-		managers[key] = _Platform_instantiateManager(manager, sendToApp);
-	}
-
-	return ports;
-}
-
-
-function _Platform_createManager(init, onEffects, onSelfMsg, cmdMap, subMap)
-{
-	return {
-		b: init,
-		c: onEffects,
-		d: onSelfMsg,
-		e: cmdMap,
-		f: subMap
-	};
-}
-
-
-function _Platform_instantiateManager(info, sendToApp)
-{
-	var router = {
-		g: sendToApp,
-		h: undefined
-	};
-
-	var onEffects = info.c;
-	var onSelfMsg = info.d;
-	var cmdMap = info.e;
-	var subMap = info.f;
-
-	function loop(state)
-	{
-		return A2(_Scheduler_andThen, loop, _Scheduler_receive(function(msg)
-		{
-			var value = msg.a;
-
-			if (msg.$ === 0)
-			{
-				return A3(onSelfMsg, router, value, state);
-			}
-
-			return cmdMap && subMap
-				? A4(onEffects, router, value.i, value.j, state)
-				: A3(onEffects, router, cmdMap ? value.i : value.j, state);
-		}));
-	}
-
-	return router.h = _Scheduler_rawSpawn(A2(_Scheduler_andThen, loop, info.b));
-}
-
-
-
-// ROUTING
-
-
-var _Platform_sendToApp = F2(function(router, msg)
-{
-	return _Scheduler_binding(function(callback)
-	{
-		router.g(msg);
-		callback(_Scheduler_succeed(_Utils_Tuple0));
-	});
-});
-
-
-var _Platform_sendToSelf = F2(function(router, msg)
-{
-	return A2(_Scheduler_send, router.h, {
-		$: 0,
-		a: msg
-	});
-});
-
-
-
-// BAGS
-
-
-function _Platform_leaf(home)
-{
-	return function(value)
-	{
-		return {
-			$: 1,
-			k: home,
-			l: value
-		};
-	};
-}
-
-
-function _Platform_batch(list)
-{
-	return {
-		$: 2,
-		m: list
-	};
-}
-
-
-var _Platform_map = F2(function(tagger, bag)
-{
-	return {
-		$: 3,
-		n: tagger,
-		o: bag
-	}
-});
-
-
-
-// PIPE BAGS INTO EFFECT MANAGERS
-
-
-function _Platform_dispatchEffects(managers, cmdBag, subBag)
-{
-	var effectsDict = {};
-	_Platform_gatherEffects(true, cmdBag, effectsDict, null);
-	_Platform_gatherEffects(false, subBag, effectsDict, null);
-
-	for (var home in managers)
-	{
-		_Scheduler_rawSend(managers[home], {
-			$: 'fx',
-			a: effectsDict[home] || { i: _List_Nil, j: _List_Nil }
-		});
-	}
-}
-
-
-function _Platform_gatherEffects(isCmd, bag, effectsDict, taggers)
-{
-	switch (bag.$)
-	{
-		case 1:
-			var home = bag.k;
-			var effect = _Platform_toEffect(isCmd, home, taggers, bag.l);
-			effectsDict[home] = _Platform_insert(isCmd, effect, effectsDict[home]);
-			return;
-
-		case 2:
-			for (var list = bag.m; list.b; list = list.b) // WHILE_CONS
-			{
-				_Platform_gatherEffects(isCmd, list.a, effectsDict, taggers);
-			}
-			return;
-
-		case 3:
-			_Platform_gatherEffects(isCmd, bag.o, effectsDict, {
-				p: bag.n,
-				q: taggers
-			});
-			return;
-	}
-}
-
-
-function _Platform_toEffect(isCmd, home, taggers, value)
-{
-	function applyTaggers(x)
-	{
-		for (var temp = taggers; temp; temp = temp.q)
-		{
-			x = temp.p(x);
-		}
-		return x;
-	}
-
-	var map = isCmd
-		? _Platform_effectManagers[home].e
-		: _Platform_effectManagers[home].f;
-
-	return A2(map, applyTaggers, value)
-}
-
-
-function _Platform_insert(isCmd, newEffect, effects)
-{
-	effects = effects || { i: _List_Nil, j: _List_Nil };
-
-	isCmd
-		? (effects.i = _List_Cons(newEffect, effects.i))
-		: (effects.j = _List_Cons(newEffect, effects.j));
-
-	return effects;
-}
-
-
-
-// PORTS
-
-
-function _Platform_checkPortName(name)
-{
-	if (_Platform_effectManagers[name])
-	{
-		_Debug_crash(3, name)
-	}
-}
-
-
-
-// OUTGOING PORTS
-
-
-function _Platform_outgoingPort(name, converter)
-{
-	_Platform_checkPortName(name);
-	_Platform_effectManagers[name] = {
-		e: _Platform_outgoingPortMap,
-		r: converter,
-		a: _Platform_setupOutgoingPort
-	};
-	return _Platform_leaf(name);
-}
-
-
-var _Platform_outgoingPortMap = F2(function(tagger, value) { return value; });
-
-
-function _Platform_setupOutgoingPort(name)
-{
-	var subs = [];
-	var converter = _Platform_effectManagers[name].r;
-
-	// CREATE MANAGER
-
-	var init = _Process_sleep(0);
-
-	_Platform_effectManagers[name].b = init;
-	_Platform_effectManagers[name].c = F3(function(router, cmdList, state)
-	{
-		for ( ; cmdList.b; cmdList = cmdList.b) // WHILE_CONS
-		{
-			// grab a separate reference to subs in case unsubscribe is called
-			var currentSubs = subs;
-			var value = _Json_unwrap(converter(cmdList.a));
-			for (var i = 0; i < currentSubs.length; i++)
-			{
-				currentSubs[i](value);
-			}
-		}
-		return init;
-	});
-
-	// PUBLIC API
-
-	function subscribe(callback)
-	{
-		subs.push(callback);
-	}
-
-	function unsubscribe(callback)
-	{
-		// copy subs into a new array in case unsubscribe is called within a
-		// subscribed callback
-		subs = subs.slice();
-		var index = subs.indexOf(callback);
-		if (index >= 0)
-		{
-			subs.splice(index, 1);
-		}
-	}
-
-	return {
-		subscribe: subscribe,
-		unsubscribe: unsubscribe
-	};
-}
-
-
-
-// INCOMING PORTS
-
-
-function _Platform_incomingPort(name, converter)
-{
-	_Platform_checkPortName(name);
-	_Platform_effectManagers[name] = {
-		f: _Platform_incomingPortMap,
-		r: converter,
-		a: _Platform_setupIncomingPort
-	};
-	return _Platform_leaf(name);
-}
-
-
-var _Platform_incomingPortMap = F2(function(tagger, finalTagger)
-{
-	return function(value)
-	{
-		return tagger(finalTagger(value));
-	};
-});
-
-
-function _Platform_setupIncomingPort(name, sendToApp)
-{
-	var subs = _List_Nil;
-	var converter = _Platform_effectManagers[name].r;
-
-	// CREATE MANAGER
-
-	var init = _Scheduler_succeed(null);
-
-	_Platform_effectManagers[name].b = init;
-	_Platform_effectManagers[name].c = F3(function(router, subList, state)
-	{
-		subs = subList;
-		return init;
-	});
-
-	// PUBLIC API
-
-	function send(incomingValue)
-	{
-		var result = A2(_Json_run, converter, _Json_wrap(incomingValue));
-
-		$elm$core$Result$isOk(result) || _Debug_crash(4, name, result.a);
-
-		var value = result.a;
-		for (var temp = subs; temp.b; temp = temp.b) // WHILE_CONS
-		{
-			sendToApp(temp.a(value));
-		}
-	}
-
-	return { send: send };
-}
-
-
-
-// EXPORT ELM MODULES
-//
-// Have DEBUG and PROD versions so that we can (1) give nicer errors in
-// debug mode and (2) not pay for the bits needed for that in prod mode.
-//
-
-
-function _Platform_export_UNUSED(exports)
-{
-	scope['Elm']
-		? _Platform_mergeExportsProd(scope['Elm'], exports)
-		: scope['Elm'] = exports;
-}
-
-
-function _Platform_mergeExportsProd(obj, exports)
-{
-	for (var name in exports)
-	{
-		(name in obj)
-			? (name == 'init')
-				? _Debug_crash(6)
-				: _Platform_mergeExportsProd(obj[name], exports[name])
-			: (obj[name] = exports[name]);
-	}
-}
-
-
-function _Platform_export(exports)
-{
-	scope['Elm']
-		? _Platform_mergeExportsDebug('Elm', scope['Elm'], exports)
-		: scope['Elm'] = exports;
-}
-
-
-function _Platform_mergeExportsDebug(moduleName, obj, exports)
-{
-	for (var name in exports)
-	{
-		(name in obj)
-			? (name == 'init')
-				? _Debug_crash(6, moduleName)
-				: _Platform_mergeExportsDebug(moduleName + '.' + name, obj[name], exports[name])
-			: (obj[name] = exports[name]);
-	}
-}
+// eslint-disable-next-line no-unused-vars
+var _Texture_size = function (texture) {
+  return _Utils_Tuple2(texture.a, texture.b);
+};
 
 
 
@@ -6147,8 +6147,8 @@ var $author$project$Playground$Internal$Time = F2(
 	});
 var $elm$core$Basics$True = {$: 'True'};
 var $elm$core$Basics$add = _Basics_add;
-var $elm$core$Basics$apR = F2(
-	function (x, f) {
+var $elm$core$Basics$apL = F2(
+	function (f, x) {
 		return f(x);
 	});
 var $elm$core$Set$Set_elm_builtin = function (a) {
@@ -6156,162 +6156,9 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 };
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $author$project$Playground$Internal$emptyKeyboard = {backspace: false, down: false, enter: false, keys: $elm$core$Set$empty, left: false, right: false, shift: false, space: false, up: false};
-var $author$project$Playground$Internal$Fail = function (a) {
-	return {$: 'Fail', a: a};
-};
-var $author$project$Playground$Internal$Success = function (a) {
-	return {$: 'Success', a: a};
-};
-var $elm$core$Dict$Black = {$: 'Black'};
-var $elm$core$Dict$RBNode_elm_builtin = F5(
-	function (a, b, c, d, e) {
-		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
-	});
-var $elm$core$Dict$Red = {$: 'Red'};
-var $elm$core$Dict$balance = F5(
-	function (color, key, value, left, right) {
-		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
-			var _v1 = right.a;
-			var rK = right.b;
-			var rV = right.c;
-			var rLeft = right.d;
-			var rRight = right.e;
-			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-				var _v3 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var lLeft = left.d;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					key,
-					value,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					rK,
-					rV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
-					rRight);
-			}
-		} else {
-			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
-				var _v5 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var _v6 = left.d;
-				var _v7 = _v6.a;
-				var llK = _v6.b;
-				var llV = _v6.c;
-				var llLeft = _v6.d;
-				var llRight = _v6.e;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					lK,
-					lV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
-			} else {
-				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
-			}
-		}
-	});
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$insertHelp = F3(
-	function (key, value, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
-		} else {
-			var nColor = dict.a;
-			var nKey = dict.b;
-			var nValue = dict.c;
-			var nLeft = dict.d;
-			var nRight = dict.e;
-			var _v1 = A2($elm$core$Basics$compare, key, nKey);
-			switch (_v1.$) {
-				case 'LT':
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						A3($elm$core$Dict$insertHelp, key, value, nLeft),
-						nRight);
-				case 'EQ':
-					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
-				default:
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						nLeft,
-						A3($elm$core$Dict$insertHelp, key, value, nRight));
-			}
-		}
-	});
-var $elm$core$Dict$insert = F3(
-	function (key, value, dict) {
-		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
-var $elm_explorations$webgl$WebGL$Texture$LoadError = {$: 'LoadError'};
-var $elm_explorations$webgl$WebGL$Texture$SizeError = F2(
-	function (a, b) {
-		return {$: 'SizeError', a: a, b: b};
-	});
-var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
-var $elm$core$Basics$toFloat = _Basics_toFloat;
-var $elm$core$Maybe$Just = function (a) {
-	return {$: 'Just', a: a};
-};
-var $elm$core$Maybe$Nothing = {$: 'Nothing'};
-var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
-var $author$project$Playground$Internal$gotTextures = F2(
-	function (r, textures) {
-		if (r.$ === 'Ok') {
-			var _v1 = r.a;
-			var name = _v1.a;
-			var t = _v1.b;
-			return A2(
-				$elm$core$Dict$insert,
-				name,
-				$author$project$Playground$Internal$Success(
-					{
-						size: function (_v2) {
-							var w = _v2.a;
-							var h = _v2.b;
-							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
-						}(
-							$elm_explorations$webgl$WebGL$Texture$size(t)),
-						texture: t
-					}))(textures);
-		} else {
-			var _v3 = r.a;
-			var name = _v3.a;
-			var err = _v3.b;
-			return A3(
-				$elm$core$Dict$insert,
-				name,
-				$author$project$Playground$Internal$Fail(err),
-				textures);
-		}
+var $elm$core$Basics$apR = F2(
+	function (x, f) {
+		return f(x);
 	});
 var $elm$core$Tuple$mapFirst = F2(
 	function (func, _v0) {
@@ -6326,18 +6173,6 @@ var $author$project$Playground$Internal$mouseClick = F2(
 		return _Utils_update(
 			mouse,
 			{click: bool});
-	});
-var $author$project$Playground$Internal$mouseDown = F2(
-	function (bool, mouse) {
-		return _Utils_update(
-			mouse,
-			{down: bool});
-	});
-var $author$project$Playground$Internal$mouseMove = F3(
-	function (x, y, mouse) {
-		return _Utils_update(
-			mouse,
-			{x: x, y: y});
 	});
 var $elm$core$Result$Err = function (a) {
 	return {$: 'Err', a: a};
@@ -6360,6 +6195,10 @@ var $elm$core$Result$Ok = function (a) {
 var $elm$json$Json$Decode$OneOf = function (a) {
 	return {$: 'OneOf', a: a};
 };
+var $elm$core$Maybe$Just = function (a) {
+	return {$: 'Just', a: a};
+};
+var $elm$core$Maybe$Nothing = {$: 'Nothing'};
 var $elm$core$String$all = _String_all;
 var $elm$core$Basics$and = _Basics_and;
 var $elm$core$Basics$append = _Utils_append;
@@ -6586,6 +6425,7 @@ var $elm$core$Basics$logBase = F2(
 	function (base, number) {
 		return _Basics_log(number) / _Basics_log(base);
 	});
+var $elm$core$Basics$toFloat = _Basics_toFloat;
 var $elm$core$Array$shiftStep = $elm$core$Basics$ceiling(
 	A2($elm$core$Basics$logBase, 2, $elm$core$Array$branchFactor));
 var $elm$core$Array$empty = A4($elm$core$Array$Array_elm_builtin, 0, $elm$core$Array$shiftStep, $elm$core$Elm$JsArray$empty, $elm$core$Elm$JsArray$empty);
@@ -6593,10 +6433,6 @@ var $elm$core$Elm$JsArray$initialize = _JsArray_initialize;
 var $elm$core$Array$Leaf = function (a) {
 	return {$: 'Leaf', a: a};
 };
-var $elm$core$Basics$apL = F2(
-	function (f, x) {
-		return f(x);
-	});
 var $elm$core$Basics$eq = _Utils_equal;
 var $elm$core$Basics$floor = _Basics_floor;
 var $elm$core$Elm$JsArray$length = _JsArray_length;
@@ -6724,10 +6560,6 @@ var $elm$core$Result$isOk = function (result) {
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $elm$time$Time$posixToMillis = function (_v0) {
-	var millis = _v0.a;
-	return millis;
-};
 var $elm$core$List$foldrHelper = F4(
 	function (fn, acc, ctr, ls) {
 		if (!ls.b) {
@@ -6796,6 +6628,7 @@ var $author$project$Playground$Transformation$apply = F2(
 	function (a, b) {
 		return {a11: (a.a11 * b.a11) + (a.a12 * b.a21), a12: (a.a11 * b.a12) + (a.a12 * b.a22), a13: ((a.a11 * b.a13) + (a.a12 * b.a23)) + a.a13, a21: (a.a21 * b.a11) + (a.a22 * b.a21), a22: (a.a21 * b.a12) + (a.a22 * b.a22), a23: ((a.a21 * b.a13) + (a.a22 * b.a23)) + a.a23};
 	});
+var $elm$core$Basics$compare = _Utils_compare;
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
 		get:
@@ -6825,6 +6658,114 @@ var $elm$core$Dict$get = F2(
 						continue get;
 				}
 			}
+		}
+	});
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
 		}
 	});
 var $elm$core$Set$insert = F2(
@@ -7103,6 +7044,11 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
+var $elm_explorations$webgl$WebGL$Texture$LoadError = {$: 'LoadError'};
+var $elm_explorations$webgl$WebGL$Texture$SizeError = F2(
+	function (a, b) {
+		return {$: 'SizeError', a: a, b: b};
+	});
 var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 	function (_v0, url) {
 		var magnify = _v0.magnify;
@@ -7175,6 +7121,97 @@ var $author$project$Playground$Internal$requestTexture = F2(
 				_Utils_Tuple2(textures, _List_Nil),
 				missing));
 	});
+var $author$project$Playground$Internal$gameTick = F3(
+	function (viewMemory, updateMemory, model) {
+		var computer = model.computer;
+		var memory = model.memory;
+		var textures = model.textures;
+		var newMemory = A2(updateMemory, computer, memory);
+		var newComputer = computer.mouse.click ? _Utils_update(
+			computer,
+			{
+				mouse: A2($author$project$Playground$Internal$mouseClick, false, computer.mouse)
+			}) : computer;
+		var _v0 = A3(
+			$author$project$Playground$Internal$render,
+			computer.screen,
+			textures,
+			A2(viewMemory, newComputer, newMemory));
+		var entities = _v0.a;
+		var missing = _v0.b;
+		if (!missing.b) {
+			return _Utils_Tuple2(
+				$author$project$Playground$Internal$Game(
+					_Utils_update(
+						model,
+						{computer: newComputer, entities: entities, memory: newMemory})),
+				$elm$core$Platform$Cmd$none);
+		} else {
+			return A2(
+				$elm$core$Tuple$mapFirst,
+				function (loadingTextures) {
+					return $author$project$Playground$Internal$Game(
+						_Utils_update(
+							model,
+							{computer: newComputer, entities: entities, memory: newMemory, textures: loadingTextures}));
+				},
+				A2($author$project$Playground$Internal$requestTexture, missing, textures));
+		}
+	});
+var $author$project$Playground$Internal$Fail = function (a) {
+	return {$: 'Fail', a: a};
+};
+var $author$project$Playground$Internal$Success = function (a) {
+	return {$: 'Success', a: a};
+};
+var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
+var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
+var $author$project$Playground$Internal$gotTextures = F2(
+	function (r, textures) {
+		if (r.$ === 'Ok') {
+			var _v1 = r.a;
+			var name = _v1.a;
+			var t = _v1.b;
+			return A2(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Success(
+					{
+						size: function (_v2) {
+							var w = _v2.a;
+							var h = _v2.b;
+							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
+						}(
+							$elm_explorations$webgl$WebGL$Texture$size(t)),
+						texture: t
+					}))(textures);
+		} else {
+			var _v3 = r.a;
+			var name = _v3.a;
+			var err = _v3.b;
+			return A3(
+				$elm$core$Dict$insert,
+				name,
+				$author$project$Playground$Internal$Fail(err),
+				textures);
+		}
+	});
+var $author$project$Playground$Internal$mouseDown = F2(
+	function (bool, mouse) {
+		return _Utils_update(
+			mouse,
+			{down: bool});
+	});
+var $author$project$Playground$Internal$mouseMove = F3(
+	function (x, y, mouse) {
+		return _Utils_update(
+			mouse,
+			{x: x, y: y});
+	});
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
 var $author$project$Playground$Internal$toScreen = F2(
 	function (width, height) {
 		return {bottom: (-height) / 2, height: height, left: (-width) / 2, right: width / 2, top: height / 2, width: width};
@@ -7596,57 +7633,29 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 		var memory = model.memory;
 		var textures = model.textures;
 		var computer = model.computer;
-		switch (msg.$) {
-			case 'Tick':
-				var time = msg.a;
-				var _v2 = computer.time;
-				var timeWas = _v2.a;
-				var d = $elm$time$Time$posixToMillis(time) - $elm$time$Time$posixToMillis(timeWas);
-				var newModel = _Utils_update(
-					model,
-					{
-						computer: computer.mouse.click ? _Utils_update(
-							computer,
+		return A3(
+			$author$project$Playground$Internal$gameTick,
+			viewMemory,
+			updateMemory,
+			function () {
+				switch (msg.$) {
+					case 'Tick':
+						var time = msg.a;
+						var _v2 = computer.time;
+						var timeWas = _v2.a;
+						var d = $elm$time$Time$posixToMillis(time) - $elm$time$Time$posixToMillis(timeWas);
+						return _Utils_update(
+							model,
 							{
-								mouse: A2($author$project$Playground$Internal$mouseClick, false, computer.mouse),
-								time: A2($author$project$Playground$Internal$Time, time, d)
-							}) : _Utils_update(
-							computer,
-							{
-								time: A2($author$project$Playground$Internal$Time, time, d)
-							}),
-						memory: A2(updateMemory, computer, memory)
-					});
-				var _v3 = A3(
-					$author$project$Playground$Internal$render,
-					computer.screen,
-					textures,
-					A2(viewMemory, newModel.computer, newModel.memory));
-				var entities = _v3.a;
-				var missing = _v3.b;
-				if (!missing.b) {
-					return _Utils_Tuple2(
-						$author$project$Playground$Internal$Game(
-							_Utils_update(
-								newModel,
-								{entities: entities})),
-						$elm$core$Platform$Cmd$none);
-				} else {
-					return A2(
-						$elm$core$Tuple$mapFirst,
-						function (loadingTextures) {
-							return $author$project$Playground$Internal$Game(
-								_Utils_update(
-									newModel,
-									{entities: entities, textures: loadingTextures}));
-						},
-						A2($author$project$Playground$Internal$requestTexture, missing, textures));
-				}
-			case 'GotViewport':
-				var viewport = msg.a.viewport;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+								computer: _Utils_update(
+									computer,
+									{
+										time: A2($author$project$Playground$Internal$Time, time, d)
+									})
+							});
+					case 'GotViewport':
+						var viewport = msg.a.viewport;
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7654,26 +7663,20 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									{
 										screen: A2($author$project$Playground$Internal$toScreen, viewport.width, viewport.height)
 									})
-							})),
-					$elm$core$Platform$Cmd$none);
-			case 'Resized':
-				var newScreen = msg.a;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					case 'Resized':
+						var newScreen = msg.a;
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{screen: newScreen})
-							})),
-					$elm$core$Platform$Cmd$none);
-			case 'KeyChanged':
-				var isDown = msg.a;
-				var key = msg.b;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					case 'KeyChanged':
+						var isDown = msg.a;
+						var key = msg.b;
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7681,16 +7684,13 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									{
 										keyboard: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.keyboard)
 									})
-							})),
-					$elm$core$Platform$Cmd$none);
-			case 'MouseMove':
-				var pageX = msg.a;
-				var pageY = msg.b;
-				var y = computer.screen.top - pageY;
-				var x = computer.screen.left + pageX;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					case 'MouseMove':
+						var pageX = msg.a;
+						var pageY = msg.b;
+						var y = computer.screen.top - pageY;
+						var x = computer.screen.left + pageX;
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7698,12 +7698,9 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									{
 										mouse: A3($author$project$Playground$Internal$mouseMove, x, y, computer.mouse)
 									})
-							})),
-					$elm$core$Platform$Cmd$none);
-			case 'MouseClick':
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					case 'MouseClick':
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7711,13 +7708,10 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									{
 										mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse)
 									})
-							})),
-					$elm$core$Platform$Cmd$none);
-			case 'MouseButton':
-				var isDown = msg.a;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					case 'MouseButton':
+						var isDown = msg.a;
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7725,13 +7719,10 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									{
 										mouse: A2($author$project$Playground$Internal$mouseDown, isDown, computer.mouse)
 									})
-							})),
-					$elm$core$Platform$Cmd$none);
-			case 'VisibilityChanged':
-				var vis = msg.a;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					case 'VisibilityChanged':
+						var vis = msg.a;
+						return _Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7741,19 +7732,16 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 										mouse: A4($author$project$Playground$Internal$Mouse, computer.mouse.x, computer.mouse.y, false, false)
 									}),
 								visibility: vis
-							})),
-					$elm$core$Platform$Cmd$none);
-			default:
-				var r = msg.a;
-				return _Utils_Tuple2(
-					$author$project$Playground$Internal$Game(
-						_Utils_update(
+							});
+					default:
+						var r = msg.a;
+						return _Utils_update(
 							model,
 							{
 								textures: A2($author$project$Playground$Internal$gotTextures, r, model.textures)
-							})),
-					$elm$core$Platform$Cmd$none);
-		}
+							});
+				}
+			}());
 	});
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$map2 = _Json_map2;
@@ -8943,7 +8931,7 @@ var $author$project$Playground$Render$setAlpha = function (c) {
 		$elm_explorations$linear_algebra$Math$Vector3$toRecord(c));
 };
 var $author$project$Playground$Shader$vertTile = {
-	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float index;\n            uniform vec2 spriteSize;\n            uniform vec2 uImgSize;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                vec2 ratio = spriteSize / uImgSize;\n                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);\n                float column = mod(index, uImgSize.x / spriteSize.x);\n                vec2 offset = vec2(column, row) * ratio;\n                uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, 1.0, 1.0);\n            }\n        ',
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float index;\n            uniform vec2 spriteSize;\n            uniform vec2 uImgSize;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                vec2 ratio = spriteSize / uImgSize;\n                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);\n                float column = mod(index, uImgSize.x / spriteSize.x);\n                vec2 offset = vec2(column, row) * ratio;\n                uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
 	attributes: {aP: 'aP'},
 	uniforms: {index: 'index', spriteSize: 'spriteSize', uImgSize: 'uImgSize', uP: 'uP', uT: 'uT'}
 };
