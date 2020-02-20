@@ -154,7 +154,7 @@ vertTile =
                 float column = mod(index, uImgSize.x / spriteSize.x);
                 vec2 offset = vec2(column, row) * ratio;
                 uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;
-                gl_Position = vec4(aP * mat2(uT) + uP, 1.0, 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
             }
         |]
 

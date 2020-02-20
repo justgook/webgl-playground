@@ -209,78 +209,95 @@ gotTextures r textures =
 
 gameUpdate : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> Msg -> Game memory -> ( Game memory, Cmd Msg )
 gameUpdate viewMemory updateMemory msg (Game ({ visibility, memory, textures, computer } as model)) =
-    case msg of
-        Tick time ->
-            let
-                (Time timeWas _) =
-                    computer.time
+    gameTick viewMemory updateMemory <|
+        case msg of
+            Tick time ->
+                let
+                    (Time timeWas _) =
+                        computer.time
 
-                d =
-                    Time.posixToMillis time - Time.posixToMillis timeWas
+                    d =
+                        Time.posixToMillis time - Time.posixToMillis timeWas
+                in
+                { model | computer = { computer | time = Time time d } }
 
-                newModel =
-                    { model
-                        | memory = updateMemory computer memory
-                        , computer =
-                            if computer.mouse.click then
-                                { computer | time = Time time d, mouse = mouseClick False computer.mouse }
+            GotViewport { viewport } ->
+                { model | computer = { computer | screen = toScreen viewport.width viewport.height } }
 
-                            else
-                                { computer | time = Time time d }
-                    }
+            Resized newScreen ->
+                { model | computer = { computer | screen = newScreen } }
 
-                --TODO move that after all updates
-                ( entities, missing ) =
-                    render computer.screen textures (viewMemory newModel.computer newModel.memory)
-            in
-            case missing of
-                [] ->
-                    ( Game { newModel | entities = entities }, Cmd.none )
+            KeyChanged isDown key ->
+                { model | computer = { computer | keyboard = updateKeyboard isDown key computer.keyboard } }
 
-                _ ->
-                    requestTexture missing textures
-                        |> Tuple.mapFirst (\loadingTextures -> Game { newModel | entities = entities, textures = loadingTextures })
+            MouseMove pageX pageY ->
+                let
+                    x =
+                        computer.screen.left + pageX
 
-        GotViewport { viewport } ->
-            ( Game { model | computer = { computer | screen = toScreen viewport.width viewport.height } }, Cmd.none )
+                    y =
+                        computer.screen.top - pageY
+                in
+                { model | computer = { computer | mouse = mouseMove x y computer.mouse } }
 
-        Resized newScreen ->
-            ( Game { model | computer = { computer | screen = newScreen } }, Cmd.none )
+            MouseClick ->
+                { model | computer = { computer | mouse = mouseClick True computer.mouse } }
 
-        KeyChanged isDown key ->
-            ( Game { model | computer = { computer | keyboard = updateKeyboard isDown key computer.keyboard } }, Cmd.none )
+            MouseButton isDown ->
+                { model | computer = { computer | mouse = mouseDown isDown computer.mouse } }
 
-        MouseMove pageX pageY ->
-            let
-                x =
-                    computer.screen.left + pageX
+            VisibilityChanged vis ->
+                { model
+                    | visibility = vis
+                    , computer =
+                        { computer
+                            | keyboard = emptyKeyboard
+                            , mouse = Mouse computer.mouse.x computer.mouse.y False False
+                        }
+                }
 
-                y =
-                    computer.screen.top - pageY
-            in
-            ( Game { model | computer = { computer | mouse = mouseMove x y computer.mouse } }, Cmd.none )
+            GotTexture r ->
+                { model | textures = gotTextures r model.textures }
 
-        MouseClick ->
-            ( Game { model | computer = { computer | mouse = mouseClick True computer.mouse } }, Cmd.none )
 
-        MouseButton isDown ->
-            ( Game { model | computer = { computer | mouse = mouseDown isDown computer.mouse } }, Cmd.none )
+gameTick viewMemory updateMemory ({ computer, memory, textures } as model) =
+    let
+        newMemory =
+            updateMemory computer memory
 
-        VisibilityChanged vis ->
-            ( { model
-                | visibility = vis
-                , computer =
-                    { computer
-                        | keyboard = emptyKeyboard
-                        , mouse = Mouse computer.mouse.x computer.mouse.y False False
-                    }
-              }
-                |> Game
+        newComputer =
+            if computer.mouse.click then
+                { computer | mouse = mouseClick False computer.mouse }
+
+            else
+                computer
+
+        ( entities, missing ) =
+            render computer.screen textures (viewMemory newComputer newMemory)
+    in
+    case missing of
+        [] ->
+            ( Game
+                { model
+                    | entities = entities
+                    , computer = newComputer
+                    , memory = newMemory
+                }
             , Cmd.none
             )
 
-        GotTexture r ->
-            ( Game { model | textures = gotTextures r model.textures }, Cmd.none )
+        _ ->
+            requestTexture missing textures
+                |> Tuple.mapFirst
+                    (\loadingTextures ->
+                        Game
+                            { model
+                                | entities = entities
+                                , textures = loadingTextures
+                                , computer = newComputer
+                                , memory = newMemory
+                            }
+                    )
 
 
 
