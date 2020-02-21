@@ -1,7 +1,7 @@
 module Playground.Advanced exposing
     ( custom, useTexture
     , Render, Opacity, ScaleRotateSkew, Translate
-    , embed, get, edit, subscriptions, resize, cacheTextures
+    , embed, get, edit, subscriptions, resize, updateTexture
     )
 
 {-| Advanced user section, for:
@@ -23,14 +23,15 @@ module Playground.Advanced exposing
 
 # Embedding
 
-@docs embed, get, edit, subscriptions, resize, cacheTextures
+@docs embed, get, edit, subscriptions, resize, updateTexture
 
 -}
 
+import Dict
 import Html exposing (Html)
 import Math.Vector2 exposing (Vec2)
 import Math.Vector4 exposing (Vec4)
-import Playground.Internal as Internal exposing (Form(..), Game(..), Number, Shape(..))
+import Playground.Internal as Internal exposing (Form(..), Game(..), Number, Shape(..), TextureData(..))
 import WebGL exposing (Entity)
 import WebGL.Texture as Texture exposing (Texture)
 
@@ -152,10 +153,43 @@ resize =
 with slow network that can take some time,
 but for more advanced games and more smooth transition you can cache textures for later use,
 so when you need show new image - texture already there.
+
+`updateTexture` gives you control over textures stored in `Game`
+
+    newModel =
+        model
+            --add new texture
+            |> updateTexture "img1.png" (\_ -> Just myTexture)
+            --remove texture
+            |> updateTexture "img2.png" (\_ -> Nothing)
+
 -}
-cacheTextures : ( String, Texture ) -> Internal.Msg
-cacheTextures =
-    Internal.setTexture
+updateTexture : String -> (Maybe Texture -> Maybe Texture) -> Game memory -> Game memory
+updateTexture key fn (Game ({ textures } as model)) =
+    Game
+        { model
+            | textures =
+                Dict.update key
+                    (\v ->
+                        (case v of
+                            Just (Success { texture }) ->
+                                fn (Just texture)
+
+                            _ ->
+                                fn Nothing
+                        )
+                            |> Maybe.map
+                                (\t ->
+                                    Success
+                                        { texture = t
+                                        , size =
+                                            Texture.size t
+                                                |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
+                                        }
+                                )
+                    )
+                    textures
+        }
 
 
 {-| Create Your own Render and use it in [`Advanced.custom`](Playground-Advanced#custom) to create [`Shape`](Playground#Shape)
