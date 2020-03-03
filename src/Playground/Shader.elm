@@ -302,6 +302,7 @@ fragImageSaturation =
 rotSprite =
     --https://discover.therookies.co/2019/08/13/unity-masterclass-how-to-set-up-your-project-for-pixel-perfect-retro-8-bit-games/
     --https://en.wikipedia.org/wiki/Pixel-art_scaling_algorithms#RotSprite
+    --https://github.com/libretro/glsl-shaders/blob/master/scalenx/shaders/scale2x.glsl
     [glsl|
         precision mediump float;
         varying vec2 uv;
