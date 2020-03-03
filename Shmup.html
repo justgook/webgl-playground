@@ -7671,6 +7671,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 		var memory = model.memory;
 		var textures = model.textures;
 		var computer = model.computer;
+		var _v1 = computer.time;
+		var timeWas = _v1.a;
 		return A3(
 			$author$project$Playground$Internal$gameTick,
 			viewMemory,
@@ -7679,8 +7681,6 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 				switch (msg.$) {
 					case 'Tick':
 						var time = msg.a;
-						var _v2 = computer.time;
-						var timeWas = _v2.a;
 						var d = $elm$time$Time$posixToMillis(time) - $elm$time$Time$posixToMillis(timeWas);
 						return _Utils_update(
 							model,
@@ -7699,7 +7699,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 								computer: _Utils_update(
 									computer,
 									{
-										screen: A2($author$project$Playground$Internal$toScreen, viewport.width, viewport.height)
+										screen: A2($author$project$Playground$Internal$toScreen, viewport.width, viewport.height),
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
 									})
 							});
 					case 'Resized':
@@ -7709,7 +7710,10 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 							{
 								computer: _Utils_update(
 									computer,
-									{screen: newScreen})
+									{
+										screen: newScreen,
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+									})
 							});
 					case 'KeyChanged':
 						var isDown = msg.a;
@@ -7720,7 +7724,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 								computer: _Utils_update(
 									computer,
 									{
-										keyboard: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.keyboard)
+										keyboard: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.keyboard),
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
 									})
 							});
 					case 'MouseMove':
@@ -7734,7 +7739,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 								computer: _Utils_update(
 									computer,
 									{
-										mouse: A3($author$project$Playground$Internal$mouseMove, x, y, computer.mouse)
+										mouse: A3($author$project$Playground$Internal$mouseMove, x, y, computer.mouse),
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
 									})
 							});
 					case 'MouseClick':
@@ -7744,7 +7750,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 								computer: _Utils_update(
 									computer,
 									{
-										mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse)
+										mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse),
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
 									})
 							});
 					case 'MouseButton':
@@ -7755,7 +7762,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 								computer: _Utils_update(
 									computer,
 									{
-										mouse: A2($author$project$Playground$Internal$mouseDown, isDown, computer.mouse)
+										mouse: A2($author$project$Playground$Internal$mouseDown, isDown, computer.mouse),
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
 									})
 							});
 					case 'VisibilityChanged':
@@ -7767,7 +7775,8 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									computer,
 									{
 										keyboard: $author$project$Playground$Internal$emptyKeyboard,
-										mouse: A4($author$project$Playground$Internal$Mouse, computer.mouse.x, computer.mouse.y, false, false)
+										mouse: A4($author$project$Playground$Internal$Mouse, computer.mouse.x, computer.mouse.y, false, false),
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
 									}),
 								visibility: vis
 							});
@@ -7776,6 +7785,11 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 						return _Utils_update(
 							model,
 							{
+								computer: _Utils_update(
+									computer,
+									{
+										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+									}),
 								textures: A2($author$project$Playground$Internal$gotTextures, r, model.textures)
 							});
 				}
