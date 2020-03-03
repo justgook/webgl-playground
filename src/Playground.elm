@@ -561,7 +561,11 @@ independent from frame rate:
         [ square green 40 |> moveRight offset ]
 
     update computer offset =
-        offset + 1 * delta computer.time
+        delta computer.time
+            |> clamp 0 30
+            |> toFloat
+            |> (*) 0.1
+            |> (+) offset
 
 -}
 delta : Time -> Int
