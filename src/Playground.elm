@@ -700,13 +700,13 @@ animationUpdate viewFrame msg ((Animation v screen textures entities ((Internal.
                         |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Internal.Time posix d))
 
         VisibilityChanged vis ->
-            ( Animation vis screen textures entities t, Cmd.none )
+            ( Animation vis screen textures entities (Internal.Time timeWas 0), Cmd.none )
 
         GotViewport { viewport } ->
             ( Animation v (Internal.toScreen viewport.width viewport.height) textures entities t, Cmd.none )
 
         Resized newScreen ->
-            ( Animation v newScreen textures entities t, Cmd.none )
+            ( Animation v newScreen textures entities (Internal.Time timeWas 0), Cmd.none )
 
         KeyChanged _ _ ->
             ( state, Cmd.none )
