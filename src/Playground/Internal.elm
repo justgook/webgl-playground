@@ -209,26 +209,27 @@ gotTextures r textures =
 
 gameUpdate : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> Msg -> Game memory -> ( Game memory, Cmd Msg )
 gameUpdate viewMemory updateMemory msg (Game ({ visibility, memory, textures, computer } as model)) =
+    let
+        (Time timeWas _) =
+            computer.time
+    in
     gameTick viewMemory updateMemory <|
         case msg of
             Tick time ->
                 let
-                    (Time timeWas _) =
-                        computer.time
-
                     d =
                         Time.posixToMillis time - Time.posixToMillis timeWas
                 in
                 { model | computer = { computer | time = Time time d } }
 
             GotViewport { viewport } ->
-                { model | computer = { computer | screen = toScreen viewport.width viewport.height } }
+                { model | computer = { computer | time = Time timeWas 0, screen = toScreen viewport.width viewport.height } }
 
             Resized newScreen ->
-                { model | computer = { computer | screen = newScreen } }
+                { model | computer = { computer | time = Time timeWas 0, screen = newScreen } }
 
             KeyChanged isDown key ->
-                { model | computer = { computer | keyboard = updateKeyboard isDown key computer.keyboard } }
+                { model | computer = { computer | time = Time timeWas 0, keyboard = updateKeyboard isDown key computer.keyboard } }
 
             MouseMove pageX pageY ->
                 let
@@ -238,26 +239,30 @@ gameUpdate viewMemory updateMemory msg (Game ({ visibility, memory, textures, co
                     y =
                         computer.screen.top - pageY
                 in
-                { model | computer = { computer | mouse = mouseMove x y computer.mouse } }
+                { model | computer = { computer | time = Time timeWas 0, mouse = mouseMove x y computer.mouse } }
 
             MouseClick ->
-                { model | computer = { computer | mouse = mouseClick True computer.mouse } }
+                { model | computer = { computer | time = Time timeWas 0, mouse = mouseClick True computer.mouse } }
 
             MouseButton isDown ->
-                { model | computer = { computer | mouse = mouseDown isDown computer.mouse } }
+                { model | computer = { computer | time = Time timeWas 0, mouse = mouseDown isDown computer.mouse } }
 
             VisibilityChanged vis ->
                 { model
                     | visibility = vis
                     , computer =
                         { computer
-                            | keyboard = emptyKeyboard
+                            | time = Time timeWas 0
+                            , keyboard = emptyKeyboard
                             , mouse = Mouse computer.mouse.x computer.mouse.y False False
                         }
                 }
 
             GotTexture r ->
-                { model | textures = gotTextures r model.textures }
+                { model
+                    | textures = gotTextures r model.textures
+                    , computer = { computer | time = Time timeWas 0 }
+                }
 
 
 gameTick viewMemory updateMemory ({ computer, memory, textures } as model) =
