@@ -7915,7 +7915,13 @@ var $author$project$Playground$animationUpdate = F3(
 			case 'VisibilityChanged':
 				var vis = msg.a;
 				return _Utils_Tuple2(
-					A5($author$project$Playground$Animation, vis, screen, textures, entities, t),
+					A5(
+						$author$project$Playground$Animation,
+						vis,
+						screen,
+						textures,
+						entities,
+						A2($author$project$Playground$Internal$Time, timeWas, 0)),
 					$elm$core$Platform$Cmd$none);
 			case 'GotViewport':
 				var viewport = msg.a.viewport;
@@ -7931,7 +7937,13 @@ var $author$project$Playground$animationUpdate = F3(
 			case 'Resized':
 				var newScreen = msg.a;
 				return _Utils_Tuple2(
-					A5($author$project$Playground$Animation, v, newScreen, textures, entities, t),
+					A5(
+						$author$project$Playground$Animation,
+						v,
+						newScreen,
+						textures,
+						entities,
+						A2($author$project$Playground$Internal$Time, timeWas, 0)),
 					$elm$core$Platform$Cmd$none);
 			case 'KeyChanged':
 				return _Utils_Tuple2(state, $elm$core$Platform$Cmd$none);
