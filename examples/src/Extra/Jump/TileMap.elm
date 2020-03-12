@@ -2,11 +2,12 @@ module Extra.Jump.TileMap exposing (fullscreen, level1)
 
 import Math.Vector4 exposing (vec4)
 import Playground exposing (group)
-import Playground.Advanced exposing (..)
-import Playground.Batch.Tilemap as Extra
+import Playground.Extra as Extra
 import Playground.Render exposing (defaultEntitySettings)
 import Playground.Shader as Shader
 import WebGL
+import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
+import WebGL.Texture exposing (Texture)
 
 
 level1 =
@@ -17,6 +18,18 @@ level1 =
     , Extra.tilemap 8 8 tileset1 a1
     ]
         |> group
+
+
+custom : Float -> Float -> Render -> Shape2d
+custom width height render =
+    --TODO remove me
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
+
+
+useTexture : String -> (Texture -> Shape2d) -> Shape2d
+useTexture url fn =
+    --TODO remove me
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
 
 
 fullscreen =

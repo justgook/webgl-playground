@@ -3,7 +3,7 @@ port module Extra.PeerJS exposing (..)
 import Browser
 import Json.Decode as D
 import Playground exposing (..)
-import Playground.Advanced exposing (..)
+import Playground.Shape2d exposing (..)
 
 
 port connect : (Bool -> msg) -> Sub msg

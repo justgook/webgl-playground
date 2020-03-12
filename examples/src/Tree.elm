@@ -7,13 +7,13 @@ import Playground exposing (..)
 
 type alias Memory =
     { w : Float
-    , h : Number
+    , h : Float
     , s : Float
     , t : Float
     }
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update init
 

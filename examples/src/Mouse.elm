@@ -3,7 +3,7 @@ module Mouse exposing (Memory, init, main, update, view)
 import Playground exposing (..)
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update ()
 

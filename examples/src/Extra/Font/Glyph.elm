@@ -3,12 +3,24 @@ module Extra.Font.Glyph exposing (glyph)
 import Math.Vector2 exposing (Vec2, vec2)
 import Math.Vector3 exposing (Vec3, vec3)
 import Math.Vector4 exposing (Vec4, vec4)
-import Playground exposing (Number, Shape)
-import Playground.Advanced exposing (custom, useTexture)
+import Playground exposing (Shape)
 import Playground.Render exposing (defaultEntitySettings)
 import Playground.Shader as Shader
 import WebGL
+import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
 import WebGL.Texture exposing (Texture)
+
+
+custom : Float -> Float -> Render -> Shape
+custom width height render =
+    --TODO remove me
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
+
+
+useTexture : String -> (Texture -> Shape) -> Shape
+useTexture url fn =
+    --TODO remove me
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
 
 
 glyph =
@@ -17,7 +29,7 @@ glyph =
     }
 
 
-glyphSprite : Number -> Number -> String -> Vec4 -> Shape
+glyphSprite : Float -> Float -> String -> Vec4 -> Shape
 glyphSprite tileW tileH atlas uv =
     useTexture atlas <|
         \t ->

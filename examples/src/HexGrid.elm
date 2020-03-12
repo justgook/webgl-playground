@@ -11,7 +11,7 @@ type alias Memory =
     { r : Float, d : Float }
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update init
 

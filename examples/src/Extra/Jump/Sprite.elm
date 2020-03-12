@@ -1,8 +1,8 @@
 module Extra.Jump.Sprite exposing (idle, run)
 
 import Extra.Jump.Direction exposing (Direction(..))
-import Playground exposing (group, move)
-import Playground.Extra exposing (scaleX, sprite)
+import Playground exposing (group, move, scaleX)
+import Playground.Extra exposing (sprite)
 
 
 run dir frame_ =

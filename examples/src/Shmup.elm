@@ -4,7 +4,7 @@ import Playground exposing (..)
 import Random
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update Init
 
@@ -390,7 +390,7 @@ type Memory
                 , interval : Int
                 , bullet : Bullet
                 }
-        , shake : Number
+        , shake : Float
         }
 
 
@@ -445,12 +445,12 @@ bottomShoot =
 
 
 type alias Bullet =
-    { x : Number
-    , y : Number
-    , r : Number
-    , a : Number
-    , speedX : Number
-    , speedY : Number
+    { x : Float
+    , y : Float
+    , r : Float
+    , a : Float
+    , speedX : Float
+    , speedY : Float
     , shape : Time -> Shape
     }
 

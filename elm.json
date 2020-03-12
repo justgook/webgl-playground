@@ -6,7 +6,7 @@
     "version": "3.0.1",
     "exposed-modules": [
         "Playground",
-        "Playground.Advanced",
+        "WebGL.Shape2d",
         "Playground.Extra"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",

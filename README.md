@@ -76,3 +76,19 @@ Every game has three important parts:
 When you start making fancier games, you will store fancier things in memory. There is a lot of room to develop your programming skills here: Making lists, using records, creating custom types, etc.
 
 I started off trying to make Pong, then worked on games like Breakout and Space Invaders as I learned more and more. It was really fun, and I hope it will be for you as well!
+# Changelog
+
+# 3.0.1 -> 4.0.0
+
+  1. `Playground.Advanced` move to own package [`WebGL.Shape2d`](https://package.elm-lang.org/packages/justgook/webgl-shape/latest/).
+  1. `Playground.delta coputer.time` - `coputer.time.delta`
+  1. `Playground.now coputer.time` - `coputer.time.now`
+
+  ### Type changes:
+
+  1. Was `Playground.Game` - now is  `Playground.Playground`
+  1. Was `Playground.Animation` - now is  `Playground.Playground ()`
+  1. Was `Playground.Picture` - now is  `Playground.Playground ()`
+  1. `Number` - removed - just use `Float`
+  
+  

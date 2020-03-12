@@ -5,7 +5,7 @@ import Fuzz exposing (float, int)
 import Mat3 as Mat3
 import Math.Vector2 as Vec2
 import Math.Vector4 as Vec4
-import Playground.Transformation as Transformation
+import Playground.Core.Transformation as Transformation
 import Test exposing (..)
 
 

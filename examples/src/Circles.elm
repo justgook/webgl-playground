@@ -7,7 +7,7 @@ import Playground exposing (..)
 --https://ellie-app.com/7nQrJm4vRKWa1
 
 
-main : Program () Animation Msg
+main : Program () (Playground ()) Msg
 main =
     animation view
 

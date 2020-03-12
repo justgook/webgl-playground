@@ -3,16 +3,22 @@ module MulticolorPolygon exposing (main, view)
 import Array
 import Math.Vector2 exposing (vec2)
 import Playground exposing (..)
-import Playground.Advanced exposing (..)
 import Playground.Polygon exposing (signedArea, triangulate)
 import Playground.Render as Render
+import WebGL.Shape2d as Shape2d exposing (Render)
+
+
+custom : Float -> Float -> Render -> Shape
+custom width height render =
+    --TODO remove me
+    Shape2d.Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Shape2d.Form width height render }
 
 
 triangle color data =
     custom 1 1 <| Render.triangle color data
 
 
-main : Program () Picture Msg
+main : Program () (Playground ()) Msg
 main =
     picture view
 

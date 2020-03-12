@@ -1,15 +1,27 @@
-module Playground.Batch.Tilemap exposing (tilemap)
+module Playground.Extra.Tilemap exposing (tilemap)
 
-import Math.Vector2 exposing (vec2)
-import Playground.Advanced exposing (Render, custom, useTexture)
-import Playground.Internal exposing (Shape)
+import Math.Vector2 exposing (Vec2, vec2)
+import Math.Vector4 exposing (Vec4)
 import Playground.Render exposing (defaultEntitySettings)
 import Playground.Shader as Shader
-import WebGL
-import WebGL.Texture
+import WebGL exposing (Shader)
+import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
+import WebGL.Texture exposing (Texture)
 
 
-tilemap : Float -> Float -> String -> String -> Shape
+custom : Float -> Float -> Render -> Shape2d
+custom width height render =
+    --TODO remove me
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
+
+
+useTexture : String -> (Texture -> Shape2d) -> Shape2d
+useTexture url fn =
+    --TODO remove me
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
+
+
+tilemap : Float -> Float -> String -> String -> Shape2d
 tilemap tileW tileH tileset lut =
     useTexture tileset
         (\tileset_ ->
@@ -47,11 +59,8 @@ tilemap tileW tileH tileset lut =
         )
 
 
-
---http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/
-
-
 fragTilemap =
+    --http://media.tojicode.com/webgl-samples/tilemap.html
     [glsl|
 precision mediump float;
 varying vec2 uv;
@@ -61,35 +70,42 @@ uniform vec2 uAtlasSize;
 uniform vec2 uLutSize;
 uniform vec2 uTileSize;
 uniform float uA;
+
 float color2float(vec4 color) {
+
     return
     color.a * 255.0
     + color.b * 256.0 * 255.0
     + color.g * 256.0 * 256.0 * 255.0
     + color.r * 256.0 * 256.0 * 256.0 * 255.0;
     }
-float modI(float a, float b) {
-   float m = a - floor((a + 0.5) / b) * b;
-   return floor(m + 0.5);
+
+/**
+ * Returns accurate MOD when arguments are approximate integers.
+ */
+float modI(float a,float b) {
+    float m=a-floor((a+0.5)/b)*b;
+    return floor(m+0.5);
 }
+
 void main () {
-   vec2 point = uv * uLutSize;
-   vec2 look = floor(point);
+   vec2 point = floor(uv * uLutSize);
+   vec2 offset = fract(uv * uLutSize);
+
    //(2i + 1)/(2N) Pixel center
-   vec2 coordinate = (look + 0.5) / uLutSize;
-   float uIndex = color2float(texture2D(uLut, coordinate));
+   vec2 coordinate = (point + 0.5) / uLutSize;
+   float index = color2float(texture2D(uLut, coordinate));
+   if (index <= 0.0) discard;
    vec2 grid = uAtlasSize / uTileSize;
    // tile indexes in uAtlas starts from zero, but in lut zero is used for
    // "none" placeholder
-   vec2 tile = vec2(modI((uIndex - 1.), grid.x), int(uIndex - 1.) / int(grid.x));
+   vec2 tile = vec2(modI((index - 1.), grid.x), int(index - 1.) / int(grid.x));
    // inverting reading botom to top
    tile.y = grid.y - tile.y - 1.;
-   vec2 fragmentOffsetPx = floor((point - look) * uTileSize);
+   vec2 fragmentOffsetPx = floor(offset * uTileSize);
    //(2i + 1)/(2N) Pixel center
    vec2 pixel = (floor(tile * uTileSize + fragmentOffsetPx) + 0.5) / uAtlasSize;
    gl_FragColor = texture2D(uAtlas, pixel);
-   gl_FragColor.a *= float(uIndex > 0.);
-   gl_FragColor.rgb *= gl_FragColor.a;
-
+   gl_FragColor.a *= float(index != 0.);
 }
     |]

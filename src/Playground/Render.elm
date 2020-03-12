@@ -25,12 +25,12 @@ module Playground.Render exposing
 
 import Math.Vector2 exposing (Vec2)
 import Math.Vector3 exposing (Vec3)
-import Math.Vector4 exposing (Vec4, vec4)
-import Playground.Advanced exposing (Render)
+import Math.Vector4 exposing (Vec4)
 import Playground.Shader as Shader
 import WebGL exposing (Mesh, Shader)
 import WebGL.Settings as WebGL exposing (Setting)
 import WebGL.Settings.Blend as Blend
+import WebGL.Shape2d exposing (Render)
 import WebGL.Texture exposing (Texture)
 
 
@@ -101,7 +101,7 @@ ngon n color uP uT opacity =
 
 {-| -}
 image : Texture -> Vec2 -> Render
-image image_ imageSize uP uT opacity =
+image uImg uImgSize uP uT opacity =
     WebGL.entityWith
         defaultEntitySettings
         Shader.vertImage
@@ -109,8 +109,8 @@ image image_ imageSize uP uT opacity =
         Shader.mesh
         { uP = uP
         , uT = uT
-        , uImg = image_
-        , uImgSize = imageSize
+        , uImg = uImg
+        , uImgSize = uImgSize
         , uA = opacity
         }
 
@@ -228,5 +228,6 @@ defaultEntitySettings =
     ]
 
 
-setAlpha c =
-    c |> Math.Vector3.toRecord |> (\c1 -> Math.Vector4.vec4 c1.x c1.y c1.z)
+setAlpha : Vec3 -> Float -> Vec4
+setAlpha =
+    Math.Vector3.toRecord >> (\a -> Math.Vector4.vec4 a.x a.y a.z)

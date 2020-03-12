@@ -13,8 +13,7 @@ import HexGrid
 import Mouse
 import MulticolorPolygon
 import Playground exposing (..)
-import Playground.Advanced exposing (..)
-import Playground.Extra exposing (scaleX, scaleY)
+import Playground.Internal exposing (embed, subscriptions)
 import Polygon
 import Set
 import Shmup
@@ -33,10 +32,10 @@ animationTime =
     60
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     Browser.document
-        { init = \flags -> playground.init
+        { init = \_ -> playground.init
         , view =
             \memory ->
                 { title = "WebGL Playground Demo"
@@ -46,7 +45,16 @@ main =
                     ]
                 }
         , update = playground.update
-        , subscriptions = \_ -> subscriptions.all
+        , subscriptions =
+            \_ ->
+                [ subscriptions.keys
+                , subscriptions.time
+                , subscriptions.visibility
+                , subscriptions.click
+                , subscriptions.mouse
+                , subscriptions.resize
+                ]
+                    |> Sub.batch
         }
 
 
@@ -358,8 +366,8 @@ calcGrid config_ { width, height } l =
 type Memory
     = Init (Array Example)
     | Menu Grid
-    | Opening MenuItem Number Grid
-    | Closing MenuItem Number Grid
+    | Opening MenuItem Float Grid
+    | Closing MenuItem Float Grid
     | Open MenuItem Grid
 
 
@@ -372,18 +380,18 @@ type alias Example =
 
 type alias Grid =
     { grid : Array MenuItem
-    , w : Number
-    , h : Number
-    , padding : Number
-    , topOffset : Number
+    , w : Float
+    , h : Float
+    , padding : Float
+    , topOffset : Float
     , cols : Int
     , hover : Int
     }
 
 
 type alias MenuItem =
-    { x : Number
-    , y : Number
+    { x : Float
+    , y : Float
     , example : Example
     }
 

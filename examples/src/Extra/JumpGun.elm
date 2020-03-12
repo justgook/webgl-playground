@@ -17,7 +17,7 @@ config =
     }
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update Init
 
@@ -251,10 +251,10 @@ type Memory
 
 
 type alias Bullet =
-    { x : Number
-    , y : Number
-    , r : Number
-    , a : Number
+    { x : Float
+    , y : Float
+    , r : Float
+    , a : Float
     , v : Vec2
     , shape : Time -> Shape
     }
@@ -317,7 +317,7 @@ initGame { screen } =
     }
 
 
-initPlayer : Number -> Number -> Player
+initPlayer : Float -> Float -> Player
 initPlayer x y =
     { p = vec2 x y
     , v = zero
@@ -334,9 +334,9 @@ type alias Player =
     { p : Vec2
     , v : Vec2
     , acc : Vec2
-    , r : Number
+    , r : Float
     , dir : Direction
-    , frame : Number
+    , frame : Float
     , contact : Vec2
     , debug : List { p1 : Vec2, p2 : Vec2 }
     }

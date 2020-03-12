@@ -153,8 +153,8 @@ vertTile =
                 float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);
                 float column = mod(index, uImgSize.x / spriteSize.x);
                 vec2 offset = vec2(column, row) * ratio;
-                uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;
-                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
+                uv = (aP * 0.5 + 0.5) * ratio + offset + edgeFix;
+                gl_Position = vec4(aP * mat2(uT) + uP, 0.0, 1.0);
             }
         |]
 
@@ -203,10 +203,8 @@ fragFill =
     [glsl|
         precision mediump float;
         uniform vec4 color;
-
         void main () {
             gl_FragColor = color;
-
         }
     |]
 

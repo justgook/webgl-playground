@@ -1,4 +1,0 @@
-{
-  "root": "../src",
-  "tests": ["Playground", "Playground.Advanced", "Playground.Extra", "./README.md"]
-}

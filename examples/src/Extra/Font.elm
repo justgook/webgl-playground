@@ -4,7 +4,7 @@ import Extra.Font.Glyph exposing (glyph)
 import Playground exposing (..)
 
 
-main : Program () Picture Msg
+main : Program () (Playground ()) Msg
 main =
     picture view
 

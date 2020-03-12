@@ -1,4 +1,4 @@
-module Playground.Transformation exposing (Transformation, apply, identity, makeRotate, makeScale, makeTranslate, scale, toGL, transform)
+module WebGL.Shape2d.Transformation exposing (Transformation, apply, identity, makeRotate, makeScale, makeTranslate, scale, toGL, transform)
 
 import Math.Vector2
 import Math.Vector4

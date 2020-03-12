@@ -4,7 +4,7 @@ import AltMath.Vector2 as Vec2 exposing (Vec2, vec2)
 import Playground exposing (..)
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update Init
 

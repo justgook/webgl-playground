@@ -2,14 +2,14 @@ module Extra.Mario exposing (Memory, init, main, update, view)
 
 import Array exposing (Array)
 import Playground exposing (..)
-import Playground.Extra exposing (scaleX, tile)
+import Playground.Extra exposing (tile)
 
 
 
 -- MAIN
 
 
-main : Program () (Game Memory) Msg
+main : Program () (Playground Memory) Msg
 main =
     game view update init
 
@@ -25,11 +25,11 @@ init =
 
 
 type alias Memory =
-    { x : Number
-    , y : Number
-    , vx : Number
+    { x : Float
+    , y : Float
+    , vx : Float
     , vy : Float
-    , dir : Number
+    , dir : Float
     }
 
 
@@ -63,7 +63,7 @@ getFrame : Memory -> Time -> number
 getFrame mario time =
     let
         frame =
-            now time // 60 |> remainderBy 8
+            .now time // 60 |> remainderBy 8
     in
     if mario.y > 0 then
         5
@@ -83,7 +83,7 @@ update : Computer -> Memory -> Memory
 update computer mario =
     let
         dt =
-            toFloat (delta computer.time) / 10
+            toFloat (.delta computer.time) / 10
 
         vx =
             toX computer.keyboard

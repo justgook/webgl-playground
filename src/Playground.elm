@@ -4,16 +4,16 @@ module Playground exposing
     , words
     , image
     , move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY
-    , scale, rotate, fade
+    , rotate, fade, scale, scaleX, scaleY
     , group
-    , Time, spin, wave, zigzag, delta, now
+    , Time, spin, wave, zigzag
     , Computer, Mouse, Screen, Keyboard, toX, toY, toXY
     , Color, rgb, red, orange, yellow, green, blue, purple, brown
     , lightRed, lightOrange, lightYellow, lightGreen, lightBlue, lightPurple, lightBrown
     , darkRed, darkOrange, darkYellow, darkGreen, darkBlue, darkPurple, darkBrown
     , white, lightGrey, grey, darkGrey, lightCharcoal, charcoal, darkCharcoal, black
     , lightGray, gray, darkGray
-    , Number, Picture, Animation, Game, Msg
+    , Playground, Msg
     )
 
 {-|
@@ -46,7 +46,7 @@ module Playground exposing
 
 # Customize Shapes
 
-@docs scale, rotate, fade
+@docs rotate, fade, scale, scaleX, scaleY
 
 
 # Groups
@@ -56,7 +56,7 @@ module Playground exposing
 
 # Time
 
-@docs Time, spin, wave, zigzag, delta, now
+@docs Time, spin, wave, zigzag
 
 
 # Computer
@@ -91,7 +91,7 @@ module Playground exposing
 
 ### Helpers Types
 
-@docs Number, Picture, Animation, Game, Msg
+@docs Playground, Msg
 
 -}
 
@@ -101,14 +101,16 @@ import Browser.Events
 import Dict exposing (Dict)
 import Math.Vector2 exposing (vec2)
 import Math.Vector3
+import Playground.Extra.Font exposing (tileFont)
 import Playground.Font.SimpleMood as SimpleMood
-import Playground.Internal as Internal exposing (Form(..), Game(..), Msg(..), Number, Shape(..), TextureData(..), TextureManager)
+import Playground.Internal as Internal exposing (Msg(..), Playground(..), TextureManager, create, subscriptions, viewWrap)
 import Playground.Polygon exposing (signedArea, triangulate)
 import Playground.Render as Render
 import Set exposing (Set)
 import Task exposing (Task)
 import Time
 import WebGL exposing (Entity)
+import WebGL.Shape2d exposing (Form(..), Shape2d(..), toEntities)
 import WebGL.Texture as Texture
 
 
@@ -128,61 +130,33 @@ import WebGL.Texture as Texture
             ]
 
 -}
-picture : List Shape -> Program () Picture Msg
+picture : List Shape -> Program () (Playground ()) Msg
 picture shapes =
     let
-        init () =
-            ( Picture (Internal.toScreen 666 666) Dict.empty []
-            , Task.perform (\{ scene } -> Resized (Internal.toScreen scene.width scene.height)) Dom.getViewport
-            )
+        { init, update } =
+            create (\_ _ -> shapes) (\_ m -> m) ()
 
-        view (Picture screen _ entities) =
+        view (Playground { computer, entities }) =
             { title = "Playground"
-            , body = Internal.viewWrap screen entities
+            , body = viewWrap computer.screen entities
             }
-
-        update msg ((Picture screen textures entities) as model) =
-            (case msg of
-                Resized newScreen ->
-                    Picture newScreen textures entities
-
-                GotTexture r ->
-                    Picture screen (Internal.gotTextures r textures) entities
-
-                _ ->
-                    model
-            )
-                |> renderPicture shapes
     in
     Browser.document
-        { init = init
+        { init =
+            \_ ->
+                init
+                    |> Tuple.mapSecond (\cmd -> [ Task.perform Tick Time.now, cmd ] |> Cmd.batch)
         , view = view
-        , update = update
+        , update =
+            \msg m ->
+                case msg of
+                    GotTexture _ ->
+                        ( update msg m |> Tuple.first, Task.perform Tick Time.now )
+
+                    _ ->
+                        update msg m
         , subscriptions = \_ -> Internal.subscriptions.resize
         }
-
-
-renderPicture : List Shape -> Picture -> ( Picture, Cmd Msg )
-renderPicture shapes (Picture screen textures _) =
-    let
-        ( entities, missing ) =
-            Internal.render screen textures shapes
-
-        ( newTextures, cmd ) =
-            case missing of
-                [] ->
-                    ( textures, Cmd.none )
-
-                _ ->
-                    Internal.requestTexture missing textures
-    in
-    ( Picture screen newTextures entities, cmd )
-
-
-{-| Picture State
--}
-type Picture
-    = Picture Screen TextureManager (List Entity)
 
 
 
@@ -236,17 +210,11 @@ while the mouse button is down.
 
 -}
 type alias Mouse =
-    { x : Number
-    , y : Number
+    { x : Float
+    , y : Float
     , down : Bool
     , click : Bool
     }
-
-
-{-| A number like `1` or `3.14` or `-120`.
--}
-type alias Number =
-    Float
 
 
 
@@ -304,7 +272,7 @@ type alias Keyboard =
     }
 
 
-{-| Turn the LEFT and RIGHT arrows into a number.
+{-| Turn the LEFT and RIGHT arrows into a Float.
 
     toX { left = False, right = False, ... } == 0
     toX { left = True , right = False, ... } == -1
@@ -327,7 +295,7 @@ So to make a square move left and right based on the arrow keys, we could say:
         x + toX computer.keyboard
 
 -}
-toX : Keyboard -> Number
+toX : Keyboard -> Float
 toX keyboard =
     (if keyboard.right then
         1
@@ -343,7 +311,7 @@ toX keyboard =
           )
 
 
-{-| Turn the UP and DOWN arrows into a number.
+{-| Turn the UP and DOWN arrows into a Float.
 
     toY { up = False, down = False, ... } == 0
     toY { up = True , down = False, ... } == 1
@@ -368,7 +336,7 @@ This can be used to move characters around in games just like [`toX`](#toX):
         )
 
 -}
-toY : Keyboard -> Number
+toY : Keyboard -> Float
 toY keyboard =
     (if keyboard.up then
         1
@@ -415,7 +383,7 @@ Now when you go up/right, you are still going 1 pixel per update.
         ( x + dx, y + dy )
 
 -}
-toXY : Keyboard -> ( Number, Number )
+toXY : Keyboard -> ( Float, Float )
 toXY keyboard =
     let
         x =
@@ -431,7 +399,7 @@ toXY keyboard =
         ( x, y )
 
 
-squareRootOfTwo : Number
+squareRootOfTwo : Float
 squareRootOfTwo =
     sqrt 2
 
@@ -456,12 +424,12 @@ on the bottom of the screen, no matter the dimensions.
 
 -}
 type alias Screen =
-    { width : Number
-    , height : Number
-    , top : Number
-    , left : Number
-    , right : Number
-    , bottom : Number
+    { width : Float
+    , height : Float
+    , top : Float
+    , left : Float
+    , right : Float
+    , bottom : Float
     }
 
 
@@ -497,12 +465,12 @@ It will do a full rotation once every eight seconds. Try changing the `8` to
 a `2` to make it do a full rotation every two seconds. It moves a lot faster!
 
 -}
-spin : Number -> Time -> Number
+spin : Float -> Time -> Float
 spin period time =
     360 * toFrac period time
 
 
-{-| Smoothly wave between two numbers.
+{-| Smoothly wave between two Floats.
 
 Here is an [`animation`](#animation) with a circle that resizes:
 
@@ -519,12 +487,12 @@ The radius of the circle will cycles between 50 and 90 every seven seconds.
 It kind of looks like it is breathing.
 
 -}
-wave : Number -> Number -> Number -> Time -> Number
+wave : Float -> Float -> Float -> Time -> Float
 wave lo hi period time =
     lo + (hi - lo) * (1 + cos (turns (toFrac period time))) / 2
 
 
-{-| Zig zag between two numbers.
+{-| Zig zag between two Floats.
 
 Here is an [`animation`](#animation) with a rectangle that tips back and forth:
 
@@ -542,65 +510,17 @@ It gets rotated by an angle. The angle cycles from -20 degrees to 20 degrees
 every four seconds.
 
 -}
-zigzag : Number -> Number -> Number -> Time -> Number
+zigzag : Float -> Float -> Float -> Time -> Float
 zigzag lo hi period time =
     lo + (hi - lo) * abs (2 * toFrac period time - 1)
 
 
-{-| Time in milliseconds since the previous frame.
-Here is an example of a green square that
-just moves to the right precisely 1px per second,
-independent from frame rate:
-
-    import Playground exposing (..)
-
-    main =
-        game view update 0
-
-    view computer offset =
-        [ square green 40 |> moveRight offset ]
-
-    update computer offset =
-        delta computer.time
-            |> clamp 0 30
-            |> toFloat
-            |> (*) 0.1
-            |> (+) offset
-
--}
-delta : Time -> Int
-delta (Internal.Time _ d) =
-    d
-
-
-{-| Turn a `Time` time into the number of milliseconds since 1970 January 1 at 00:00:00 UTC. It was a Thursday.
-Here is an example of the text that shows the current seconds:
-
-    import Playground exposing (..)
-
-    main =
-        animation view
-
-    view time =
-        let
-            s =
-                remainderBy (now time // 1000) 60
-                    |> String.fromInt
-        in
-        words black s
-
--}
-now : Time -> Int
-now (Internal.Time posix _) =
-    Time.posixToMillis posix
-
-
 {-| -}
 toFrac : Float -> Time -> Float
-toFrac period (Internal.Time posix _) =
+toFrac period { now } =
     let
         ms =
-            Time.posixToMillis posix
+            now
 
         p =
             period * 1000
@@ -633,99 +553,35 @@ Within `view` we can use functions like [`spin`](#spin), [`wave`](#wave),
 and [`zigzag`](#zigzag) to move and rotate our shapes.
 
 -}
-animation : (Time -> List Shape) -> Program () Animation Msg
+animation : (Time -> List Shape) -> Program () (Playground ()) Msg
 animation viewFrame =
     let
-        init () =
-            ( Animation Browser.Events.Visible
-                (Internal.toScreen 666 666)
-                Dict.empty
-                []
-                (Internal.Time (Time.millisToPosix 0) 0)
-            , Task.perform GotViewport Dom.getViewport
-            )
+        { init, update } =
+            create (\{ time } _ -> viewFrame time) (\_ m -> m) ()
 
-        view (Animation _ screen _ entities _) =
+        view (Playground { computer, entities }) =
             { title = "Playground"
-            , body = Internal.viewWrap screen entities
+            , body = viewWrap computer.screen entities
             }
 
-        update =
-            animationUpdate viewFrame
-
-        subscriptions (Animation visibility _ _ _ _) =
+        subs (Playground { visibility, computer }) =
             case visibility of
                 Browser.Events.Hidden ->
-                    Internal.subscriptions_.visibility
+                    Browser.Events.onVisibilityChange VisibilityChanged
 
                 Browser.Events.Visible ->
-                    animationSubscriptions
+                    Sub.batch
+                        [ Internal.subscriptions.resize
+                        , Internal.subscriptions.time
+                        , Internal.subscriptions.visibility
+                        ]
     in
     Browser.document
-        { init = init
+        { init = \_ -> init
         , view = view
         , update = update
-        , subscriptions = subscriptions
+        , subscriptions = subs
         }
-
-
-{-| Animation State
--}
-type Animation
-    = Animation Browser.Events.Visibility Screen TextureManager (List Entity) Time
-
-
-animationSubscriptions : Sub Msg
-animationSubscriptions =
-    Sub.batch
-        [ Internal.subscriptions.resize
-        , Internal.subscriptions.time
-        , Internal.subscriptions_.visibility
-        ]
-
-
-animationUpdate : (Time -> List Shape) -> Msg -> Animation -> ( Animation, Cmd Msg )
-animationUpdate viewFrame msg ((Animation v screen textures entities ((Internal.Time timeWas _) as t)) as state) =
-    case msg of
-        Tick posix ->
-            let
-                d =
-                    Time.posixToMillis posix - Time.posixToMillis timeWas
-
-                ( newEntities, missing ) =
-                    Internal.render screen textures (viewFrame (Internal.Time posix d))
-            in
-            case missing of
-                [] ->
-                    ( Animation v screen textures newEntities (Internal.Time posix d), Cmd.none )
-
-                _ ->
-                    Internal.requestTexture missing textures
-                        |> Tuple.mapFirst (\loadingTextures -> Animation v screen loadingTextures newEntities (Internal.Time posix d))
-
-        VisibilityChanged vis ->
-            ( Animation vis screen textures entities (Internal.Time timeWas 0), Cmd.none )
-
-        GotViewport { viewport } ->
-            ( Animation v (Internal.toScreen viewport.width viewport.height) textures entities t, Cmd.none )
-
-        Resized newScreen ->
-            ( Animation v newScreen textures entities (Internal.Time timeWas 0), Cmd.none )
-
-        KeyChanged _ _ ->
-            ( state, Cmd.none )
-
-        MouseMove _ _ ->
-            ( state, Cmd.none )
-
-        MouseClick ->
-            ( state, Cmd.none )
-
-        MouseButton _ ->
-            ( state, Cmd.none )
-
-        GotTexture r ->
-            ( Animation v screen (Internal.gotTextures r textures) entities t, Cmd.none )
 
 
 
@@ -787,15 +643,44 @@ Notice that in the `update` we use information from the keyboard to update the
 `x` and `y` values. These building blocks let you make pretty fancy games!
 
 -}
-game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
-game =
-    Internal.game
+game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Playground memory) Msg
+game viewMemory updateMemory initialMemory =
+    let
+        { init, update } =
+            create viewMemory updateMemory initialMemory
+
+        subs (Playground { visibility, computer }) =
+            case visibility of
+                Browser.Events.Hidden ->
+                    Browser.Events.onVisibilityChange VisibilityChanged
+
+                Browser.Events.Visible ->
+                    Sub.batch
+                        [ subscriptions.keys
+                        , subscriptions.time
+                        , subscriptions.visibility
+                        , subscriptions.click
+                        , subscriptions.mouse
+                        , subscriptions.resize
+                        ]
+
+        view (Playground { computer, entities }) =
+            { title = "Playground"
+            , body = viewWrap computer.screen entities
+            }
+    in
+    Browser.document
+        { init = \_ -> init
+        , view = view
+        , update = update
+        , subscriptions = subs
+        }
 
 
-{-| Game State
+{-| Playground State
 -}
-type alias Game memory =
-    Internal.Game memory
+type alias Playground memory =
+    Internal.Playground memory
 
 
 {-| -}
@@ -814,7 +699,7 @@ Read on to see examples of [`circle`](#circle), [`rectangle`](#rectangle),
 
 -}
 type alias Shape =
-    Internal.Shape
+    Shape2d
 
 
 {-| Make circles:
@@ -825,13 +710,13 @@ type alias Shape =
     sun =
         circle yellow 300
 
-You give color and then the radius. So the higher the number, the larger
+You give color and then the radius. So the higher the Float, the larger
 the circle.
 
 -}
-circle : Color -> Number -> Shape
+circle : Color -> Float -> Shape
 circle color radius =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -850,9 +735,9 @@ circle color radius =
 You give the color, and then the width and height. So our `football` example is 200 pixels wide and 100 pixels tall
 
 -}
-oval : Color -> Number -> Number -> Shape
+oval : Color -> Float -> Float -> Shape
 oval color width height =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -873,13 +758,13 @@ oval color width height =
             , square white 60
             ]
 
-The number you give is the dimension of each side. So that purple square would
+The Float you give is the dimension of each side. So that purple square would
 be 80 pixels by 80 pixels.
 
 -}
-square : Color -> Number -> Shape
+square : Color -> Float -> Shape
 square color n =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -904,9 +789,9 @@ You give the color, width, and then height. So the first shape is vertical
 part of the cross, the thinner and taller part.
 
 -}
-rectangle : Color -> Number -> Number -> Shape
+rectangle : Color -> Float -> Float -> Shape
 rectangle color width height =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -927,13 +812,13 @@ do a simple version like this:
             [ triangle darkYellow 200
             ]
 
-The number is the "radius", so the distance from the center to each point of
+The `Float` is the "radius", so the distance from the center to each point of
 the pyramid is `200`. Pretty big!
 
 -}
-triangle : Color -> Number -> Shape
+triangle : Color -> Float -> Shape
 triangle color radius =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -957,9 +842,9 @@ You give the color and then the radius. So the distance from the center to each
 of the five points is 100 pixels.
 
 -}
-pentagon : Color -> Number -> Shape
+pentagon : Color -> Float -> Shape
 pentagon color radius =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -979,15 +864,15 @@ pentagon color radius =
             [ hexagon lightYellow 50
             ]
 
-The number is the radius, the distance from the center to each point.
+The Float is the radius, the distance from the center to each point.
 
 If you made more hexagons, you could [`move`](#move) them around to make a
 honeycomb pattern!
 
 -}
-hexagon : Color -> Number -> Shape
+hexagon : Color -> Float -> Shape
 hexagon color radius =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -1009,9 +894,9 @@ You give the color and radius, so each point of this stop sign is 100 pixels
 from the center.
 
 -}
-octagon : Color -> Number -> Shape
+octagon : Color -> Float -> Shape
 octagon color radius =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -1036,7 +921,7 @@ octagon color radius =
 [`move`](#move) or [`group`](#group) so that rotation makes more sense.
 
 -}
-polygon : Color -> List ( Number, Number ) -> Shape
+polygon : Color -> List ( Float, Float ) -> Shape
 polygon color points =
     (if signedArea points < 0 then
         List.reverse points
@@ -1053,7 +938,7 @@ polygon color points =
 
 
 polygonTriangle color data =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -1076,9 +961,9 @@ polygonTriangle color data =
 You provide the width, height, and then the URL of the image you want to show.
 
 -}
-image : Number -> Number -> String -> Shape
+image : Float -> Float -> String -> Shape
 image width height src =
-    Shape
+    Shape2d
         { x = 0
         , y = 0
         , a = 0
@@ -1088,7 +973,7 @@ image width height src =
         , form =
             Textured src
                 (\t ->
-                    Shape
+                    Shape2d
                         { x = 0
                         , y = 0
                         , a = 0
@@ -1119,67 +1004,16 @@ You can use [`scale`](#scale) to make the words bigger or smaller.
 
 -}
 words : Color -> String -> Shape
-words color string =
-    Shape
-        { x = 0
-        , y = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form =
-            Textured SimpleMood.image
-                (\t ->
-                    let
-                        ( imgW, imgH ) =
-                            t
-                                |> Texture.size
-                                |> Tuple.mapBoth toFloat toFloat
-
-                        imgSize =
-                            Math.Vector2.vec2 imgW imgH
-
-                        tileW =
-                            16
-
-                        tileH =
-                            16
-
-                        simpleMoodChar =
-                            char t imgSize color tileW tileH
-
-                        output =
-                            String.toList string
-                                |> List.foldl
-                                    (\c { chars, x, y, width } ->
-                                        if c == '\n' then
-                                            { chars = chars
-                                            , x = tileW
-                                            , y = y - tileH
-                                            , width = max width x
-                                            }
-
-                                        else
-                                            { chars = simpleMoodChar x y (SimpleMood.letters c) :: chars, x = x + tileW, y = y, width = width }
-                                    )
-                                    { chars = [], x = tileW, y = tileH, width = 0 }
-                    in
-                    Shape { x = max output.x output.width * -0.5, y = output.y * -0.5 + 0.5 * -tileH, a = 0, sx = 1, sy = 1, o = 1, form = Group output.chars }
-                )
-        }
+words =
+    tileFont wordsConfig
 
 
-char : Texture.Texture -> Math.Vector2.Vec2 -> Math.Vector3.Vec3 -> Number -> Number -> Number -> Number -> Float -> Shape
-char spriteSheet imageSize color w h x y index =
-    Shape
-        { x = x
-        , y = y
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form w h <| Render.tileWithColor spriteSheet (vec2 w h) imageSize color index
-        }
+wordsConfig =
+    { charW = 16
+    , charH = 16
+    , src = SimpleMood.image
+    , getIndex = SimpleMood.letters
+    }
 
 
 {-| Put shapes together so you can [`move`](#move) and [`rotate`](#rotate)
@@ -1213,14 +1047,14 @@ them as a group. Maybe you want to put a bunch of stars in the sky:
 -}
 group : List Shape -> Shape
 group shapes =
-    Shape { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group shapes }
+    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group shapes }
 
 
 
 -- TRANSFORMS
 
 
-{-| Move a shape by some number of pixels:
+{-| Move a shape by some Float of pixels:
 
     import Playground exposing (..)
 
@@ -1237,12 +1071,12 @@ group shapes =
             ]
 
 -}
-move : Number -> Number -> Shape -> Shape
-move dx dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | x = x + dx, y = y + dy }
+move : Float -> Float -> Shape -> Shape
+move dx dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | x = x + dx, y = y + dy }
 
 
-{-| Move a shape up by some number of pixels. So if you wanted to make a tree
+{-| Move a shape up by some Float of pixels. So if you wanted to make a tree
 you could move the leaves up above the trunk:
 
     import Playground exposing (..)
@@ -1255,12 +1089,12 @@ you could move the leaves up above the trunk:
             ]
 
 -}
-moveUp : Number -> Shape -> Shape
+moveUp : Float -> Shape -> Shape
 moveUp =
     moveY
 
 
-{-| Move a shape down by some number of pixels. So if you wanted to put the sky
+{-| Move a shape down by some Float of pixels. So if you wanted to put the sky
 above the ground, you could move the sky up and the ground down:
 
     import Playground exposing (..)
@@ -1274,9 +1108,9 @@ above the ground, you could move the sky up and the ground down:
             ]
 
 -}
-moveDown : Number -> Shape -> Shape
-moveDown dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | y = y - dy }
+moveDown : Float -> Shape -> Shape
+moveDown dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | y = y - dy }
 
 
 {-| Move shapes to the left.
@@ -1291,9 +1125,9 @@ moveDown dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
             ]
 
 -}
-moveLeft : Number -> Shape -> Shape
-moveLeft dx (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | x = x - dx }
+moveLeft : Float -> Shape -> Shape
+moveLeft dx (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | x = x - dx }
 
 
 {-| Move shapes to the right.
@@ -1308,7 +1142,7 @@ moveLeft dx (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
             ]
 
 -}
-moveRight : Number -> Shape -> Shape
+moveRight : Float -> Shape -> Shape
 moveRight =
     moveX
 
@@ -1329,9 +1163,9 @@ moves back and forth:
 Using `moveX` feels a bit nicer here because the movement may be positive or negative.
 
 -}
-moveX : Number -> Shape -> Shape
-moveX dx (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | x = x + dx }
+moveX : Float -> Shape -> Shape
+moveX dx (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | x = x + dx }
 
 
 {-| Move the `y` coordinate of shape by some amount. Maybe you want to make grass along the bottom of the screen:
@@ -1353,9 +1187,9 @@ Using `moveY` feels a bit nicer when setting things relative to the bottom or
 top of the screen, since the values are negative sometimes.
 
 -}
-moveY : Number -> Shape -> Shape
-moveY dy (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | y = y + dy }
+moveY : Float -> Shape -> Shape
+moveY dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | y = y + dy }
 
 
 {-| Make a shape bigger or smaller. So if you wanted some [`words`](#words) to
@@ -1370,9 +1204,33 @@ be larger, you could say:
             ]
 
 -}
-scale : Number -> Shape -> Shape
-scale ns (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | sx = sx * ns, sy = sy * ns }
+scale : Float -> Shape -> Shape
+scale ns (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | sx = sx * ns, sy = sy * ns }
+
+
+{-| Make a shape **horizontally** bigger or smaller.
+Also can be used to flip object:
+
+    tile 20 27 0 "character.png" 1
+        |> scaleX -1
+
+-}
+scaleX : Float -> Shape -> Shape
+scaleX sx (Shape2d shape) =
+    Shape2d { shape | sx = shape.sx * sx }
+
+
+{-| Make a shape **vertically** bigger or smaller.
+Also can be used to flip object:
+
+    tile 20 27 0 "character.png" 1
+        |> scaleY -1
+
+-}
+scaleY : Float -> Shape -> Shape
+scaleY sy (Shape2d shape) =
+    Shape2d { shape | sy = shape.sy * sy }
 
 
 {-| Rotate shapes in degrees.
@@ -1389,9 +1247,9 @@ The degrees go **counter-clockwise** to match the direction of the
 [unit circle](https://en.wikipedia.org/wiki/Unit_circle).
 
 -}
-rotate : Number -> Shape -> Shape
-rotate da (Shape ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape { shape | a = a + degrees da }
+rotate : Float -> Shape -> Shape
+rotate da (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
+    Shape2d { shape | a = a + degrees da }
 
 
 {-| Fade a shape. This lets you make shapes see-through or even completely
@@ -1408,13 +1266,13 @@ invisible. Here is a shape that fades in and out:
             |> fade (zigzag 0 1 3 time)
         ]
 
-The number has to be between `0` and `1`, where `0` is totally transparent
+The Float has to be between `0` and `1`, where `0` is totally transparent
 and `1` is completely solid.
 
 -}
-fade : Number -> Shape -> Shape
-fade o (Shape shape) =
-    Shape { shape | o = o }
+fade : Float -> Shape -> Shape
+fade o (Shape2d shape) =
+    Shape2d { shape | o = o }
 
 
 
@@ -1647,23 +1505,23 @@ color you want. For example:
     brightPurple =
         rgb 94 28 221
 
-Each number needs to be between 0 and 255.
+Each Float needs to be between 0 and 255.
 
-It can be hard to figure out what numbers to pick, so try using a color picker
+It can be hard to figure out what Floats to pick, so try using a color picker
 like [paletton] to find colors that look nice together. Once you find nice
 colors, click on the color previews to get their RGB values.
 
 [paletton]: http://paletton.com/
 
 -}
-rgb : Number -> Number -> Number -> Color
+rgb : Float -> Float -> Float -> Color
 rgb r g b =
     Math.Vector3.vec3 (toFloat (colorClamp r) / 255) (toFloat (colorClamp g) / 255) (toFloat (colorClamp b) / 255)
 
 
-colorClamp : Number -> Int
-colorClamp number =
-    clamp 0 255 (round number)
+colorClamp : Float -> Int
+colorClamp n =
+    clamp 0 255 (round n)
 
 
 hexColor2Vec3 : String -> Maybe Math.Vector3.Vec3

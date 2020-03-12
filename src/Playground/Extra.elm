@@ -1,15 +1,9 @@
 module Playground.Extra exposing
-    ( scaleX, scaleY
-    , tile, sprite
+    ( tile, sprite
     , tilemap
     )
 
 {-|
-
-
-# Customize Shapes
-
-@docs scaleX, scaleY
 
 
 # Shapes
@@ -25,36 +19,11 @@ module Playground.Extra exposing
 
 import Math.Vector2 exposing (vec2)
 import Math.Vector4 exposing (Vec4, vec4)
-import Playground exposing (Color, Number, Shape)
-import Playground.Advanced exposing (Render, custom, useTexture)
-import Playground.Batch.Tilemap
-import Playground.Internal exposing (Form(..), Number, Shape(..))
+import Playground exposing (Color, Shape)
+import Playground.Extra.Tilemap as Tilemap
 import Playground.Render as Render
-import WebGL.Texture
-
-
-{-| Make a shape **horizontally** bigger or smaller.
-Also can be used to flip object:
-
-    tile 20 27 0 "character.png" 1
-        |> scaleX -1
-
--}
-scaleX : Number -> Shape -> Shape
-scaleX sx (Shape shape) =
-    Shape { shape | sx = shape.sx * sx }
-
-
-{-| Make a shape **vertically** bigger or smaller.
-Also can be used to flip object:
-
-    tile 20 27 0 "character.png" 1
-        |> scaleY -1
-
--}
-scaleY : Number -> Shape -> Shape
-scaleY sy (Shape shape) =
-    Shape { shape | sy = shape.sy * sy }
+import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
+import WebGL.Texture exposing (Texture)
 
 
 {-| Show tile from a tileset.
@@ -73,11 +42,20 @@ this draws the first tile of the second row
     tile 16 24 "sprites.png" 3
 
 -}
-tile : Number -> Number -> String -> Int -> Shape
+tile : Float -> Float -> String -> Int -> Shape
 tile tileW tileH tileset index =
-    useTexture tileset <|
-        \t ->
-            custom tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
+    Shape2d
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Textured tileset <|
+                \t ->
+                    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index) }
+        }
 
 
 {-| Show sprite from a sprite sheet.
@@ -90,7 +68,7 @@ starting at position `16,0` up to _including_ pixels at `31,23`
     sprite "sprites.png" { xmin = 16, xmax = 31, ymin = 0, ymax = 23 }
 
 -}
-sprite : String -> { xmin : Number, xmax : Number, ymin : Number, ymax : Number } -> Shape
+sprite : String -> { xmin : Float, xmax : Float, ymin : Float, ymax : Float } -> Shape
 sprite atlas { xmin, xmax, ymin, ymax } =
     let
         w =
@@ -99,29 +77,31 @@ sprite atlas { xmin, xmax, ymin, ymax } =
         h =
             abs (ymax - ymin) + 1
     in
-    useTexture atlas <|
-        \t ->
-            let
-                ( tW_, tH_ ) =
-                    WebGL.Texture.size t
+    Shape2d
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Textured atlas <|
+                \t ->
+                    let
+                        ( tW_, tH_ ) =
+                            WebGL.Texture.size t
 
-                tW =
-                    toFloat tW_
+                        tW =
+                            toFloat tW_
 
-                tH =
-                    toFloat tH_
+                        tH =
+                            toFloat tH_
 
-                uv =
-                    vec4 (xmin / tW) (1 - ymin / tH - (h / tH)) (w / tW) (h / tH)
-            in
-            custom w h <| Render.sprite t (vec2 tW tH) uv
-
-
-colorTile : Number -> Number -> String -> Color -> Int -> Shape
-colorTile tileW tileH tileset color index =
-    useTexture tileset <|
-        \t ->
-            custom tileW tileH <| Render.tileWithColor t (vec2 tileW tileH) (size t) color (toFloat index)
+                        uv =
+                            vec4 (xmin / tW) (1 - ymin / tH - (h / tH)) (w / tW) (h / tH)
+                    in
+                    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form w h <| Render.sprite t (vec2 tW tH) uv }
+        }
 
 
 {-| Show tilemap from a tileset and a corresponding lookup table stored as a texture.
@@ -173,9 +153,9 @@ More details about this rendering technique can be found in [Brandon Jones’ bl
 [2]: https://blog.tojicode.com/2012/07/sprite-tile-maps-on-gpu.html
 
 -}
-tilemap : Number -> Number -> String -> String -> Shape
+tilemap : Float -> Float -> String -> String -> Shape
 tilemap =
-    Playground.Batch.Tilemap.tilemap
+    Tilemap.tilemap
 
 
 size : WebGL.Texture.Texture -> Math.Vector2.Vec2
