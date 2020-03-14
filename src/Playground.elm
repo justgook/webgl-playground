@@ -4,7 +4,7 @@ module Playground exposing
     , words
     , image
     , move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY
-    , rotate, fade, scale, scaleX, scaleY
+    , rotate, fade, scale, scaleX, scaleY, flipY, flipX
     , group
     , Time, spin, wave, zigzag
     , Computer, Mouse, Screen, Keyboard, toX, toY, toXY
@@ -46,7 +46,7 @@ module Playground exposing
 
 # Customize Shapes
 
-@docs rotate, fade, scale, scaleX, scaleY
+@docs rotate, fade, scale, scaleX, scaleY, flipY, flipX
 
 
 # Groups
@@ -248,14 +248,18 @@ like this:
 
 Check out [`toX`](#toX) and [`toY`](#toY) which make this even easier!
 
-**Note:** The `keys` set will be filled with the name of all keys which are
-down right now. So you will see things like `"a"`, `"b"`, `"c"`, `"1"`, `"2"`,
-`"Space"`, and `"Control"` in there. Check out [this list][list] to see the
-names used for all the different special keys! From there, you can use
+**Note:** The `keys` set will be filled with the `code` of all keys which are
+down right now. So you will see things like `"KeyA"`, `"KeyB"`, `"KeyC"`, `"Digit1"`, `"Digit2"`,
+`"Space"`, and `"ControlLeft"` in there.
+For example, the code is `"KeyQ"` for the `Q` key on a QWERTY layout keyboard,
+but the same code value also represents the `'` key on Dvorak keyboards and the `A` key on AZERTY keyboards.
+
+Check out [this list][list] to see the
+names used for all the different keys! From there, you can use
 [`Set.member`][member] to check for whichever key you want. E.g.
 `Set.member "Control" computer.keyboard.keys`.
 
-[list]: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
+[list]: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code/code_values
 [member]: /packages/elm/core/latest/Set#member
 
 -}
@@ -1231,6 +1235,28 @@ Also can be used to flip object:
 scaleY : Float -> Shape -> Shape
 scaleY sy (Shape2d shape) =
     Shape2d { shape | sy = shape.sy * sy }
+
+
+{-| Mirror shape horizontally
+
+    tile 20 27 0 "character.png" 1
+        |> flipX
+
+-}
+flipX : Shape -> Shape
+flipX (Shape2d shape) =
+    Shape2d { shape | sx = shape.sx * -1 }
+
+
+{-| Mirror shape vertically
+
+    tile 20 27 0 "character.png" 1
+        |> flipY
+
+-}
+flipY : Shape -> Shape
+flipY (Shape2d shape) =
+    Shape2d { shape | sy = shape.sy * -1 }
 
 
 {-| Rotate shapes in degrees.

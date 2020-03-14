@@ -4,16 +4,17 @@ import Array exposing (Array)
 import Browser
 import Circles
 import Clock
+import Embedded
 import Extra.Font
 import Extra.JumpGun as JumpGun
 import Extra.Mario as Mario
 import Font
 import GitHubCorner
 import HexGrid
+import Html exposing (Html)
 import Mouse
 import MulticolorPolygon
 import Playground exposing (..)
-import Playground.Internal exposing (embed, subscriptions)
 import Polygon
 import Set
 import Shmup
@@ -32,30 +33,28 @@ animationTime =
     60
 
 
-main : Program () (Playground Memory) Msg
+main : Program () (Embedded.Model Memory) Embedded.Msg
 main =
     Browser.document
-        { init = \_ -> playground.init
+        { init = \_ -> Embedded.init initialMemory
         , view =
-            \memory ->
+            \model ->
                 { title = "WebGL Playground Demo"
                 , body =
                     [ GitHubCorner.topRight "https://github.com/justgook/webgl-playground"
-                    , playground.view memory
+                    , Embedded.view model
+                    , Html.node "style" [] [ Html.text "html,body{margin:0;padding:0;overflow:hidden;}canvas{display:block}" ]
                     ]
                 }
-        , update = playground.update
-        , subscriptions =
-            \_ ->
-                [ subscriptions.keys
-                , subscriptions.time
-                , subscriptions.visibility
-                , subscriptions.click
-                , subscriptions.mouse
-                , subscriptions.resize
-                ]
-                    |> Sub.batch
+        , update = Embedded.update updateMemory viewMemory
+        , subscriptions = Embedded.subscriptions
         }
+
+
+
+--
+--playground =
+--    embed viewMemory updateMemory initialMemory
 
 
 viewMemory : Computer -> Memory -> List Shape
@@ -394,10 +393,6 @@ type alias MenuItem =
     , y : Float
     , example : Example
     }
-
-
-playground =
-    embed viewMemory updateMemory initialMemory
 
 
 applyIf : Bool -> (a -> a) -> a -> a

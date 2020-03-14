@@ -35,13 +35,6 @@ import WebGL.Texture exposing (Texture)
 
 
 {-| Rectangle render
-
-Example [Playground.rectangle](Playground#rectangle):
-
-    rectangle : Color -> Number -> Number -> Shape
-    rectangle color width height =
-        rect color |> Advanced.custom width height
-
 -}
 rect : Vec3 -> Render
 rect color uP uT opacity =
@@ -60,10 +53,6 @@ rect color uP uT opacity =
 
 Example [Playground.oval](Playground#oval):
 
-    oval : Color -> Number -> Number -> Shape
-    oval color width height =
-        rect color |> Advanced.custom width height
-
 -}
 circle : Vec3 -> Render
 circle color uP uT opacity =
@@ -78,12 +67,7 @@ circle color uP uT opacity =
         }
 
 
-{-| Render
-
-    hexagon : Color -> Number -> Shape
-    hexagon color radius =
-        ngon 6 color |> Advanced.custom width height
-
+{-| Render regular polygon
 -}
 ngon : Float -> Vec3 -> Render
 ngon n color uP uT opacity =

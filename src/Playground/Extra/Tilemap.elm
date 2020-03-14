@@ -9,54 +9,69 @@ import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
 import WebGL.Texture exposing (Texture)
 
 
-custom : Float -> Float -> Render -> Shape2d
-custom width height render =
-    --TODO remove me
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
-
-
-useTexture : String -> (Texture -> Shape2d) -> Shape2d
-useTexture url fn =
-    --TODO remove me
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
-
-
 tilemap : Float -> Float -> String -> String -> Shape2d
 tilemap tileW tileH tileset lut =
-    useTexture tileset
-        (\tileset_ ->
-            useTexture lut
-                (\lut_ ->
-                    let
-                        ( w1, h1 ) =
-                            WebGL.Texture.size tileset_
-                                |> Tuple.mapBoth toFloat toFloat
+    Shape2d
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Textured tileset
+                (\tileset_ ->
+                    Shape2d
+                        { x = 0
+                        , y = 0
+                        , a = 0
+                        , sx = 1
+                        , sy = 1
+                        , o = 1
+                        , form =
+                            Textured lut
+                                (\lut_ ->
+                                    let
+                                        ( w1, h1 ) =
+                                            WebGL.Texture.size tileset_
+                                                |> Tuple.mapBoth toFloat toFloat
 
-                        ( w2, h2 ) =
-                            WebGL.Texture.size lut_
-                                |> Tuple.mapBoth toFloat toFloat
-                    in
-                    custom
-                        (w2 * tileW)
-                        (h2 * tileH)
-                        (\translate scaleRotateSkew opacity ->
-                            WebGL.entityWith
-                                defaultEntitySettings
-                                Shader.vertImage
-                                fragTilemap
-                                Shader.mesh
-                                { uP = translate
-                                , uT = scaleRotateSkew
-                                , uA = opacity
-                                , uTileSize = vec2 tileW tileH
-                                , uAtlas = tileset_
-                                , uAtlasSize = vec2 w1 h1
-                                , uLut = lut_
-                                , uLutSize = vec2 w2 h2
-                                }
-                        )
+                                        ( w2, h2 ) =
+                                            WebGL.Texture.size lut_
+                                                |> Tuple.mapBoth toFloat toFloat
+                                    in
+                                    Shape2d
+                                        { x = 0
+                                        , y = 0
+                                        , a = 0
+                                        , sx = 1
+                                        , sy = 1
+                                        , o = 1
+                                        , form =
+                                            Form
+                                                (w2 * tileW)
+                                                (h2 * tileH)
+                                                (\translate scaleRotateSkew opacity ->
+                                                    WebGL.entityWith
+                                                        defaultEntitySettings
+                                                        Shader.vertImage
+                                                        fragTilemap
+                                                        Shader.mesh
+                                                        { uP = translate
+                                                        , uT = scaleRotateSkew
+                                                        , uA = opacity
+                                                        , uTileSize = vec2 tileW tileH
+                                                        , uAtlas = tileset_
+                                                        , uAtlasSize = vec2 w1 h1
+                                                        , uLut = lut_
+                                                        , uLutSize = vec2 w2 h2
+                                                        }
+                                                )
+                                        }
+                                )
+                        }
                 )
-        )
+        }
 
 
 fragTilemap =

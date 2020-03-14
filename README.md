@@ -80,9 +80,13 @@ I started off trying to make Pong, then worked on games like Breakout and Space 
 
 # 3.0.1 -> 4.0.0
 
-  1. `Playground.Advanced` move to own package [`WebGL.Shape2d`](https://package.elm-lang.org/packages/justgook/webgl-shape/latest/).
-  1. `Playground.delta coputer.time` - `coputer.time.delta`
-  1. `Playground.now coputer.time` - `coputer.time.now`
+  1. `Playground.Advanced` move to own package [`WebGL.Shape2d`](https://package.elm-lang.org/packages/justgook/webgl-shape/latest/) [example](https://raw.githubusercontent.com/justgook/webgl-playground/master/examples/src/Embedded.elm)
+  1. `Playground.Keyboard.keys` now is filled with the `event.code` instead of `event.key`
+  1. `Playground.delta computer.time` - `computer.time.delta`
+  1. `Playground.now computer.time` - `computer.time.now`
+  1. `Playground.Extra.scaleX` moved to `Playground.scaleX`
+  1. `Playground.Extra.scaleY` moved to `Playground.scaleY`
+  
 
   ### Type changes:
 

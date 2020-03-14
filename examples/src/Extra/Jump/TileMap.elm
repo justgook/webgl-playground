@@ -20,33 +20,30 @@ level1 =
         |> group
 
 
-custom : Float -> Float -> Render -> Shape2d
-custom width height render =
-    --TODO remove me
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
-
-
-useTexture : String -> (Texture -> Shape2d) -> Shape2d
-useTexture url fn =
-    --TODO remove me
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
-
-
 fullscreen =
-    custom 1
-        1
-        (\translate scaleRotateSkew opacity ->
-            WebGL.entityWith
-                defaultEntitySettings
-                vertFullscreen
-                Shader.fragFill
-                Shader.mesh
-                { uP = translate
-                , uT = scaleRotateSkew
-                , uA = opacity
-                , color = vec4 (14 / 255) (21 / 255) (28 / 255) 1
-                }
-        )
+    Shape2d
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Form 1
+                1
+                (\translate scaleRotateSkew opacity ->
+                    WebGL.entityWith
+                        defaultEntitySettings
+                        vertFullscreen
+                        Shader.fragFill
+                        Shader.mesh
+                        { uP = translate
+                        , uT = scaleRotateSkew
+                        , uA = opacity
+                        , color = vec4 (14 / 255) (21 / 255) (28 / 255) 1
+                        }
+                )
+        }
 
 
 vertFullscreen =

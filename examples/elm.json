@@ -15,7 +15,8 @@
             "elm/time": "1.0.0",
             "elm/virtual-dom": "1.0.2",
             "elm-explorations/linear-algebra": "1.0.3",
-            "elm-explorations/webgl": "1.1.1"
+            "elm-explorations/webgl": "1.1.1",
+            "justgook/webgl-shape": "1.0.0"
         },
         "indirect": {
             "elm/url": "1.0.0"

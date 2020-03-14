@@ -8,7 +8,6 @@ module Playground.Internal exposing
     , TextureManager
     , Time
     , create
-    , embed
     , gotTextures
     , mouseClick
     , mouseDown
@@ -33,47 +32,6 @@ import Time
 import WebGL exposing (Entity)
 import WebGL.Shape2d exposing (Shape2d, toEntities)
 import WebGL.Texture as Texture exposing (Texture, nonPowerOfTwoOptions)
-
-
-
------ DELETE ME !!!
-
-
-embed :
-    (Computer -> memory -> List Shape2d)
-    -> (Computer -> memory -> memory)
-    -> memory
-    ->
-        { init : ( Playground memory, Cmd Msg )
-        , view : Playground memory -> Html a
-        , update : Msg -> Playground memory -> ( Playground memory, Cmd Msg )
-        }
-embed viewMemory updateMemory initialMemory =
-    ---DELETE ME
-    let
-        { init, update } =
-            create viewMemory updateMemory initialMemory
-
-        view (Playground { computer, entities }) =
-            embedViewWrap computer.screen entities
-    in
-    { init = init
-    , view = view
-    , update = update
-    }
-
-
-embedViewWrap : Screen -> List Entity -> Html msg
-embedViewWrap screen entities =
-    WebGL.toHtmlWith webGLOption
-        [ H.width (round screen.width)
-        , H.height (round screen.height)
-        ]
-        entities
-
-
-
------ DELETE ME !!!
 
 
 create :
@@ -351,7 +309,7 @@ updateKeyboard isDown key keyboard =
                 Set.remove key keyboard.keys
     in
     case key of
-        " " ->
+        "Space" ->
             { keyboard | keys = keys, space = isDown }
 
         "Enter" ->

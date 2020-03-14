@@ -11,18 +11,6 @@ import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
 import WebGL.Texture exposing (Texture)
 
 
-custom : Float -> Float -> Render -> Shape
-custom width height render =
-    --TODO remove me
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form width height render }
-
-
-useTexture : String -> (Texture -> Shape) -> Shape
-useTexture url fn =
-    --TODO remove me
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Textured url fn }
-
-
 glyph =
     { a =
         glyphSprite 43 51 image <| vec4 0.328125 0.689453125 0.083984375 0.099609375
@@ -31,9 +19,18 @@ glyph =
 
 glyphSprite : Float -> Float -> String -> Vec4 -> Shape
 glyphSprite tileW tileH atlas uv =
-    useTexture atlas <|
-        \t ->
-            custom tileW tileH <| myGlyph t (size t) (vec3 1 0 0) uv
+    Shape2d
+        { x = 0
+        , y = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Textured atlas <|
+                \t ->
+                    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form tileW tileH <| myGlyph t (size t) (vec3 1 0 0) uv }
+        }
 
 
 myGlyph : Texture -> Vec2 -> Vec3 -> Vec4 -> Vec2 -> Vec4 -> Float -> WebGL.Entity
