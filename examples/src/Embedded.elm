@@ -67,7 +67,7 @@ update updateMemory viewMemory msg ({ textures } as model) =
                     unClick model.computer c
 
                 newMemory =
-                    if computer.time.delta /= computer.time.now then
+                    if computer.time.delta /= 0 && computer.time.delta /= computer.time.now then
                         updateMemory model.computer model.memory
 
                     else
@@ -132,7 +132,7 @@ view_ computer _ =
 
 getTexture : String -> Cmd Msg
 getTexture url =
-    Texture.load url
+    Texture.loadWith textureOption url
         |> Task.attempt
             (\r ->
                 case r of
@@ -186,8 +186,8 @@ subscriptions_ :
 subscriptions_ =
     { keys =
         \computer ->
-            [ E.onKeyUp (D.map (\k -> { computer | keyboard = updateKeyboard False k computer.keyboard }) (D.field "key" D.string))
-            , E.onKeyDown (D.map (\k -> { computer | keyboard = updateKeyboard True k computer.keyboard }) (D.field "key" D.string))
+            [ E.onKeyUp (D.map (\k -> { computer | keyboard = updateKeyboard False k computer.keyboard, time = { now = computer.time.now, delta = 0 } }) (D.field "code" D.string))
+            , E.onKeyDown (D.map (\k -> { computer | keyboard = updateKeyboard True k computer.keyboard, time = { now = computer.time.now, delta = 0 } }) (D.field "code" D.string))
             ]
                 |> Sub.batch
     , time =
@@ -205,9 +205,9 @@ subscriptions_ =
                 )
     , click =
         \computer ->
-            [ E.onClick (D.succeed { computer | mouse = mouseClick True computer.mouse })
-            , E.onMouseDown (D.succeed { computer | mouse = mouseDown True computer.mouse })
-            , E.onMouseUp (D.succeed { computer | mouse = mouseDown False computer.mouse })
+            [ E.onClick (D.succeed { computer | mouse = mouseClick True computer.mouse, time = { now = computer.time.now, delta = 0 } })
+            , E.onMouseDown (D.succeed { computer | mouse = mouseDown True computer.mouse, time = { now = computer.time.now, delta = 0 } })
+            , E.onMouseUp (D.succeed { computer | mouse = mouseDown False computer.mouse, time = { now = computer.time.now, delta = 0 } })
             ]
                 |> Sub.batch
     , mouse =
@@ -225,12 +225,12 @@ subscriptions_ =
                             mouse =
                                 computer.mouse
                         in
-                        { computer | mouse = { mouse | x = x, y = y } }
+                        { computer | mouse = { mouse | x = x, y = y }, time = { now = computer.time.now, delta = 0 } }
                     )
                     (D.field "pageX" D.float)
                     (D.field "pageY" D.float)
                 )
-    , resize = \computer -> E.onResize (\w h -> { computer | screen = toScreen (toFloat w) (toFloat h) })
+    , resize = \computer -> E.onResize (\w h -> { computer | screen = toScreen (toFloat w) (toFloat h), time = { now = computer.time.now, delta = 0 } })
     }
 
 
@@ -241,3 +241,13 @@ unClick was computer =
 
     else
         computer
+
+
+textureOption : Texture.Options
+textureOption =
+    { magnify = Texture.linear
+    , minify = Texture.linear
+    , horizontalWrap = Texture.clampToEdge
+    , verticalWrap = Texture.clampToEdge
+    , flipY = True
+    }
