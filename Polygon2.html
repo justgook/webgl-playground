@@ -387,7 +387,7 @@ function _Debug_toAnsiString(ansi, value)
 		return _Debug_stringColor(ansi, '<' + value.byteLength + ' bytes>');
 	}
 
-	if (typeof File === 'function' && value instanceof File)
+	if (typeof File !== 'undefined' && value instanceof File)
 	{
 		return _Debug_internalColor(ansi, '<' + value.name + '>');
 	}
@@ -457,7 +457,7 @@ function _Debug_fadeColor(ansi, string)
 
 function _Debug_internalColor(ansi, string)
 {
-	return ansi ? '\x1b[94m' + string + '\x1b[0m' : string;
+	return ansi ? '\x1b[36m' + string + '\x1b[0m' : string;
 }
 
 function _Debug_toHexDigit(n)
@@ -558,12 +558,6 @@ function _Utils_eq(x, y)
 
 function _Utils_eqHelp(x, y, depth, stack)
 {
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
 	if (x === y)
 	{
 		return true;
@@ -573,6 +567,12 @@ function _Utils_eqHelp(x, y, depth, stack)
 	{
 		typeof x === 'function' && _Debug_crash(5);
 		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
 	}
 
 	/**/
@@ -875,7 +875,7 @@ var _String_cons = F2(function(chr, str)
 function _String_uncons(string)
 {
 	var word = string.charCodeAt(0);
-	return word
+	return !isNaN(word)
 		? $elm$core$Maybe$Just(
 			0xD800 <= word && word <= 0xDBFF
 				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
@@ -1888,19 +1888,19 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
 	$elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
 	var managers = {};
-	result = init(result.a);
-	var model = result.a;
+	var initPair = init(result.a);
+	var model = initPair.a;
 	var stepper = stepperBuilder(sendToApp, model);
 	var ports = _Platform_setupEffects(managers, sendToApp);
 
 	function sendToApp(msg, viewMetadata)
 	{
-		result = A2(update, msg, model);
-		stepper(model = result.a, viewMetadata);
-		_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+		var pair = A2(update, msg, model);
+		stepper(model = pair.a, viewMetadata);
+		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
 	}
 
-	_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
 	return ports ? { ports: ports } : {};
 }
@@ -2058,6 +2058,51 @@ var _Platform_map = F2(function(tagger, bag)
 
 
 // PIPE BAGS INTO EFFECT MANAGERS
+//
+// Effects must be queued!
+//
+// Say your init contains a synchronous command, like Time.now or Time.here
+//
+//   - This will produce a batch of effects (FX_1)
+//   - The synchronous task triggers the subsequent `update` call
+//   - This will produce a batch of effects (FX_2)
+//
+// If we just start dispatching FX_2, subscriptions from FX_2 can be processed
+// before subscriptions from FX_1. No good! Earlier versions of this code had
+// this problem, leading to these reports:
+//
+//   https://github.com/elm/core/issues/980
+//   https://github.com/elm/core/pull/981
+//   https://github.com/elm/compiler/issues/1776
+//
+// The queue is necessary to avoid ordering issues for synchronous commands.
+
+
+// Why use true/false here? Why not just check the length of the queue?
+// The goal is to detect "are we currently dispatching effects?" If we
+// are, we need to bail and let the ongoing while loop handle things.
+//
+// Now say the queue has 1 element. When we dequeue the final element,
+// the queue will be empty, but we are still actively dispatching effects.
+// So you could get queue jumping in a really tricky category of cases.
+//
+var _Platform_effectsQueue = [];
+var _Platform_effectsActive = false;
+
+
+function _Platform_enqueueEffects(managers, cmdBag, subBag)
+{
+	_Platform_effectsQueue.push({ p: managers, q: cmdBag, r: subBag });
+
+	if (_Platform_effectsActive) return;
+
+	_Platform_effectsActive = true;
+	for (var fx; fx = _Platform_effectsQueue.shift(); )
+	{
+		_Platform_dispatchEffects(fx.p, fx.q, fx.r);
+	}
+	_Platform_effectsActive = false;
+}
 
 
 function _Platform_dispatchEffects(managers, cmdBag, subBag)
@@ -2095,8 +2140,8 @@ function _Platform_gatherEffects(isCmd, bag, effectsDict, taggers)
 
 		case 3:
 			_Platform_gatherEffects(isCmd, bag.o, effectsDict, {
-				p: bag.n,
-				q: taggers
+				s: bag.n,
+				t: taggers
 			});
 			return;
 	}
@@ -2107,9 +2152,9 @@ function _Platform_toEffect(isCmd, home, taggers, value)
 {
 	function applyTaggers(x)
 	{
-		for (var temp = taggers; temp; temp = temp.q)
+		for (var temp = taggers; temp; temp = temp.t)
 		{
-			x = temp.p(x);
+			x = temp.s(x);
 		}
 		return x;
 	}
@@ -2156,7 +2201,7 @@ function _Platform_outgoingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		e: _Platform_outgoingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupOutgoingPort
 	};
 	return _Platform_leaf(name);
@@ -2169,7 +2214,7 @@ var _Platform_outgoingPortMap = F2(function(tagger, value) { return value; });
 function _Platform_setupOutgoingPort(name)
 {
 	var subs = [];
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2226,7 +2271,7 @@ function _Platform_incomingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		f: _Platform_incomingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupIncomingPort
 	};
 	return _Platform_leaf(name);
@@ -2245,7 +2290,7 @@ var _Platform_incomingPortMap = F2(function(tagger, finalTagger)
 function _Platform_setupIncomingPort(name, sendToApp)
 {
 	var subs = _List_Nil;
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2325,6 +2370,1081 @@ function _Platform_mergeExportsDebug(moduleName, obj, exports)
 			: (obj[name] = exports[name]);
 	}
 }
+
+
+// eslint-disable-next-line no-unused-vars
+var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap, flipY, url) {
+  var isMipmap = mininify !== 9728 && mininify !== 9729;
+  return _Scheduler_binding(function (callback) {
+    var img = new Image();
+    function createTexture(gl) {
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magnify);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mininify);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, horizontalWrap);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, verticalWrap);
+      if (isMipmap) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      return texture;
+    }
+    img.onload = function () {
+      var width = img.width;
+      var height = img.height;
+      var widthPowerOfTwo = (width & (width - 1)) === 0;
+      var heightPowerOfTwo = (height & (height - 1)) === 0;
+      var isSizeValid = (widthPowerOfTwo && heightPowerOfTwo) || (
+        !isMipmap
+        && horizontalWrap === 33071 // clamp to edge
+        && verticalWrap === 33071
+      );
+      if (isSizeValid) {
+        callback(_Scheduler_succeed({
+          $: 0,
+          createTexture: createTexture,
+          a: width,
+          b: height
+        }));
+      } else {
+        callback(_Scheduler_fail(A2(
+          $elm_explorations$webgl$WebGL$Texture$SizeError,
+          width,
+          height
+        )));
+      }
+    };
+    img.onerror = function () {
+      callback(_Scheduler_fail($elm_explorations$webgl$WebGL$Texture$LoadError));
+    };
+    if (url.slice(0, 5) !== 'data:') {
+      img.crossOrigin = 'Anonymous';
+    }
+    img.src = url;
+  });
+});
+
+// eslint-disable-next-line no-unused-vars
+var _Texture_size = function (texture) {
+  return _Utils_Tuple2(texture.a, texture.b);
+};
+
+
+/*
+ * Copyright (c) 2010 Mozilla Corporation
+ * Copyright (c) 2010 Vladimir Vukicevic
+ * Copyright (c) 2013 John Mayer
+ * Copyright (c) 2018 Andrey Kuzmin
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+// Vector2
+
+var _MJS_v2 = F2(function(x, y) {
+    return new Float64Array([x, y]);
+});
+
+var _MJS_v2getX = function(a) {
+    return a[0];
+};
+
+var _MJS_v2getY = function(a) {
+    return a[1];
+};
+
+var _MJS_v2setX = F2(function(x, a) {
+    return new Float64Array([x, a[1]]);
+});
+
+var _MJS_v2setY = F2(function(y, a) {
+    return new Float64Array([a[0], y]);
+});
+
+var _MJS_v2toRecord = function(a) {
+    return { x: a[0], y: a[1] };
+};
+
+var _MJS_v2fromRecord = function(r) {
+    return new Float64Array([r.x, r.y]);
+};
+
+var _MJS_v2add = F2(function(a, b) {
+    var r = new Float64Array(2);
+    r[0] = a[0] + b[0];
+    r[1] = a[1] + b[1];
+    return r;
+});
+
+var _MJS_v2sub = F2(function(a, b) {
+    var r = new Float64Array(2);
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    return r;
+});
+
+var _MJS_v2negate = function(a) {
+    var r = new Float64Array(2);
+    r[0] = -a[0];
+    r[1] = -a[1];
+    return r;
+};
+
+var _MJS_v2direction = F2(function(a, b) {
+    var r = new Float64Array(2);
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    var im = 1.0 / _MJS_v2lengthLocal(r);
+    r[0] = r[0] * im;
+    r[1] = r[1] * im;
+    return r;
+});
+
+function _MJS_v2lengthLocal(a) {
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1]);
+}
+var _MJS_v2length = _MJS_v2lengthLocal;
+
+var _MJS_v2lengthSquared = function(a) {
+    return a[0] * a[0] + a[1] * a[1];
+};
+
+var _MJS_v2distance = F2(function(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    return Math.sqrt(dx * dx + dy * dy);
+});
+
+var _MJS_v2distanceSquared = F2(function(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    return dx * dx + dy * dy;
+});
+
+var _MJS_v2normalize = function(a) {
+    var r = new Float64Array(2);
+    var im = 1.0 / _MJS_v2lengthLocal(a);
+    r[0] = a[0] * im;
+    r[1] = a[1] * im;
+    return r;
+};
+
+var _MJS_v2scale = F2(function(k, a) {
+    var r = new Float64Array(2);
+    r[0] = a[0] * k;
+    r[1] = a[1] * k;
+    return r;
+});
+
+var _MJS_v2dot = F2(function(a, b) {
+    return a[0] * b[0] + a[1] * b[1];
+});
+
+// Vector3
+
+var _MJS_v3temp1Local = new Float64Array(3);
+var _MJS_v3temp2Local = new Float64Array(3);
+var _MJS_v3temp3Local = new Float64Array(3);
+
+var _MJS_v3 = F3(function(x, y, z) {
+    return new Float64Array([x, y, z]);
+});
+
+var _MJS_v3getX = function(a) {
+    return a[0];
+};
+
+var _MJS_v3getY = function(a) {
+    return a[1];
+};
+
+var _MJS_v3getZ = function(a) {
+    return a[2];
+};
+
+var _MJS_v3setX = F2(function(x, a) {
+    return new Float64Array([x, a[1], a[2]]);
+});
+
+var _MJS_v3setY = F2(function(y, a) {
+    return new Float64Array([a[0], y, a[2]]);
+});
+
+var _MJS_v3setZ = F2(function(z, a) {
+    return new Float64Array([a[0], a[1], z]);
+});
+
+var _MJS_v3toRecord = function(a) {
+    return { x: a[0], y: a[1], z: a[2] };
+};
+
+var _MJS_v3fromRecord = function(r) {
+    return new Float64Array([r.x, r.y, r.z]);
+};
+
+var _MJS_v3add = F2(function(a, b) {
+    var r = new Float64Array(3);
+    r[0] = a[0] + b[0];
+    r[1] = a[1] + b[1];
+    r[2] = a[2] + b[2];
+    return r;
+});
+
+function _MJS_v3subLocal(a, b, r) {
+    if (r === undefined) {
+        r = new Float64Array(3);
+    }
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    r[2] = a[2] - b[2];
+    return r;
+}
+var _MJS_v3sub = F2(_MJS_v3subLocal);
+
+var _MJS_v3negate = function(a) {
+    var r = new Float64Array(3);
+    r[0] = -a[0];
+    r[1] = -a[1];
+    r[2] = -a[2];
+    return r;
+};
+
+function _MJS_v3directionLocal(a, b, r) {
+    if (r === undefined) {
+        r = new Float64Array(3);
+    }
+    return _MJS_v3normalizeLocal(_MJS_v3subLocal(a, b, r), r);
+}
+var _MJS_v3direction = F2(_MJS_v3directionLocal);
+
+function _MJS_v3lengthLocal(a) {
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+}
+var _MJS_v3length = _MJS_v3lengthLocal;
+
+var _MJS_v3lengthSquared = function(a) {
+    return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
+};
+
+var _MJS_v3distance = F2(function(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    var dz = a[2] - b[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+});
+
+var _MJS_v3distanceSquared = F2(function(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    var dz = a[2] - b[2];
+    return dx * dx + dy * dy + dz * dz;
+});
+
+function _MJS_v3normalizeLocal(a, r) {
+    if (r === undefined) {
+        r = new Float64Array(3);
+    }
+    var im = 1.0 / _MJS_v3lengthLocal(a);
+    r[0] = a[0] * im;
+    r[1] = a[1] * im;
+    r[2] = a[2] * im;
+    return r;
+}
+var _MJS_v3normalize = _MJS_v3normalizeLocal;
+
+var _MJS_v3scale = F2(function(k, a) {
+    return new Float64Array([a[0] * k, a[1] * k, a[2] * k]);
+});
+
+var _MJS_v3dotLocal = function(a, b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+};
+var _MJS_v3dot = F2(_MJS_v3dotLocal);
+
+function _MJS_v3crossLocal(a, b, r) {
+    if (r === undefined) {
+        r = new Float64Array(3);
+    }
+    r[0] = a[1] * b[2] - a[2] * b[1];
+    r[1] = a[2] * b[0] - a[0] * b[2];
+    r[2] = a[0] * b[1] - a[1] * b[0];
+    return r;
+}
+var _MJS_v3cross = F2(_MJS_v3crossLocal);
+
+var _MJS_v3mul4x4 = F2(function(m, v) {
+    var w;
+    var tmp = _MJS_v3temp1Local;
+    var r = new Float64Array(3);
+
+    tmp[0] = m[3];
+    tmp[1] = m[7];
+    tmp[2] = m[11];
+    w = _MJS_v3dotLocal(v, tmp) + m[15];
+    tmp[0] = m[0];
+    tmp[1] = m[4];
+    tmp[2] = m[8];
+    r[0] = (_MJS_v3dotLocal(v, tmp) + m[12]) / w;
+    tmp[0] = m[1];
+    tmp[1] = m[5];
+    tmp[2] = m[9];
+    r[1] = (_MJS_v3dotLocal(v, tmp) + m[13]) / w;
+    tmp[0] = m[2];
+    tmp[1] = m[6];
+    tmp[2] = m[10];
+    r[2] = (_MJS_v3dotLocal(v, tmp) + m[14]) / w;
+    return r;
+});
+
+// Vector4
+
+var _MJS_v4 = F4(function(x, y, z, w) {
+    return new Float64Array([x, y, z, w]);
+});
+
+var _MJS_v4getX = function(a) {
+    return a[0];
+};
+
+var _MJS_v4getY = function(a) {
+    return a[1];
+};
+
+var _MJS_v4getZ = function(a) {
+    return a[2];
+};
+
+var _MJS_v4getW = function(a) {
+    return a[3];
+};
+
+var _MJS_v4setX = F2(function(x, a) {
+    return new Float64Array([x, a[1], a[2], a[3]]);
+});
+
+var _MJS_v4setY = F2(function(y, a) {
+    return new Float64Array([a[0], y, a[2], a[3]]);
+});
+
+var _MJS_v4setZ = F2(function(z, a) {
+    return new Float64Array([a[0], a[1], z, a[3]]);
+});
+
+var _MJS_v4setW = F2(function(w, a) {
+    return new Float64Array([a[0], a[1], a[2], w]);
+});
+
+var _MJS_v4toRecord = function(a) {
+    return { x: a[0], y: a[1], z: a[2], w: a[3] };
+};
+
+var _MJS_v4fromRecord = function(r) {
+    return new Float64Array([r.x, r.y, r.z, r.w]);
+};
+
+var _MJS_v4add = F2(function(a, b) {
+    var r = new Float64Array(4);
+    r[0] = a[0] + b[0];
+    r[1] = a[1] + b[1];
+    r[2] = a[2] + b[2];
+    r[3] = a[3] + b[3];
+    return r;
+});
+
+var _MJS_v4sub = F2(function(a, b) {
+    var r = new Float64Array(4);
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    r[2] = a[2] - b[2];
+    r[3] = a[3] - b[3];
+    return r;
+});
+
+var _MJS_v4negate = function(a) {
+    var r = new Float64Array(4);
+    r[0] = -a[0];
+    r[1] = -a[1];
+    r[2] = -a[2];
+    r[3] = -a[3];
+    return r;
+};
+
+var _MJS_v4direction = F2(function(a, b) {
+    var r = new Float64Array(4);
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    r[2] = a[2] - b[2];
+    r[3] = a[3] - b[3];
+    var im = 1.0 / _MJS_v4lengthLocal(r);
+    r[0] = r[0] * im;
+    r[1] = r[1] * im;
+    r[2] = r[2] * im;
+    r[3] = r[3] * im;
+    return r;
+});
+
+function _MJS_v4lengthLocal(a) {
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3]);
+}
+var _MJS_v4length = _MJS_v4lengthLocal;
+
+var _MJS_v4lengthSquared = function(a) {
+    return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
+};
+
+var _MJS_v4distance = F2(function(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    var dz = a[2] - b[2];
+    var dw = a[3] - b[3];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
+});
+
+var _MJS_v4distanceSquared = F2(function(a, b) {
+    var dx = a[0] - b[0];
+    var dy = a[1] - b[1];
+    var dz = a[2] - b[2];
+    var dw = a[3] - b[3];
+    return dx * dx + dy * dy + dz * dz + dw * dw;
+});
+
+var _MJS_v4normalize = function(a) {
+    var r = new Float64Array(4);
+    var im = 1.0 / _MJS_v4lengthLocal(a);
+    r[0] = a[0] * im;
+    r[1] = a[1] * im;
+    r[2] = a[2] * im;
+    r[3] = a[3] * im;
+    return r;
+};
+
+var _MJS_v4scale = F2(function(k, a) {
+    var r = new Float64Array(4);
+    r[0] = a[0] * k;
+    r[1] = a[1] * k;
+    r[2] = a[2] * k;
+    r[3] = a[3] * k;
+    return r;
+});
+
+var _MJS_v4dot = F2(function(a, b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+});
+
+// Matrix4
+
+var _MJS_m4x4temp1Local = new Float64Array(16);
+var _MJS_m4x4temp2Local = new Float64Array(16);
+
+var _MJS_m4x4identity = new Float64Array([
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0
+]);
+
+var _MJS_m4x4fromRecord = function(r) {
+    var m = new Float64Array(16);
+    m[0] = r.m11;
+    m[1] = r.m21;
+    m[2] = r.m31;
+    m[3] = r.m41;
+    m[4] = r.m12;
+    m[5] = r.m22;
+    m[6] = r.m32;
+    m[7] = r.m42;
+    m[8] = r.m13;
+    m[9] = r.m23;
+    m[10] = r.m33;
+    m[11] = r.m43;
+    m[12] = r.m14;
+    m[13] = r.m24;
+    m[14] = r.m34;
+    m[15] = r.m44;
+    return m;
+};
+
+var _MJS_m4x4toRecord = function(m) {
+    return {
+        m11: m[0], m21: m[1], m31: m[2], m41: m[3],
+        m12: m[4], m22: m[5], m32: m[6], m42: m[7],
+        m13: m[8], m23: m[9], m33: m[10], m43: m[11],
+        m14: m[12], m24: m[13], m34: m[14], m44: m[15]
+    };
+};
+
+var _MJS_m4x4inverse = function(m) {
+    var r = new Float64Array(16);
+
+    r[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] +
+        m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
+    r[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] -
+        m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
+    r[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] +
+        m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
+    r[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] -
+        m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
+    r[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] -
+        m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
+    r[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] +
+        m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
+    r[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] -
+        m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
+    r[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] +
+        m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
+    r[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] +
+        m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
+    r[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] -
+        m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
+    r[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] +
+        m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
+    r[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] -
+        m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
+    r[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] -
+        m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
+    r[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] +
+        m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
+    r[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] -
+        m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
+    r[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
+        m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
+
+    var det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12];
+
+    if (det === 0) {
+        return $elm$core$Maybe$Nothing;
+    }
+
+    det = 1.0 / det;
+
+    for (var i = 0; i < 16; i = i + 1) {
+        r[i] = r[i] * det;
+    }
+
+    return $elm$core$Maybe$Just(r);
+};
+
+var _MJS_m4x4inverseOrthonormal = function(m) {
+    var r = _MJS_m4x4transposeLocal(m);
+    var t = [m[12], m[13], m[14]];
+    r[3] = r[7] = r[11] = 0;
+    r[12] = -_MJS_v3dotLocal([r[0], r[4], r[8]], t);
+    r[13] = -_MJS_v3dotLocal([r[1], r[5], r[9]], t);
+    r[14] = -_MJS_v3dotLocal([r[2], r[6], r[10]], t);
+    return r;
+};
+
+function _MJS_m4x4makeFrustumLocal(left, right, bottom, top, znear, zfar) {
+    var r = new Float64Array(16);
+
+    r[0] = 2 * znear / (right - left);
+    r[1] = 0;
+    r[2] = 0;
+    r[3] = 0;
+    r[4] = 0;
+    r[5] = 2 * znear / (top - bottom);
+    r[6] = 0;
+    r[7] = 0;
+    r[8] = (right + left) / (right - left);
+    r[9] = (top + bottom) / (top - bottom);
+    r[10] = -(zfar + znear) / (zfar - znear);
+    r[11] = -1;
+    r[12] = 0;
+    r[13] = 0;
+    r[14] = -2 * zfar * znear / (zfar - znear);
+    r[15] = 0;
+
+    return r;
+}
+var _MJS_m4x4makeFrustum = F6(_MJS_m4x4makeFrustumLocal);
+
+var _MJS_m4x4makePerspective = F4(function(fovy, aspect, znear, zfar) {
+    var ymax = znear * Math.tan(fovy * Math.PI / 360.0);
+    var ymin = -ymax;
+    var xmin = ymin * aspect;
+    var xmax = ymax * aspect;
+
+    return _MJS_m4x4makeFrustumLocal(xmin, xmax, ymin, ymax, znear, zfar);
+});
+
+function _MJS_m4x4makeOrthoLocal(left, right, bottom, top, znear, zfar) {
+    var r = new Float64Array(16);
+
+    r[0] = 2 / (right - left);
+    r[1] = 0;
+    r[2] = 0;
+    r[3] = 0;
+    r[4] = 0;
+    r[5] = 2 / (top - bottom);
+    r[6] = 0;
+    r[7] = 0;
+    r[8] = 0;
+    r[9] = 0;
+    r[10] = -2 / (zfar - znear);
+    r[11] = 0;
+    r[12] = -(right + left) / (right - left);
+    r[13] = -(top + bottom) / (top - bottom);
+    r[14] = -(zfar + znear) / (zfar - znear);
+    r[15] = 1;
+
+    return r;
+}
+var _MJS_m4x4makeOrtho = F6(_MJS_m4x4makeOrthoLocal);
+
+var _MJS_m4x4makeOrtho2D = F4(function(left, right, bottom, top) {
+    return _MJS_m4x4makeOrthoLocal(left, right, bottom, top, -1, 1);
+});
+
+function _MJS_m4x4mulLocal(a, b) {
+    var r = new Float64Array(16);
+    var a11 = a[0];
+    var a21 = a[1];
+    var a31 = a[2];
+    var a41 = a[3];
+    var a12 = a[4];
+    var a22 = a[5];
+    var a32 = a[6];
+    var a42 = a[7];
+    var a13 = a[8];
+    var a23 = a[9];
+    var a33 = a[10];
+    var a43 = a[11];
+    var a14 = a[12];
+    var a24 = a[13];
+    var a34 = a[14];
+    var a44 = a[15];
+    var b11 = b[0];
+    var b21 = b[1];
+    var b31 = b[2];
+    var b41 = b[3];
+    var b12 = b[4];
+    var b22 = b[5];
+    var b32 = b[6];
+    var b42 = b[7];
+    var b13 = b[8];
+    var b23 = b[9];
+    var b33 = b[10];
+    var b43 = b[11];
+    var b14 = b[12];
+    var b24 = b[13];
+    var b34 = b[14];
+    var b44 = b[15];
+
+    r[0] = a11 * b11 + a12 * b21 + a13 * b31 + a14 * b41;
+    r[1] = a21 * b11 + a22 * b21 + a23 * b31 + a24 * b41;
+    r[2] = a31 * b11 + a32 * b21 + a33 * b31 + a34 * b41;
+    r[3] = a41 * b11 + a42 * b21 + a43 * b31 + a44 * b41;
+    r[4] = a11 * b12 + a12 * b22 + a13 * b32 + a14 * b42;
+    r[5] = a21 * b12 + a22 * b22 + a23 * b32 + a24 * b42;
+    r[6] = a31 * b12 + a32 * b22 + a33 * b32 + a34 * b42;
+    r[7] = a41 * b12 + a42 * b22 + a43 * b32 + a44 * b42;
+    r[8] = a11 * b13 + a12 * b23 + a13 * b33 + a14 * b43;
+    r[9] = a21 * b13 + a22 * b23 + a23 * b33 + a24 * b43;
+    r[10] = a31 * b13 + a32 * b23 + a33 * b33 + a34 * b43;
+    r[11] = a41 * b13 + a42 * b23 + a43 * b33 + a44 * b43;
+    r[12] = a11 * b14 + a12 * b24 + a13 * b34 + a14 * b44;
+    r[13] = a21 * b14 + a22 * b24 + a23 * b34 + a24 * b44;
+    r[14] = a31 * b14 + a32 * b24 + a33 * b34 + a34 * b44;
+    r[15] = a41 * b14 + a42 * b24 + a43 * b34 + a44 * b44;
+
+    return r;
+}
+var _MJS_m4x4mul = F2(_MJS_m4x4mulLocal);
+
+var _MJS_m4x4mulAffine = F2(function(a, b) {
+    var r = new Float64Array(16);
+    var a11 = a[0];
+    var a21 = a[1];
+    var a31 = a[2];
+    var a12 = a[4];
+    var a22 = a[5];
+    var a32 = a[6];
+    var a13 = a[8];
+    var a23 = a[9];
+    var a33 = a[10];
+    var a14 = a[12];
+    var a24 = a[13];
+    var a34 = a[14];
+
+    var b11 = b[0];
+    var b21 = b[1];
+    var b31 = b[2];
+    var b12 = b[4];
+    var b22 = b[5];
+    var b32 = b[6];
+    var b13 = b[8];
+    var b23 = b[9];
+    var b33 = b[10];
+    var b14 = b[12];
+    var b24 = b[13];
+    var b34 = b[14];
+
+    r[0] = a11 * b11 + a12 * b21 + a13 * b31;
+    r[1] = a21 * b11 + a22 * b21 + a23 * b31;
+    r[2] = a31 * b11 + a32 * b21 + a33 * b31;
+    r[3] = 0;
+    r[4] = a11 * b12 + a12 * b22 + a13 * b32;
+    r[5] = a21 * b12 + a22 * b22 + a23 * b32;
+    r[6] = a31 * b12 + a32 * b22 + a33 * b32;
+    r[7] = 0;
+    r[8] = a11 * b13 + a12 * b23 + a13 * b33;
+    r[9] = a21 * b13 + a22 * b23 + a23 * b33;
+    r[10] = a31 * b13 + a32 * b23 + a33 * b33;
+    r[11] = 0;
+    r[12] = a11 * b14 + a12 * b24 + a13 * b34 + a14;
+    r[13] = a21 * b14 + a22 * b24 + a23 * b34 + a24;
+    r[14] = a31 * b14 + a32 * b24 + a33 * b34 + a34;
+    r[15] = 1;
+
+    return r;
+});
+
+var _MJS_m4x4makeRotate = F2(function(angle, axis) {
+    var r = new Float64Array(16);
+    axis = _MJS_v3normalizeLocal(axis, _MJS_v3temp1Local);
+    var x = axis[0];
+    var y = axis[1];
+    var z = axis[2];
+    var c = Math.cos(angle);
+    var c1 = 1 - c;
+    var s = Math.sin(angle);
+
+    r[0] = x * x * c1 + c;
+    r[1] = y * x * c1 + z * s;
+    r[2] = z * x * c1 - y * s;
+    r[3] = 0;
+    r[4] = x * y * c1 - z * s;
+    r[5] = y * y * c1 + c;
+    r[6] = y * z * c1 + x * s;
+    r[7] = 0;
+    r[8] = x * z * c1 + y * s;
+    r[9] = y * z * c1 - x * s;
+    r[10] = z * z * c1 + c;
+    r[11] = 0;
+    r[12] = 0;
+    r[13] = 0;
+    r[14] = 0;
+    r[15] = 1;
+
+    return r;
+});
+
+var _MJS_m4x4rotate = F3(function(angle, axis, m) {
+    var r = new Float64Array(16);
+    var im = 1.0 / _MJS_v3lengthLocal(axis);
+    var x = axis[0] * im;
+    var y = axis[1] * im;
+    var z = axis[2] * im;
+    var c = Math.cos(angle);
+    var c1 = 1 - c;
+    var s = Math.sin(angle);
+    var xs = x * s;
+    var ys = y * s;
+    var zs = z * s;
+    var xyc1 = x * y * c1;
+    var xzc1 = x * z * c1;
+    var yzc1 = y * z * c1;
+    var t11 = x * x * c1 + c;
+    var t21 = xyc1 + zs;
+    var t31 = xzc1 - ys;
+    var t12 = xyc1 - zs;
+    var t22 = y * y * c1 + c;
+    var t32 = yzc1 + xs;
+    var t13 = xzc1 + ys;
+    var t23 = yzc1 - xs;
+    var t33 = z * z * c1 + c;
+    var m11 = m[0], m21 = m[1], m31 = m[2], m41 = m[3];
+    var m12 = m[4], m22 = m[5], m32 = m[6], m42 = m[7];
+    var m13 = m[8], m23 = m[9], m33 = m[10], m43 = m[11];
+    var m14 = m[12], m24 = m[13], m34 = m[14], m44 = m[15];
+
+    r[0] = m11 * t11 + m12 * t21 + m13 * t31;
+    r[1] = m21 * t11 + m22 * t21 + m23 * t31;
+    r[2] = m31 * t11 + m32 * t21 + m33 * t31;
+    r[3] = m41 * t11 + m42 * t21 + m43 * t31;
+    r[4] = m11 * t12 + m12 * t22 + m13 * t32;
+    r[5] = m21 * t12 + m22 * t22 + m23 * t32;
+    r[6] = m31 * t12 + m32 * t22 + m33 * t32;
+    r[7] = m41 * t12 + m42 * t22 + m43 * t32;
+    r[8] = m11 * t13 + m12 * t23 + m13 * t33;
+    r[9] = m21 * t13 + m22 * t23 + m23 * t33;
+    r[10] = m31 * t13 + m32 * t23 + m33 * t33;
+    r[11] = m41 * t13 + m42 * t23 + m43 * t33;
+    r[12] = m14,
+    r[13] = m24;
+    r[14] = m34;
+    r[15] = m44;
+
+    return r;
+});
+
+function _MJS_m4x4makeScale3Local(x, y, z) {
+    var r = new Float64Array(16);
+
+    r[0] = x;
+    r[1] = 0;
+    r[2] = 0;
+    r[3] = 0;
+    r[4] = 0;
+    r[5] = y;
+    r[6] = 0;
+    r[7] = 0;
+    r[8] = 0;
+    r[9] = 0;
+    r[10] = z;
+    r[11] = 0;
+    r[12] = 0;
+    r[13] = 0;
+    r[14] = 0;
+    r[15] = 1;
+
+    return r;
+}
+var _MJS_m4x4makeScale3 = F3(_MJS_m4x4makeScale3Local);
+
+var _MJS_m4x4makeScale = function(v) {
+    return _MJS_m4x4makeScale3Local(v[0], v[1], v[2]);
+};
+
+var _MJS_m4x4scale3 = F4(function(x, y, z, m) {
+    var r = new Float64Array(16);
+
+    r[0] = m[0] * x;
+    r[1] = m[1] * x;
+    r[2] = m[2] * x;
+    r[3] = m[3] * x;
+    r[4] = m[4] * y;
+    r[5] = m[5] * y;
+    r[6] = m[6] * y;
+    r[7] = m[7] * y;
+    r[8] = m[8] * z;
+    r[9] = m[9] * z;
+    r[10] = m[10] * z;
+    r[11] = m[11] * z;
+    r[12] = m[12];
+    r[13] = m[13];
+    r[14] = m[14];
+    r[15] = m[15];
+
+    return r;
+});
+
+var _MJS_m4x4scale = F2(function(v, m) {
+    var r = new Float64Array(16);
+    var x = v[0];
+    var y = v[1];
+    var z = v[2];
+
+    r[0] = m[0] * x;
+    r[1] = m[1] * x;
+    r[2] = m[2] * x;
+    r[3] = m[3] * x;
+    r[4] = m[4] * y;
+    r[5] = m[5] * y;
+    r[6] = m[6] * y;
+    r[7] = m[7] * y;
+    r[8] = m[8] * z;
+    r[9] = m[9] * z;
+    r[10] = m[10] * z;
+    r[11] = m[11] * z;
+    r[12] = m[12];
+    r[13] = m[13];
+    r[14] = m[14];
+    r[15] = m[15];
+
+    return r;
+});
+
+function _MJS_m4x4makeTranslate3Local(x, y, z) {
+    var r = new Float64Array(16);
+
+    r[0] = 1;
+    r[1] = 0;
+    r[2] = 0;
+    r[3] = 0;
+    r[4] = 0;
+    r[5] = 1;
+    r[6] = 0;
+    r[7] = 0;
+    r[8] = 0;
+    r[9] = 0;
+    r[10] = 1;
+    r[11] = 0;
+    r[12] = x;
+    r[13] = y;
+    r[14] = z;
+    r[15] = 1;
+
+    return r;
+}
+var _MJS_m4x4makeTranslate3 = F3(_MJS_m4x4makeTranslate3Local);
+
+var _MJS_m4x4makeTranslate = function(v) {
+    return _MJS_m4x4makeTranslate3Local(v[0], v[1], v[2]);
+};
+
+var _MJS_m4x4translate3 = F4(function(x, y, z, m) {
+    var r = new Float64Array(16);
+    var m11 = m[0];
+    var m21 = m[1];
+    var m31 = m[2];
+    var m41 = m[3];
+    var m12 = m[4];
+    var m22 = m[5];
+    var m32 = m[6];
+    var m42 = m[7];
+    var m13 = m[8];
+    var m23 = m[9];
+    var m33 = m[10];
+    var m43 = m[11];
+
+    r[0] = m11;
+    r[1] = m21;
+    r[2] = m31;
+    r[3] = m41;
+    r[4] = m12;
+    r[5] = m22;
+    r[6] = m32;
+    r[7] = m42;
+    r[8] = m13;
+    r[9] = m23;
+    r[10] = m33;
+    r[11] = m43;
+    r[12] = m11 * x + m12 * y + m13 * z + m[12];
+    r[13] = m21 * x + m22 * y + m23 * z + m[13];
+    r[14] = m31 * x + m32 * y + m33 * z + m[14];
+    r[15] = m41 * x + m42 * y + m43 * z + m[15];
+
+    return r;
+});
+
+var _MJS_m4x4translate = F2(function(v, m) {
+    var r = new Float64Array(16);
+    var x = v[0];
+    var y = v[1];
+    var z = v[2];
+    var m11 = m[0];
+    var m21 = m[1];
+    var m31 = m[2];
+    var m41 = m[3];
+    var m12 = m[4];
+    var m22 = m[5];
+    var m32 = m[6];
+    var m42 = m[7];
+    var m13 = m[8];
+    var m23 = m[9];
+    var m33 = m[10];
+    var m43 = m[11];
+
+    r[0] = m11;
+    r[1] = m21;
+    r[2] = m31;
+    r[3] = m41;
+    r[4] = m12;
+    r[5] = m22;
+    r[6] = m32;
+    r[7] = m42;
+    r[8] = m13;
+    r[9] = m23;
+    r[10] = m33;
+    r[11] = m43;
+    r[12] = m11 * x + m12 * y + m13 * z + m[12];
+    r[13] = m21 * x + m22 * y + m23 * z + m[13];
+    r[14] = m31 * x + m32 * y + m33 * z + m[14];
+    r[15] = m41 * x + m42 * y + m43 * z + m[15];
+
+    return r;
+});
+
+var _MJS_m4x4makeLookAt = F3(function(eye, center, up) {
+    var z = _MJS_v3directionLocal(eye, center, _MJS_v3temp1Local);
+    var x = _MJS_v3normalizeLocal(_MJS_v3crossLocal(up, z, _MJS_v3temp2Local), _MJS_v3temp2Local);
+    var y = _MJS_v3normalizeLocal(_MJS_v3crossLocal(z, x, _MJS_v3temp3Local), _MJS_v3temp3Local);
+    var tm1 = _MJS_m4x4temp1Local;
+    var tm2 = _MJS_m4x4temp2Local;
+
+    tm1[0] = x[0];
+    tm1[1] = y[0];
+    tm1[2] = z[0];
+    tm1[3] = 0;
+    tm1[4] = x[1];
+    tm1[5] = y[1];
+    tm1[6] = z[1];
+    tm1[7] = 0;
+    tm1[8] = x[2];
+    tm1[9] = y[2];
+    tm1[10] = z[2];
+    tm1[11] = 0;
+    tm1[12] = 0;
+    tm1[13] = 0;
+    tm1[14] = 0;
+    tm1[15] = 1;
+
+    tm2[0] = 1; tm2[1] = 0; tm2[2] = 0; tm2[3] = 0;
+    tm2[4] = 0; tm2[5] = 1; tm2[6] = 0; tm2[7] = 0;
+    tm2[8] = 0; tm2[9] = 0; tm2[10] = 1; tm2[11] = 0;
+    tm2[12] = -eye[0]; tm2[13] = -eye[1]; tm2[14] = -eye[2]; tm2[15] = 1;
+
+    return _MJS_m4x4mulLocal(tm1, tm2);
+});
+
+
+function _MJS_m4x4transposeLocal(m) {
+    var r = new Float64Array(16);
+
+    r[0] = m[0]; r[1] = m[4]; r[2] = m[8]; r[3] = m[12];
+    r[4] = m[1]; r[5] = m[5]; r[6] = m[9]; r[7] = m[13];
+    r[8] = m[2]; r[9] = m[6]; r[10] = m[10]; r[11] = m[14];
+    r[12] = m[3]; r[13] = m[7]; r[14] = m[11]; r[15] = m[15];
+
+    return r;
+}
+var _MJS_m4x4transpose = _MJS_m4x4transposeLocal;
+
+var _MJS_m4x4makeBasis = F3(function(vx, vy, vz) {
+    var r = new Float64Array(16);
+
+    r[0] = vx[0];
+    r[1] = vx[1];
+    r[2] = vx[2];
+    r[3] = 0;
+    r[4] = vy[0];
+    r[5] = vy[1];
+    r[6] = vy[2];
+    r[7] = 0;
+    r[8] = vz[0];
+    r[9] = vz[1];
+    r[10] = vz[2];
+    r[11] = 0;
+    r[12] = 0;
+    r[13] = 0;
+    r[14] = 0;
+    r[15] = 1;
+
+    return r;
+});
 
 
 
@@ -4326,1079 +5446,50 @@ function _Browser_load(url)
 }
 
 
-// eslint-disable-next-line no-unused-vars
-var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap, flipY, url) {
-  var isMipmap = mininify !== 9728 && mininify !== 9729;
-  return _Scheduler_binding(function (callback) {
-    var img = new Image();
-    function createTexture(gl) {
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magnify);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mininify);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, horizontalWrap);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, verticalWrap);
-      if (isMipmap) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-      }
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      return texture;
-    }
-    img.onload = function () {
-      var width = img.width;
-      var height = img.height;
-      var widthPowerOfTwo = (width & (width - 1)) === 0;
-      var heightPowerOfTwo = (height & (height - 1)) === 0;
-      var isSizeValid = (widthPowerOfTwo && heightPowerOfTwo) || (
-        !isMipmap
-        && horizontalWrap === 33071 // clamp to edge
-        && verticalWrap === 33071
-      );
-      if (isSizeValid) {
-        callback(_Scheduler_succeed({
-          $: 0,
-          createTexture: createTexture,
-          a: width,
-          b: height
-        }));
-      } else {
-        callback(_Scheduler_fail(A2(
-          $elm_explorations$webgl$WebGL$Texture$SizeError,
-          width,
-          height
-        )));
-      }
-    };
-    img.onerror = function () {
-      callback(_Scheduler_fail($elm_explorations$webgl$WebGL$Texture$LoadError));
-    };
-    if (url.slice(0, 5) !== 'data:') {
-      img.crossOrigin = 'Anonymous';
-    }
-    img.src = url;
-  });
-});
 
-// eslint-disable-next-line no-unused-vars
-var _Texture_size = function (texture) {
-  return _Utils_Tuple2(texture.a, texture.b);
-};
-
-
-/*
- * Copyright (c) 2010 Mozilla Corporation
- * Copyright (c) 2010 Vladimir Vukicevic
- * Copyright (c) 2013 John Mayer
- * Copyright (c) 2018 Andrey Kuzmin
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
-
-// Vector2
-
-var _MJS_v2 = F2(function(x, y) {
-    return new Float64Array([x, y]);
-});
-
-var _MJS_v2getX = function(a) {
-    return a[0];
-};
-
-var _MJS_v2getY = function(a) {
-    return a[1];
-};
-
-var _MJS_v2setX = F2(function(x, a) {
-    return new Float64Array([x, a[1]]);
-});
-
-var _MJS_v2setY = F2(function(y, a) {
-    return new Float64Array([a[0], y]);
-});
-
-var _MJS_v2toRecord = function(a) {
-    return { x: a[0], y: a[1] };
-};
-
-var _MJS_v2fromRecord = function(r) {
-    return new Float64Array([r.x, r.y]);
-};
-
-var _MJS_v2add = F2(function(a, b) {
-    var r = new Float64Array(2);
-    r[0] = a[0] + b[0];
-    r[1] = a[1] + b[1];
-    return r;
-});
-
-var _MJS_v2sub = F2(function(a, b) {
-    var r = new Float64Array(2);
-    r[0] = a[0] - b[0];
-    r[1] = a[1] - b[1];
-    return r;
-});
-
-var _MJS_v2negate = function(a) {
-    var r = new Float64Array(2);
-    r[0] = -a[0];
-    r[1] = -a[1];
-    return r;
-};
-
-var _MJS_v2direction = F2(function(a, b) {
-    var r = new Float64Array(2);
-    r[0] = a[0] - b[0];
-    r[1] = a[1] - b[1];
-    var im = 1.0 / _MJS_v2lengthLocal(r);
-    r[0] = r[0] * im;
-    r[1] = r[1] * im;
-    return r;
-});
-
-function _MJS_v2lengthLocal(a) {
-    return Math.sqrt(a[0] * a[0] + a[1] * a[1]);
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
 }
-var _MJS_v2length = _MJS_v2lengthLocal;
 
-var _MJS_v2lengthSquared = function(a) {
-    return a[0] * a[0] + a[1] * a[1];
-};
-
-var _MJS_v2distance = F2(function(a, b) {
-    var dx = a[0] - b[0];
-    var dy = a[1] - b[1];
-    return Math.sqrt(dx * dx + dy * dy);
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
 });
 
-var _MJS_v2distanceSquared = F2(function(a, b) {
-    var dx = a[0] - b[0];
-    var dy = a[1] - b[1];
-    return dx * dx + dy * dy;
-});
-
-var _MJS_v2normalize = function(a) {
-    var r = new Float64Array(2);
-    var im = 1.0 / _MJS_v2lengthLocal(a);
-    r[0] = a[0] * im;
-    r[1] = a[1] * im;
-    return r;
-};
-
-var _MJS_v2scale = F2(function(k, a) {
-    var r = new Float64Array(2);
-    r[0] = a[0] * k;
-    r[1] = a[1] * k;
-    return r;
-});
-
-var _MJS_v2dot = F2(function(a, b) {
-    return a[0] * b[0] + a[1] * b[1];
-});
-
-// Vector3
-
-var _MJS_v3temp1Local = new Float64Array(3);
-var _MJS_v3temp2Local = new Float64Array(3);
-var _MJS_v3temp3Local = new Float64Array(3);
-
-var _MJS_v3 = F3(function(x, y, z) {
-    return new Float64Array([x, y, z]);
-});
-
-var _MJS_v3getX = function(a) {
-    return a[0];
-};
-
-var _MJS_v3getY = function(a) {
-    return a[1];
-};
-
-var _MJS_v3getZ = function(a) {
-    return a[2];
-};
-
-var _MJS_v3setX = F2(function(x, a) {
-    return new Float64Array([x, a[1], a[2]]);
-});
-
-var _MJS_v3setY = F2(function(y, a) {
-    return new Float64Array([a[0], y, a[2]]);
-});
-
-var _MJS_v3setZ = F2(function(z, a) {
-    return new Float64Array([a[0], a[1], z]);
-});
-
-var _MJS_v3toRecord = function(a) {
-    return { x: a[0], y: a[1], z: a[2] };
-};
-
-var _MJS_v3fromRecord = function(r) {
-    return new Float64Array([r.x, r.y, r.z]);
-};
-
-var _MJS_v3add = F2(function(a, b) {
-    var r = new Float64Array(3);
-    r[0] = a[0] + b[0];
-    r[1] = a[1] + b[1];
-    r[2] = a[2] + b[2];
-    return r;
-});
-
-function _MJS_v3subLocal(a, b, r) {
-    if (r === undefined) {
-        r = new Float64Array(3);
-    }
-    r[0] = a[0] - b[0];
-    r[1] = a[1] - b[1];
-    r[2] = a[2] - b[2];
-    return r;
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
 }
-var _MJS_v3sub = F2(_MJS_v3subLocal);
 
-var _MJS_v3negate = function(a) {
-    var r = new Float64Array(3);
-    r[0] = -a[0];
-    r[1] = -a[1];
-    r[2] = -a[2];
-    return r;
-};
 
-function _MJS_v3directionLocal(a, b, r) {
-    if (r === undefined) {
-        r = new Float64Array(3);
-    }
-    return _MJS_v3normalizeLocal(_MJS_v3subLocal(a, b, r), r);
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
 }
-var _MJS_v3direction = F2(_MJS_v3directionLocal);
-
-function _MJS_v3lengthLocal(a) {
-    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-}
-var _MJS_v3length = _MJS_v3lengthLocal;
-
-var _MJS_v3lengthSquared = function(a) {
-    return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
-};
-
-var _MJS_v3distance = F2(function(a, b) {
-    var dx = a[0] - b[0];
-    var dy = a[1] - b[1];
-    var dz = a[2] - b[2];
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
-});
-
-var _MJS_v3distanceSquared = F2(function(a, b) {
-    var dx = a[0] - b[0];
-    var dy = a[1] - b[1];
-    var dz = a[2] - b[2];
-    return dx * dx + dy * dy + dz * dz;
-});
-
-function _MJS_v3normalizeLocal(a, r) {
-    if (r === undefined) {
-        r = new Float64Array(3);
-    }
-    var im = 1.0 / _MJS_v3lengthLocal(a);
-    r[0] = a[0] * im;
-    r[1] = a[1] * im;
-    r[2] = a[2] * im;
-    return r;
-}
-var _MJS_v3normalize = _MJS_v3normalizeLocal;
-
-var _MJS_v3scale = F2(function(k, a) {
-    return new Float64Array([a[0] * k, a[1] * k, a[2] * k]);
-});
-
-var _MJS_v3dotLocal = function(a, b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-};
-var _MJS_v3dot = F2(_MJS_v3dotLocal);
-
-function _MJS_v3crossLocal(a, b, r) {
-    if (r === undefined) {
-        r = new Float64Array(3);
-    }
-    r[0] = a[1] * b[2] - a[2] * b[1];
-    r[1] = a[2] * b[0] - a[0] * b[2];
-    r[2] = a[0] * b[1] - a[1] * b[0];
-    return r;
-}
-var _MJS_v3cross = F2(_MJS_v3crossLocal);
-
-var _MJS_v3mul4x4 = F2(function(m, v) {
-    var w;
-    var tmp = _MJS_v3temp1Local;
-    var r = new Float64Array(3);
-
-    tmp[0] = m[3];
-    tmp[1] = m[7];
-    tmp[2] = m[11];
-    w = _MJS_v3dotLocal(v, tmp) + m[15];
-    tmp[0] = m[0];
-    tmp[1] = m[4];
-    tmp[2] = m[8];
-    r[0] = (_MJS_v3dotLocal(v, tmp) + m[12]) / w;
-    tmp[0] = m[1];
-    tmp[1] = m[5];
-    tmp[2] = m[9];
-    r[1] = (_MJS_v3dotLocal(v, tmp) + m[13]) / w;
-    tmp[0] = m[2];
-    tmp[1] = m[6];
-    tmp[2] = m[10];
-    r[2] = (_MJS_v3dotLocal(v, tmp) + m[14]) / w;
-    return r;
-});
-
-// Vector4
-
-var _MJS_v4 = F4(function(x, y, z, w) {
-    return new Float64Array([x, y, z, w]);
-});
-
-var _MJS_v4getX = function(a) {
-    return a[0];
-};
-
-var _MJS_v4getY = function(a) {
-    return a[1];
-};
-
-var _MJS_v4getZ = function(a) {
-    return a[2];
-};
-
-var _MJS_v4getW = function(a) {
-    return a[3];
-};
-
-var _MJS_v4setX = F2(function(x, a) {
-    return new Float64Array([x, a[1], a[2], a[3]]);
-});
-
-var _MJS_v4setY = F2(function(y, a) {
-    return new Float64Array([a[0], y, a[2], a[3]]);
-});
-
-var _MJS_v4setZ = F2(function(z, a) {
-    return new Float64Array([a[0], a[1], z, a[3]]);
-});
-
-var _MJS_v4setW = F2(function(w, a) {
-    return new Float64Array([a[0], a[1], a[2], w]);
-});
-
-var _MJS_v4toRecord = function(a) {
-    return { x: a[0], y: a[1], z: a[2], w: a[3] };
-};
-
-var _MJS_v4fromRecord = function(r) {
-    return new Float64Array([r.x, r.y, r.z, r.w]);
-};
-
-var _MJS_v4add = F2(function(a, b) {
-    var r = new Float64Array(4);
-    r[0] = a[0] + b[0];
-    r[1] = a[1] + b[1];
-    r[2] = a[2] + b[2];
-    r[3] = a[3] + b[3];
-    return r;
-});
-
-var _MJS_v4sub = F2(function(a, b) {
-    var r = new Float64Array(4);
-    r[0] = a[0] - b[0];
-    r[1] = a[1] - b[1];
-    r[2] = a[2] - b[2];
-    r[3] = a[3] - b[3];
-    return r;
-});
-
-var _MJS_v4negate = function(a) {
-    var r = new Float64Array(4);
-    r[0] = -a[0];
-    r[1] = -a[1];
-    r[2] = -a[2];
-    r[3] = -a[3];
-    return r;
-};
-
-var _MJS_v4direction = F2(function(a, b) {
-    var r = new Float64Array(4);
-    r[0] = a[0] - b[0];
-    r[1] = a[1] - b[1];
-    r[2] = a[2] - b[2];
-    r[3] = a[3] - b[3];
-    var im = 1.0 / _MJS_v4lengthLocal(r);
-    r[0] = r[0] * im;
-    r[1] = r[1] * im;
-    r[2] = r[2] * im;
-    r[3] = r[3] * im;
-    return r;
-});
-
-function _MJS_v4lengthLocal(a) {
-    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3]);
-}
-var _MJS_v4length = _MJS_v4lengthLocal;
-
-var _MJS_v4lengthSquared = function(a) {
-    return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
-};
-
-var _MJS_v4distance = F2(function(a, b) {
-    var dx = a[0] - b[0];
-    var dy = a[1] - b[1];
-    var dz = a[2] - b[2];
-    var dw = a[3] - b[3];
-    return Math.sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
-});
-
-var _MJS_v4distanceSquared = F2(function(a, b) {
-    var dx = a[0] - b[0];
-    var dy = a[1] - b[1];
-    var dz = a[2] - b[2];
-    var dw = a[3] - b[3];
-    return dx * dx + dy * dy + dz * dz + dw * dw;
-});
-
-var _MJS_v4normalize = function(a) {
-    var r = new Float64Array(4);
-    var im = 1.0 / _MJS_v4lengthLocal(a);
-    r[0] = a[0] * im;
-    r[1] = a[1] * im;
-    r[2] = a[2] * im;
-    r[3] = a[3] * im;
-    return r;
-};
-
-var _MJS_v4scale = F2(function(k, a) {
-    var r = new Float64Array(4);
-    r[0] = a[0] * k;
-    r[1] = a[1] * k;
-    r[2] = a[2] * k;
-    r[3] = a[3] * k;
-    return r;
-});
-
-var _MJS_v4dot = F2(function(a, b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-});
-
-// Matrix4
-
-var _MJS_m4x4temp1Local = new Float64Array(16);
-var _MJS_m4x4temp2Local = new Float64Array(16);
-
-var _MJS_m4x4identity = new Float64Array([
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.0, 0.0, 0.0, 1.0
-]);
-
-var _MJS_m4x4fromRecord = function(r) {
-    var m = new Float64Array(16);
-    m[0] = r.m11;
-    m[1] = r.m21;
-    m[2] = r.m31;
-    m[3] = r.m41;
-    m[4] = r.m12;
-    m[5] = r.m22;
-    m[6] = r.m32;
-    m[7] = r.m42;
-    m[8] = r.m13;
-    m[9] = r.m23;
-    m[10] = r.m33;
-    m[11] = r.m43;
-    m[12] = r.m14;
-    m[13] = r.m24;
-    m[14] = r.m34;
-    m[15] = r.m44;
-    return m;
-};
-
-var _MJS_m4x4toRecord = function(m) {
-    return {
-        m11: m[0], m21: m[1], m31: m[2], m41: m[3],
-        m12: m[4], m22: m[5], m32: m[6], m42: m[7],
-        m13: m[8], m23: m[9], m33: m[10], m43: m[11],
-        m14: m[12], m24: m[13], m34: m[14], m44: m[15]
-    };
-};
-
-var _MJS_m4x4inverse = function(m) {
-    var r = new Float64Array(16);
-
-    r[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] +
-        m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
-    r[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] -
-        m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
-    r[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] +
-        m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
-    r[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] -
-        m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
-    r[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] -
-        m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
-    r[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] +
-        m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
-    r[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] -
-        m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
-    r[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] +
-        m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
-    r[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] +
-        m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
-    r[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] -
-        m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
-    r[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] +
-        m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
-    r[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] -
-        m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
-    r[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] -
-        m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
-    r[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] +
-        m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
-    r[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] -
-        m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
-    r[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
-        m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
-
-    var det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12];
-
-    if (det === 0) {
-        return $elm$core$Maybe$Nothing;
-    }
-
-    det = 1.0 / det;
-
-    for (var i = 0; i < 16; i = i + 1) {
-        r[i] = r[i] * det;
-    }
-
-    return $elm$core$Maybe$Just(r);
-};
-
-var _MJS_m4x4inverseOrthonormal = function(m) {
-    var r = _MJS_m4x4transposeLocal(m);
-    var t = [m[12], m[13], m[14]];
-    r[3] = r[7] = r[11] = 0;
-    r[12] = -_MJS_v3dotLocal([r[0], r[4], r[8]], t);
-    r[13] = -_MJS_v3dotLocal([r[1], r[5], r[9]], t);
-    r[14] = -_MJS_v3dotLocal([r[2], r[6], r[10]], t);
-    return r;
-};
-
-function _MJS_m4x4makeFrustumLocal(left, right, bottom, top, znear, zfar) {
-    var r = new Float64Array(16);
-
-    r[0] = 2 * znear / (right - left);
-    r[1] = 0;
-    r[2] = 0;
-    r[3] = 0;
-    r[4] = 0;
-    r[5] = 2 * znear / (top - bottom);
-    r[6] = 0;
-    r[7] = 0;
-    r[8] = (right + left) / (right - left);
-    r[9] = (top + bottom) / (top - bottom);
-    r[10] = -(zfar + znear) / (zfar - znear);
-    r[11] = -1;
-    r[12] = 0;
-    r[13] = 0;
-    r[14] = -2 * zfar * znear / (zfar - znear);
-    r[15] = 0;
-
-    return r;
-}
-var _MJS_m4x4makeFrustum = F6(_MJS_m4x4makeFrustumLocal);
-
-var _MJS_m4x4makePerspective = F4(function(fovy, aspect, znear, zfar) {
-    var ymax = znear * Math.tan(fovy * Math.PI / 360.0);
-    var ymin = -ymax;
-    var xmin = ymin * aspect;
-    var xmax = ymax * aspect;
-
-    return _MJS_m4x4makeFrustumLocal(xmin, xmax, ymin, ymax, znear, zfar);
-});
-
-function _MJS_m4x4makeOrthoLocal(left, right, bottom, top, znear, zfar) {
-    var r = new Float64Array(16);
-
-    r[0] = 2 / (right - left);
-    r[1] = 0;
-    r[2] = 0;
-    r[3] = 0;
-    r[4] = 0;
-    r[5] = 2 / (top - bottom);
-    r[6] = 0;
-    r[7] = 0;
-    r[8] = 0;
-    r[9] = 0;
-    r[10] = -2 / (zfar - znear);
-    r[11] = 0;
-    r[12] = -(right + left) / (right - left);
-    r[13] = -(top + bottom) / (top - bottom);
-    r[14] = -(zfar + znear) / (zfar - znear);
-    r[15] = 1;
-
-    return r;
-}
-var _MJS_m4x4makeOrtho = F6(_MJS_m4x4makeOrthoLocal);
-
-var _MJS_m4x4makeOrtho2D = F4(function(left, right, bottom, top) {
-    return _MJS_m4x4makeOrthoLocal(left, right, bottom, top, -1, 1);
-});
-
-function _MJS_m4x4mulLocal(a, b) {
-    var r = new Float64Array(16);
-    var a11 = a[0];
-    var a21 = a[1];
-    var a31 = a[2];
-    var a41 = a[3];
-    var a12 = a[4];
-    var a22 = a[5];
-    var a32 = a[6];
-    var a42 = a[7];
-    var a13 = a[8];
-    var a23 = a[9];
-    var a33 = a[10];
-    var a43 = a[11];
-    var a14 = a[12];
-    var a24 = a[13];
-    var a34 = a[14];
-    var a44 = a[15];
-    var b11 = b[0];
-    var b21 = b[1];
-    var b31 = b[2];
-    var b41 = b[3];
-    var b12 = b[4];
-    var b22 = b[5];
-    var b32 = b[6];
-    var b42 = b[7];
-    var b13 = b[8];
-    var b23 = b[9];
-    var b33 = b[10];
-    var b43 = b[11];
-    var b14 = b[12];
-    var b24 = b[13];
-    var b34 = b[14];
-    var b44 = b[15];
-
-    r[0] = a11 * b11 + a12 * b21 + a13 * b31 + a14 * b41;
-    r[1] = a21 * b11 + a22 * b21 + a23 * b31 + a24 * b41;
-    r[2] = a31 * b11 + a32 * b21 + a33 * b31 + a34 * b41;
-    r[3] = a41 * b11 + a42 * b21 + a43 * b31 + a44 * b41;
-    r[4] = a11 * b12 + a12 * b22 + a13 * b32 + a14 * b42;
-    r[5] = a21 * b12 + a22 * b22 + a23 * b32 + a24 * b42;
-    r[6] = a31 * b12 + a32 * b22 + a33 * b32 + a34 * b42;
-    r[7] = a41 * b12 + a42 * b22 + a43 * b32 + a44 * b42;
-    r[8] = a11 * b13 + a12 * b23 + a13 * b33 + a14 * b43;
-    r[9] = a21 * b13 + a22 * b23 + a23 * b33 + a24 * b43;
-    r[10] = a31 * b13 + a32 * b23 + a33 * b33 + a34 * b43;
-    r[11] = a41 * b13 + a42 * b23 + a43 * b33 + a44 * b43;
-    r[12] = a11 * b14 + a12 * b24 + a13 * b34 + a14 * b44;
-    r[13] = a21 * b14 + a22 * b24 + a23 * b34 + a24 * b44;
-    r[14] = a31 * b14 + a32 * b24 + a33 * b34 + a34 * b44;
-    r[15] = a41 * b14 + a42 * b24 + a43 * b34 + a44 * b44;
-
-    return r;
-}
-var _MJS_m4x4mul = F2(_MJS_m4x4mulLocal);
-
-var _MJS_m4x4mulAffine = F2(function(a, b) {
-    var r = new Float64Array(16);
-    var a11 = a[0];
-    var a21 = a[1];
-    var a31 = a[2];
-    var a12 = a[4];
-    var a22 = a[5];
-    var a32 = a[6];
-    var a13 = a[8];
-    var a23 = a[9];
-    var a33 = a[10];
-    var a14 = a[12];
-    var a24 = a[13];
-    var a34 = a[14];
-
-    var b11 = b[0];
-    var b21 = b[1];
-    var b31 = b[2];
-    var b12 = b[4];
-    var b22 = b[5];
-    var b32 = b[6];
-    var b13 = b[8];
-    var b23 = b[9];
-    var b33 = b[10];
-    var b14 = b[12];
-    var b24 = b[13];
-    var b34 = b[14];
-
-    r[0] = a11 * b11 + a12 * b21 + a13 * b31;
-    r[1] = a21 * b11 + a22 * b21 + a23 * b31;
-    r[2] = a31 * b11 + a32 * b21 + a33 * b31;
-    r[3] = 0;
-    r[4] = a11 * b12 + a12 * b22 + a13 * b32;
-    r[5] = a21 * b12 + a22 * b22 + a23 * b32;
-    r[6] = a31 * b12 + a32 * b22 + a33 * b32;
-    r[7] = 0;
-    r[8] = a11 * b13 + a12 * b23 + a13 * b33;
-    r[9] = a21 * b13 + a22 * b23 + a23 * b33;
-    r[10] = a31 * b13 + a32 * b23 + a33 * b33;
-    r[11] = 0;
-    r[12] = a11 * b14 + a12 * b24 + a13 * b34 + a14;
-    r[13] = a21 * b14 + a22 * b24 + a23 * b34 + a24;
-    r[14] = a31 * b14 + a32 * b24 + a33 * b34 + a34;
-    r[15] = 1;
-
-    return r;
-});
-
-var _MJS_m4x4makeRotate = F2(function(angle, axis) {
-    var r = new Float64Array(16);
-    axis = _MJS_v3normalizeLocal(axis, _MJS_v3temp1Local);
-    var x = axis[0];
-    var y = axis[1];
-    var z = axis[2];
-    var c = Math.cos(angle);
-    var c1 = 1 - c;
-    var s = Math.sin(angle);
-
-    r[0] = x * x * c1 + c;
-    r[1] = y * x * c1 + z * s;
-    r[2] = z * x * c1 - y * s;
-    r[3] = 0;
-    r[4] = x * y * c1 - z * s;
-    r[5] = y * y * c1 + c;
-    r[6] = y * z * c1 + x * s;
-    r[7] = 0;
-    r[8] = x * z * c1 + y * s;
-    r[9] = y * z * c1 - x * s;
-    r[10] = z * z * c1 + c;
-    r[11] = 0;
-    r[12] = 0;
-    r[13] = 0;
-    r[14] = 0;
-    r[15] = 1;
-
-    return r;
-});
-
-var _MJS_m4x4rotate = F3(function(angle, axis, m) {
-    var r = new Float64Array(16);
-    var im = 1.0 / _MJS_v3lengthLocal(axis);
-    var x = axis[0] * im;
-    var y = axis[1] * im;
-    var z = axis[2] * im;
-    var c = Math.cos(angle);
-    var c1 = 1 - c;
-    var s = Math.sin(angle);
-    var xs = x * s;
-    var ys = y * s;
-    var zs = z * s;
-    var xyc1 = x * y * c1;
-    var xzc1 = x * z * c1;
-    var yzc1 = y * z * c1;
-    var t11 = x * x * c1 + c;
-    var t21 = xyc1 + zs;
-    var t31 = xzc1 - ys;
-    var t12 = xyc1 - zs;
-    var t22 = y * y * c1 + c;
-    var t32 = yzc1 + xs;
-    var t13 = xzc1 + ys;
-    var t23 = yzc1 - xs;
-    var t33 = z * z * c1 + c;
-    var m11 = m[0], m21 = m[1], m31 = m[2], m41 = m[3];
-    var m12 = m[4], m22 = m[5], m32 = m[6], m42 = m[7];
-    var m13 = m[8], m23 = m[9], m33 = m[10], m43 = m[11];
-    var m14 = m[12], m24 = m[13], m34 = m[14], m44 = m[15];
-
-    r[0] = m11 * t11 + m12 * t21 + m13 * t31;
-    r[1] = m21 * t11 + m22 * t21 + m23 * t31;
-    r[2] = m31 * t11 + m32 * t21 + m33 * t31;
-    r[3] = m41 * t11 + m42 * t21 + m43 * t31;
-    r[4] = m11 * t12 + m12 * t22 + m13 * t32;
-    r[5] = m21 * t12 + m22 * t22 + m23 * t32;
-    r[6] = m31 * t12 + m32 * t22 + m33 * t32;
-    r[7] = m41 * t12 + m42 * t22 + m43 * t32;
-    r[8] = m11 * t13 + m12 * t23 + m13 * t33;
-    r[9] = m21 * t13 + m22 * t23 + m23 * t33;
-    r[10] = m31 * t13 + m32 * t23 + m33 * t33;
-    r[11] = m41 * t13 + m42 * t23 + m43 * t33;
-    r[12] = m14,
-    r[13] = m24;
-    r[14] = m34;
-    r[15] = m44;
-
-    return r;
-});
-
-function _MJS_m4x4makeScale3Local(x, y, z) {
-    var r = new Float64Array(16);
-
-    r[0] = x;
-    r[1] = 0;
-    r[2] = 0;
-    r[3] = 0;
-    r[4] = 0;
-    r[5] = y;
-    r[6] = 0;
-    r[7] = 0;
-    r[8] = 0;
-    r[9] = 0;
-    r[10] = z;
-    r[11] = 0;
-    r[12] = 0;
-    r[13] = 0;
-    r[14] = 0;
-    r[15] = 1;
-
-    return r;
-}
-var _MJS_m4x4makeScale3 = F3(_MJS_m4x4makeScale3Local);
-
-var _MJS_m4x4makeScale = function(v) {
-    return _MJS_m4x4makeScale3Local(v[0], v[1], v[2]);
-};
-
-var _MJS_m4x4scale3 = F4(function(x, y, z, m) {
-    var r = new Float64Array(16);
-
-    r[0] = m[0] * x;
-    r[1] = m[1] * x;
-    r[2] = m[2] * x;
-    r[3] = m[3] * x;
-    r[4] = m[4] * y;
-    r[5] = m[5] * y;
-    r[6] = m[6] * y;
-    r[7] = m[7] * y;
-    r[8] = m[8] * z;
-    r[9] = m[9] * z;
-    r[10] = m[10] * z;
-    r[11] = m[11] * z;
-    r[12] = m[12];
-    r[13] = m[13];
-    r[14] = m[14];
-    r[15] = m[15];
-
-    return r;
-});
-
-var _MJS_m4x4scale = F2(function(v, m) {
-    var r = new Float64Array(16);
-    var x = v[0];
-    var y = v[1];
-    var z = v[2];
-
-    r[0] = m[0] * x;
-    r[1] = m[1] * x;
-    r[2] = m[2] * x;
-    r[3] = m[3] * x;
-    r[4] = m[4] * y;
-    r[5] = m[5] * y;
-    r[6] = m[6] * y;
-    r[7] = m[7] * y;
-    r[8] = m[8] * z;
-    r[9] = m[9] * z;
-    r[10] = m[10] * z;
-    r[11] = m[11] * z;
-    r[12] = m[12];
-    r[13] = m[13];
-    r[14] = m[14];
-    r[15] = m[15];
-
-    return r;
-});
-
-function _MJS_m4x4makeTranslate3Local(x, y, z) {
-    var r = new Float64Array(16);
-
-    r[0] = 1;
-    r[1] = 0;
-    r[2] = 0;
-    r[3] = 0;
-    r[4] = 0;
-    r[5] = 1;
-    r[6] = 0;
-    r[7] = 0;
-    r[8] = 0;
-    r[9] = 0;
-    r[10] = 1;
-    r[11] = 0;
-    r[12] = x;
-    r[13] = y;
-    r[14] = z;
-    r[15] = 1;
-
-    return r;
-}
-var _MJS_m4x4makeTranslate3 = F3(_MJS_m4x4makeTranslate3Local);
-
-var _MJS_m4x4makeTranslate = function(v) {
-    return _MJS_m4x4makeTranslate3Local(v[0], v[1], v[2]);
-};
-
-var _MJS_m4x4translate3 = F4(function(x, y, z, m) {
-    var r = new Float64Array(16);
-    var m11 = m[0];
-    var m21 = m[1];
-    var m31 = m[2];
-    var m41 = m[3];
-    var m12 = m[4];
-    var m22 = m[5];
-    var m32 = m[6];
-    var m42 = m[7];
-    var m13 = m[8];
-    var m23 = m[9];
-    var m33 = m[10];
-    var m43 = m[11];
-
-    r[0] = m11;
-    r[1] = m21;
-    r[2] = m31;
-    r[3] = m41;
-    r[4] = m12;
-    r[5] = m22;
-    r[6] = m32;
-    r[7] = m42;
-    r[8] = m13;
-    r[9] = m23;
-    r[10] = m33;
-    r[11] = m43;
-    r[12] = m11 * x + m12 * y + m13 * z + m[12];
-    r[13] = m21 * x + m22 * y + m23 * z + m[13];
-    r[14] = m31 * x + m32 * y + m33 * z + m[14];
-    r[15] = m41 * x + m42 * y + m43 * z + m[15];
-
-    return r;
-});
-
-var _MJS_m4x4translate = F2(function(v, m) {
-    var r = new Float64Array(16);
-    var x = v[0];
-    var y = v[1];
-    var z = v[2];
-    var m11 = m[0];
-    var m21 = m[1];
-    var m31 = m[2];
-    var m41 = m[3];
-    var m12 = m[4];
-    var m22 = m[5];
-    var m32 = m[6];
-    var m42 = m[7];
-    var m13 = m[8];
-    var m23 = m[9];
-    var m33 = m[10];
-    var m43 = m[11];
-
-    r[0] = m11;
-    r[1] = m21;
-    r[2] = m31;
-    r[3] = m41;
-    r[4] = m12;
-    r[5] = m22;
-    r[6] = m32;
-    r[7] = m42;
-    r[8] = m13;
-    r[9] = m23;
-    r[10] = m33;
-    r[11] = m43;
-    r[12] = m11 * x + m12 * y + m13 * z + m[12];
-    r[13] = m21 * x + m22 * y + m23 * z + m[13];
-    r[14] = m31 * x + m32 * y + m33 * z + m[14];
-    r[15] = m41 * x + m42 * y + m43 * z + m[15];
-
-    return r;
-});
-
-var _MJS_m4x4makeLookAt = F3(function(eye, center, up) {
-    var z = _MJS_v3directionLocal(eye, center, _MJS_v3temp1Local);
-    var x = _MJS_v3normalizeLocal(_MJS_v3crossLocal(up, z, _MJS_v3temp2Local), _MJS_v3temp2Local);
-    var y = _MJS_v3normalizeLocal(_MJS_v3crossLocal(z, x, _MJS_v3temp3Local), _MJS_v3temp3Local);
-    var tm1 = _MJS_m4x4temp1Local;
-    var tm2 = _MJS_m4x4temp2Local;
-
-    tm1[0] = x[0];
-    tm1[1] = y[0];
-    tm1[2] = z[0];
-    tm1[3] = 0;
-    tm1[4] = x[1];
-    tm1[5] = y[1];
-    tm1[6] = z[1];
-    tm1[7] = 0;
-    tm1[8] = x[2];
-    tm1[9] = y[2];
-    tm1[10] = z[2];
-    tm1[11] = 0;
-    tm1[12] = 0;
-    tm1[13] = 0;
-    tm1[14] = 0;
-    tm1[15] = 1;
-
-    tm2[0] = 1; tm2[1] = 0; tm2[2] = 0; tm2[3] = 0;
-    tm2[4] = 0; tm2[5] = 1; tm2[6] = 0; tm2[7] = 0;
-    tm2[8] = 0; tm2[9] = 0; tm2[10] = 1; tm2[11] = 0;
-    tm2[12] = -eye[0]; tm2[13] = -eye[1]; tm2[14] = -eye[2]; tm2[15] = 1;
-
-    return _MJS_m4x4mulLocal(tm1, tm2);
-});
-
-
-function _MJS_m4x4transposeLocal(m) {
-    var r = new Float64Array(16);
-
-    r[0] = m[0]; r[1] = m[4]; r[2] = m[8]; r[3] = m[12];
-    r[4] = m[1]; r[5] = m[5]; r[6] = m[9]; r[7] = m[13];
-    r[8] = m[2]; r[9] = m[6]; r[10] = m[10]; r[11] = m[14];
-    r[12] = m[3]; r[13] = m[7]; r[14] = m[11]; r[15] = m[15];
-
-    return r;
-}
-var _MJS_m4x4transpose = _MJS_m4x4transposeLocal;
-
-var _MJS_m4x4makeBasis = F3(function(vx, vy, vz) {
-    var r = new Float64Array(16);
-
-    r[0] = vx[0];
-    r[1] = vx[1];
-    r[2] = vx[2];
-    r[3] = 0;
-    r[4] = vy[0];
-    r[5] = vy[1];
-    r[6] = vy[2];
-    r[7] = 0;
-    r[8] = vz[0];
-    r[9] = vz[1];
-    r[10] = vz[2];
-    r[11] = 0;
-    r[12] = 0;
-    r[13] = 0;
-    r[14] = 0;
-    r[15] = 1;
-
-    return r;
-});
 
 
 function _WebGL_log(/* msg */) {
@@ -6158,12 +6249,8 @@ var $elm$core$Set$toList = function (_v0) {
 var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
-var $author$project$Playground$Picture = F3(
-	function (a, b, c) {
-		return {$: 'Picture', a: a, b: b, c: c};
-	});
-var $author$project$Playground$Internal$Resized = function (a) {
-	return {$: 'Resized', a: a};
+var $author$project$Playground$Internal$Tick = function (a) {
+	return {$: 'Tick', a: a};
 };
 var $elm$core$Basics$apR = F2(
 	function (x, f) {
@@ -6560,6 +6647,1282 @@ var $elm$core$Result$isOk = function (result) {
 		return false;
 	}
 };
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $author$project$Playground$Internal$GotViewport = function (a) {
+	return {$: 'GotViewport', a: a};
+};
+var $author$project$Playground$Internal$InitTime = function (a) {
+	return {$: 'InitTime', a: a};
+};
+var $elm$core$Basics$identity = function (x) {
+	return x;
+};
+var $author$project$Playground$Internal$Playground = function (a) {
+	return {$: 'Playground', a: a};
+};
+var $elm$browser$Browser$Events$Visible = {$: 'Visible'};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $author$project$Playground$Internal$Mouse = F4(
+	function (x, y, down, click) {
+		return {click: click, down: down, x: x, y: y};
+	});
+var $author$project$Playground$Internal$emptyKeyboard = {backspace: false, down: false, enter: false, keys: $elm$core$Set$empty, left: false, right: false, shift: false, space: false, up: false};
+var $elm$core$Dict$isEmpty = function (dict) {
+	if (dict.$ === 'RBEmpty_elm_builtin') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Set$isEmpty = function (_v0) {
+	var dict = _v0.a;
+	return $elm$core$Dict$isEmpty(dict);
+};
+var $elm$core$Tuple$mapFirst = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			func(x),
+			y);
+	});
+var $author$project$Playground$Internal$mouseClick = F2(
+	function (bool, mouse) {
+		return _Utils_update(
+			mouse,
+			{click: bool});
+	});
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Playground$Internal$GotTexture = function (a) {
+	return {$: 'GotTexture', a: a};
+};
+var $elm$core$Task$Perform = function (a) {
+	return {$: 'Perform', a: a};
+};
+var $elm$core$Task$andThen = _Scheduler_andThen;
+var $elm$core$Task$succeed = _Scheduler_succeed;
+var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
+var $elm$core$List$foldrHelper = F4(
+	function (fn, acc, ctr, ls) {
+		if (!ls.b) {
+			return acc;
+		} else {
+			var a = ls.a;
+			var r1 = ls.b;
+			if (!r1.b) {
+				return A2(fn, a, acc);
+			} else {
+				var b = r1.a;
+				var r2 = r1.b;
+				if (!r2.b) {
+					return A2(
+						fn,
+						a,
+						A2(fn, b, acc));
+				} else {
+					var c = r2.a;
+					var r3 = r2.b;
+					if (!r3.b) {
+						return A2(
+							fn,
+							a,
+							A2(
+								fn,
+								b,
+								A2(fn, c, acc)));
+					} else {
+						var d = r3.a;
+						var r4 = r3.b;
+						var res = (ctr > 500) ? A3(
+							$elm$core$List$foldl,
+							fn,
+							acc,
+							$elm$core$List$reverse(r4)) : A4($elm$core$List$foldrHelper, fn, acc, ctr + 1, r4);
+						return A2(
+							fn,
+							a,
+							A2(
+								fn,
+								b,
+								A2(
+									fn,
+									c,
+									A2(fn, d, res))));
+					}
+				}
+			}
+		}
+	});
+var $elm$core$List$foldr = F3(
+	function (fn, acc, ls) {
+		return A4($elm$core$List$foldrHelper, fn, acc, 0, ls);
+	});
+var $elm$core$List$map = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, acc) {
+					return A2(
+						$elm$core$List$cons,
+						f(x),
+						acc);
+				}),
+			_List_Nil,
+			xs);
+	});
+var $elm$core$Task$map = F2(
+	function (func, taskA) {
+		return A2(
+			$elm$core$Task$andThen,
+			function (a) {
+				return $elm$core$Task$succeed(
+					func(a));
+			},
+			taskA);
+	});
+var $elm$core$Task$map2 = F3(
+	function (func, taskA, taskB) {
+		return A2(
+			$elm$core$Task$andThen,
+			function (a) {
+				return A2(
+					$elm$core$Task$andThen,
+					function (b) {
+						return $elm$core$Task$succeed(
+							A2(func, a, b));
+					},
+					taskB);
+			},
+			taskA);
+	});
+var $elm$core$Task$sequence = function (tasks) {
+	return A3(
+		$elm$core$List$foldr,
+		$elm$core$Task$map2($elm$core$List$cons),
+		$elm$core$Task$succeed(_List_Nil),
+		tasks);
+};
+var $elm$core$Platform$sendToApp = _Platform_sendToApp;
+var $elm$core$Task$spawnCmd = F2(
+	function (router, _v0) {
+		var task = _v0.a;
+		return _Scheduler_spawn(
+			A2(
+				$elm$core$Task$andThen,
+				$elm$core$Platform$sendToApp(router),
+				task));
+	});
+var $elm$core$Task$onEffects = F3(
+	function (router, commands, state) {
+		return A2(
+			$elm$core$Task$map,
+			function (_v0) {
+				return _Utils_Tuple0;
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$map,
+					$elm$core$Task$spawnCmd(router),
+					commands)));
+	});
+var $elm$core$Task$onSelfMsg = F3(
+	function (_v0, _v1, _v2) {
+		return $elm$core$Task$succeed(_Utils_Tuple0);
+	});
+var $elm$core$Task$cmdMap = F2(
+	function (tagger, _v0) {
+		var task = _v0.a;
+		return $elm$core$Task$Perform(
+			A2($elm$core$Task$map, tagger, task));
+	});
+_Platform_effectManagers['Task'] = _Platform_createManager($elm$core$Task$init, $elm$core$Task$onEffects, $elm$core$Task$onSelfMsg, $elm$core$Task$cmdMap);
+var $elm$core$Task$command = _Platform_leaf('Task');
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$Task$onError = _Scheduler_onError;
+var $elm$core$Task$attempt = F2(
+	function (resultToMessage, task) {
+		return $elm$core$Task$command(
+			$elm$core$Task$Perform(
+				A2(
+					$elm$core$Task$onError,
+					A2(
+						$elm$core$Basics$composeL,
+						A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+						$elm$core$Result$Err),
+					A2(
+						$elm$core$Task$andThen,
+						A2(
+							$elm$core$Basics$composeL,
+							A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+							$elm$core$Result$Ok),
+						task))));
+	});
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Set$foldl = F3(
+	function (func, initialState, _v0) {
+		var dict = _v0.a;
+		return A3(
+			$elm$core$Dict$foldl,
+			F3(
+				function (key, _v1, state) {
+					return A2(func, key, state);
+				}),
+			initialState,
+			dict);
+	});
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm_explorations$webgl$WebGL$Texture$LoadError = {$: 'LoadError'};
+var $elm_explorations$webgl$WebGL$Texture$SizeError = F2(
+	function (a, b) {
+		return {$: 'SizeError', a: a, b: b};
+	});
+var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
+	function (_v0, url) {
+		var magnify = _v0.magnify;
+		var minify = _v0.minify;
+		var horizontalWrap = _v0.horizontalWrap;
+		var verticalWrap = _v0.verticalWrap;
+		var flipY = _v0.flipY;
+		var expand = F4(
+			function (_v1, _v2, _v3, _v4) {
+				var mag = _v1.a;
+				var min = _v2.a;
+				var hor = _v3.a;
+				var vert = _v4.a;
+				return A6(_Texture_load, mag, min, hor, vert, flipY, url);
+			});
+		return A4(expand, magnify, minify, horizontalWrap, verticalWrap);
+	});
+var $elm$core$Task$fail = _Scheduler_fail;
+var $elm$core$Task$mapError = F2(
+	function (convert, task) {
+		return A2(
+			$elm$core$Task$onError,
+			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
+			task);
+	});
+var $elm$core$Tuple$mapSecond = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			x,
+			func(y));
+	});
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var $elm_explorations$webgl$WebGL$Texture$Wrap = function (a) {
+	return {$: 'Wrap', a: a};
+};
+var $elm_explorations$webgl$WebGL$Texture$clampToEdge = $elm_explorations$webgl$WebGL$Texture$Wrap(33071);
+var $elm_explorations$webgl$WebGL$Texture$Resize = function (a) {
+	return {$: 'Resize', a: a};
+};
+var $elm_explorations$webgl$WebGL$Texture$linear = $elm_explorations$webgl$WebGL$Texture$Resize(9729);
+var $author$project$Playground$Internal$textureOption = {flipY: true, horizontalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge, magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$linear, verticalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
+var $author$project$Playground$Internal$requestTexture = F2(
+	function (missing, textures) {
+		return A2(
+			$elm$core$Tuple$mapSecond,
+			$elm$core$Platform$Cmd$batch,
+			A3(
+				$elm$core$Set$foldl,
+				F2(
+					function (url, acc) {
+						var done = acc.a.done;
+						var loading = acc.a.loading;
+						var acc2 = acc.b;
+						return A2($elm$core$Set$member, url, loading) ? acc : _Utils_Tuple2(
+							{
+								done: done,
+								loading: A2($elm$core$Set$insert, url, loading)
+							},
+							A2(
+								$elm$core$List$cons,
+								A2(
+									$elm$core$Task$attempt,
+									$author$project$Playground$Internal$GotTexture,
+									A2(
+										$elm$core$Task$mapError,
+										$elm$core$Tuple$pair(url),
+										A2(
+											$elm$core$Task$map,
+											$elm$core$Tuple$pair(url),
+											A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)))),
+								acc2));
+					}),
+				_Utils_Tuple2(textures, _List_Nil),
+				missing));
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity = {a11: 1, a12: 0, a13: 0, a21: 0, a22: 1, a23: 0};
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$apply = F2(
+	function (a, b) {
+		return {a11: (a.a11 * b.a11) + (a.a12 * b.a21), a12: (a.a11 * b.a12) + (a.a12 * b.a22), a13: ((a.a11 * b.a13) + (a.a12 * b.a23)) + a.a13, a21: (a.a21 * b.a11) + (a.a22 * b.a21), a22: (a.a21 * b.a12) + (a.a22 * b.a22), a23: ((a.a21 * b.a13) + (a.a22 * b.a23)) + a.a23};
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
+	function (sx, sy, b) {
+		return {a11: sx * b.a11, a12: sx * b.a12, a13: sx * b.a13, a21: sy * b.a21, a22: sy * b.a22, a23: sy * b.a23};
+	});
+var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
+var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
+	var a11 = _v0.a11;
+	var a12 = _v0.a12;
+	var a13 = _v0.a13;
+	var a21 = _v0.a21;
+	var a22 = _v0.a22;
+	var a23 = _v0.a23;
+	return _Utils_Tuple2(
+		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
+			{w: a22, x: a11, y: a12, z: a21}),
+		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
+			{x: a13, y: a23}));
+};
+var $elm$core$Basics$cos = _Basics_cos;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$core$Basics$sin = _Basics_sin;
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$transform = F5(
+	function (tx, ty, sx, sy, angle) {
+		return {
+			a11: $elm$core$Basics$cos(angle) * sx,
+			a12: $elm$core$Basics$sin(angle) * (-sy),
+			a13: tx,
+			a21: $elm$core$Basics$sin(angle) * sx,
+			a22: $elm$core$Basics$cos(angle) * sy,
+			a23: ty
+		};
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
+	function (screen, textures, parent, parentOpacity, _v0, acc) {
+		renderShape:
+		while (true) {
+			var x = _v0.a.x;
+			var y = _v0.a.y;
+			var a = _v0.a.a;
+			var sx = _v0.a.sx;
+			var sy = _v0.a.sy;
+			var o = _v0.a.o;
+			var form = _v0.a.form;
+			var entities = acc.a;
+			var missing = acc.b;
+			var opacity = o * parentOpacity;
+			var createTrans = F5(
+				function (tx, ty, sx_, sy_, a_) {
+					return A2(
+						$justgook$webgl_shape$WebGL$Shape2d$Transformation$apply,
+						parent,
+						A5($justgook$webgl_shape$WebGL$Shape2d$Transformation$transform, tx, ty, sx_, sy_, a_));
+				});
+			switch (form.$) {
+				case 'Form':
+					var width = form.a;
+					var height = form.b;
+					var fn = form.c;
+					var _v2 = $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL(
+						A3(
+							$justgook$webgl_shape$WebGL$Shape2d$Transformation$scale,
+							1 / screen.width,
+							1 / screen.height,
+							A5(createTrans, x * 2, y * 2, width * sx, height * sy, a)));
+					var t1 = _v2.a;
+					var t2 = _v2.b;
+					return _Utils_Tuple2(
+						A2(
+							$elm$core$List$cons,
+							A3(fn, t2, t1, opacity),
+							entities),
+						missing);
+				case 'Textured':
+					var src = form.a;
+					var fn = form.b;
+					var _v3 = A2($elm$core$Dict$get, src, textures);
+					if (_v3.$ === 'Just') {
+						var texture = _v3.a;
+						var $temp$screen = screen,
+							$temp$textures = textures,
+							$temp$parent = A5(createTrans, x * 2, y * 2, sx, sy, a),
+							$temp$parentOpacity = opacity,
+							$temp$_v0 = fn(texture),
+							$temp$acc = acc;
+						screen = $temp$screen;
+						textures = $temp$textures;
+						parent = $temp$parent;
+						parentOpacity = $temp$parentOpacity;
+						_v0 = $temp$_v0;
+						acc = $temp$acc;
+						continue renderShape;
+					} else {
+						return A2($elm$core$Set$member, src, missing) ? acc : _Utils_Tuple2(
+							entities,
+							A2($elm$core$Set$insert, src, missing));
+					}
+				default:
+					var shapes = form.a;
+					return A3(
+						$elm$core$List$foldr,
+						A4(
+							$justgook$webgl_shape$WebGL$Shape2d$renderShape,
+							screen,
+							textures,
+							A5(createTrans, x * 2, y * 2, sx, sy, a),
+							opacity),
+						acc,
+						shapes);
+			}
+		}
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$toEntities = F3(
+	function (textures, screen, shapes) {
+		return A3(
+			$elm$core$List$foldr,
+			A4($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity, 1),
+			_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
+			shapes);
+	});
+var $author$project$Playground$Internal$gameTick = F3(
+	function (viewMemory, updateMemory, model) {
+		var computer = model.computer;
+		var memory = model.memory;
+		var textures = model.textures;
+		var newMemory = A2(updateMemory, computer, memory);
+		var newComputer = computer.mouse.click ? _Utils_update(
+			computer,
+			{
+				mouse: A2($author$project$Playground$Internal$mouseClick, false, computer.mouse)
+			}) : computer;
+		var _v0 = A3(
+			$justgook$webgl_shape$WebGL$Shape2d$toEntities,
+			textures.done,
+			computer.screen,
+			A2(viewMemory, newComputer, newMemory));
+		var entities = _v0.a;
+		var missing = _v0.b;
+		return $elm$core$Set$isEmpty(missing) ? _Utils_Tuple2(
+			$author$project$Playground$Internal$Playground(
+				_Utils_update(
+					model,
+					{computer: newComputer, entities: entities, memory: newMemory})),
+			$elm$core$Platform$Cmd$none) : A2(
+			$elm$core$Tuple$mapFirst,
+			function (loadingTextures) {
+				return $author$project$Playground$Internal$Playground(
+					_Utils_update(
+						model,
+						{computer: newComputer, entities: entities, memory: newMemory, textures: loadingTextures}));
+			},
+			A2($author$project$Playground$Internal$requestTexture, missing, textures));
+	});
+var $elm$core$Dict$getMin = function (dict) {
+	getMin:
+	while (true) {
+		if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
+			var left = dict.d;
+			var $temp$dict = left;
+			dict = $temp$dict;
+			continue getMin;
+		} else {
+			return dict;
+		}
+	}
+};
+var $elm$core$Dict$moveRedLeft = function (dict) {
+	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
+		if ((dict.e.d.$ === 'RBNode_elm_builtin') && (dict.e.d.a.$ === 'Red')) {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v1 = dict.d;
+			var lClr = _v1.a;
+			var lK = _v1.b;
+			var lV = _v1.c;
+			var lLeft = _v1.d;
+			var lRight = _v1.e;
+			var _v2 = dict.e;
+			var rClr = _v2.a;
+			var rK = _v2.b;
+			var rV = _v2.c;
+			var rLeft = _v2.d;
+			var _v3 = rLeft.a;
+			var rlK = rLeft.b;
+			var rlV = rLeft.c;
+			var rlL = rLeft.d;
+			var rlR = rLeft.e;
+			var rRight = _v2.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				$elm$core$Dict$Red,
+				rlK,
+				rlV,
+				A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					rlL),
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rlR, rRight));
+		} else {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v4 = dict.d;
+			var lClr = _v4.a;
+			var lK = _v4.b;
+			var lV = _v4.c;
+			var lLeft = _v4.d;
+			var lRight = _v4.e;
+			var _v5 = dict.e;
+			var rClr = _v5.a;
+			var rK = _v5.b;
+			var rV = _v5.c;
+			var rLeft = _v5.d;
+			var rRight = _v5.e;
+			if (clr.$ === 'Black') {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			}
+		}
+	} else {
+		return dict;
+	}
+};
+var $elm$core$Dict$moveRedRight = function (dict) {
+	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
+		if ((dict.d.d.$ === 'RBNode_elm_builtin') && (dict.d.d.a.$ === 'Red')) {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v1 = dict.d;
+			var lClr = _v1.a;
+			var lK = _v1.b;
+			var lV = _v1.c;
+			var _v2 = _v1.d;
+			var _v3 = _v2.a;
+			var llK = _v2.b;
+			var llV = _v2.c;
+			var llLeft = _v2.d;
+			var llRight = _v2.e;
+			var lRight = _v1.e;
+			var _v4 = dict.e;
+			var rClr = _v4.a;
+			var rK = _v4.b;
+			var rV = _v4.c;
+			var rLeft = _v4.d;
+			var rRight = _v4.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				$elm$core$Dict$Red,
+				lK,
+				lV,
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+				A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					lRight,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight)));
+		} else {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v5 = dict.d;
+			var lClr = _v5.a;
+			var lK = _v5.b;
+			var lV = _v5.c;
+			var lLeft = _v5.d;
+			var lRight = _v5.e;
+			var _v6 = dict.e;
+			var rClr = _v6.a;
+			var rK = _v6.b;
+			var rV = _v6.c;
+			var rLeft = _v6.d;
+			var rRight = _v6.e;
+			if (clr.$ === 'Black') {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			}
+		}
+	} else {
+		return dict;
+	}
+};
+var $elm$core$Dict$removeHelpPrepEQGT = F7(
+	function (targetKey, dict, color, key, value, left, right) {
+		if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+			var _v1 = left.a;
+			var lK = left.b;
+			var lV = left.c;
+			var lLeft = left.d;
+			var lRight = left.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				lK,
+				lV,
+				lLeft,
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, lRight, right));
+		} else {
+			_v2$2:
+			while (true) {
+				if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Black')) {
+					if (right.d.$ === 'RBNode_elm_builtin') {
+						if (right.d.a.$ === 'Black') {
+							var _v3 = right.a;
+							var _v4 = right.d;
+							var _v5 = _v4.a;
+							return $elm$core$Dict$moveRedRight(dict);
+						} else {
+							break _v2$2;
+						}
+					} else {
+						var _v6 = right.a;
+						var _v7 = right.d;
+						return $elm$core$Dict$moveRedRight(dict);
+					}
+				} else {
+					break _v2$2;
+				}
+			}
+			return dict;
+		}
+	});
+var $elm$core$Dict$removeMin = function (dict) {
+	if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
+		var color = dict.a;
+		var key = dict.b;
+		var value = dict.c;
+		var left = dict.d;
+		var lColor = left.a;
+		var lLeft = left.d;
+		var right = dict.e;
+		if (lColor.$ === 'Black') {
+			if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
+				var _v3 = lLeft.a;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					key,
+					value,
+					$elm$core$Dict$removeMin(left),
+					right);
+			} else {
+				var _v4 = $elm$core$Dict$moveRedLeft(dict);
+				if (_v4.$ === 'RBNode_elm_builtin') {
+					var nColor = _v4.a;
+					var nKey = _v4.b;
+					var nValue = _v4.c;
+					var nLeft = _v4.d;
+					var nRight = _v4.e;
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						$elm$core$Dict$removeMin(nLeft),
+						nRight);
+				} else {
+					return $elm$core$Dict$RBEmpty_elm_builtin;
+				}
+			}
+		} else {
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				value,
+				$elm$core$Dict$removeMin(left),
+				right);
+		}
+	} else {
+		return $elm$core$Dict$RBEmpty_elm_builtin;
+	}
+};
+var $elm$core$Dict$removeHelp = F2(
+	function (targetKey, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			if (_Utils_cmp(targetKey, key) < 0) {
+				if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Black')) {
+					var _v4 = left.a;
+					var lLeft = left.d;
+					if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
+						var _v6 = lLeft.a;
+						return A5(
+							$elm$core$Dict$RBNode_elm_builtin,
+							color,
+							key,
+							value,
+							A2($elm$core$Dict$removeHelp, targetKey, left),
+							right);
+					} else {
+						var _v7 = $elm$core$Dict$moveRedLeft(dict);
+						if (_v7.$ === 'RBNode_elm_builtin') {
+							var nColor = _v7.a;
+							var nKey = _v7.b;
+							var nValue = _v7.c;
+							var nLeft = _v7.d;
+							var nRight = _v7.e;
+							return A5(
+								$elm$core$Dict$balance,
+								nColor,
+								nKey,
+								nValue,
+								A2($elm$core$Dict$removeHelp, targetKey, nLeft),
+								nRight);
+						} else {
+							return $elm$core$Dict$RBEmpty_elm_builtin;
+						}
+					}
+				} else {
+					return A5(
+						$elm$core$Dict$RBNode_elm_builtin,
+						color,
+						key,
+						value,
+						A2($elm$core$Dict$removeHelp, targetKey, left),
+						right);
+				}
+			} else {
+				return A2(
+					$elm$core$Dict$removeHelpEQGT,
+					targetKey,
+					A7($elm$core$Dict$removeHelpPrepEQGT, targetKey, dict, color, key, value, left, right));
+			}
+		}
+	});
+var $elm$core$Dict$removeHelpEQGT = F2(
+	function (targetKey, dict) {
+		if (dict.$ === 'RBNode_elm_builtin') {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			if (_Utils_eq(targetKey, key)) {
+				var _v1 = $elm$core$Dict$getMin(right);
+				if (_v1.$ === 'RBNode_elm_builtin') {
+					var minKey = _v1.b;
+					var minValue = _v1.c;
+					return A5(
+						$elm$core$Dict$balance,
+						color,
+						minKey,
+						minValue,
+						left,
+						$elm$core$Dict$removeMin(right));
+				} else {
+					return $elm$core$Dict$RBEmpty_elm_builtin;
+				}
+			} else {
+				return A5(
+					$elm$core$Dict$balance,
+					color,
+					key,
+					value,
+					left,
+					A2($elm$core$Dict$removeHelp, targetKey, right));
+			}
+		} else {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		}
+	});
+var $elm$core$Dict$remove = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$removeHelp, key, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Set$remove = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$remove, key, dict));
+	});
+var $author$project$Playground$Internal$gotTextures = F2(
+	function (r, textures) {
+		var done = textures.done;
+		var loading = textures.loading;
+		if (r.$ === 'Ok') {
+			var _v1 = r.a;
+			var name = _v1.a;
+			var t = _v1.b;
+			return {
+				done: A3($elm$core$Dict$insert, name, t, done),
+				loading: A2($elm$core$Set$remove, name, loading)
+			};
+		} else {
+			var _v2 = r.a;
+			var name = _v2.a;
+			var err = _v2.b;
+			return textures;
+		}
+	});
+var $author$project$Playground$Internal$mouseDown = F2(
+	function (bool, mouse) {
+		return _Utils_update(
+			mouse,
+			{down: bool});
+	});
+var $author$project$Playground$Internal$mouseMove = F3(
+	function (x, y, mouse) {
+		return _Utils_update(
+			mouse,
+			{x: x, y: y});
+	});
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $author$project$Playground$Internal$toScreen = F2(
+	function (width, height) {
+		return {bottom: (-height) / 2, height: height, left: (-width) / 2, right: width / 2, top: height / 2, width: width};
+	});
+var $author$project$Playground$Internal$updateKeyboard = F3(
+	function (isDown, key, keyboard) {
+		var keys = isDown ? A2($elm$core$Set$insert, key, keyboard.keys) : A2($elm$core$Set$remove, key, keyboard.keys);
+		switch (key) {
+			case 'Space':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, space: isDown});
+			case 'Enter':
+				return _Utils_update(
+					keyboard,
+					{enter: isDown, keys: keys});
+			case 'ShiftLeft':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, shift: isDown});
+			case 'ShiftRight':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, shift: isDown});
+			case 'Backspace':
+				return _Utils_update(
+					keyboard,
+					{backspace: isDown, keys: keys});
+			case 'ArrowUp':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, up: isDown});
+			case 'ArrowDown':
+				return _Utils_update(
+					keyboard,
+					{down: isDown, keys: keys});
+			case 'ArrowLeft':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, left: isDown});
+			case 'ArrowRight':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, right: isDown});
+			default:
+				return _Utils_update(
+					keyboard,
+					{keys: keys});
+		}
+	});
+var $author$project$Playground$Internal$gameUpdate = F4(
+	function (viewMemory, updateMemory, msg, _v0) {
+		var model = _v0.a;
+		var visibility = model.visibility;
+		var memory = model.memory;
+		var textures = model.textures;
+		var computer = model.computer;
+		switch (msg.$) {
+			case 'Tick':
+				var time = msg.a;
+				var now = $elm$time$Time$posixToMillis(time);
+				var d = now - computer.time.now;
+				return A3(
+					$author$project$Playground$Internal$gameTick,
+					viewMemory,
+					updateMemory,
+					_Utils_update(
+						model,
+						{
+							computer: _Utils_update(
+								computer,
+								{
+									time: {delta: d, now: now}
+								})
+						}));
+			case 'GotViewport':
+				var viewport = msg.a.viewport;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										screen: A2($author$project$Playground$Internal$toScreen, viewport.width, viewport.height)
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'Resized':
+				var newScreen = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{screen: newScreen})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'KeyChanged':
+				var isDown = msg.a;
+				var key = msg.b;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										keyboard: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.keyboard)
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'MouseMove':
+				var pageX = msg.a;
+				var pageY = msg.b;
+				var y = computer.screen.top - pageY;
+				var x = computer.screen.left + pageX;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										mouse: A3($author$project$Playground$Internal$mouseMove, x, y, computer.mouse)
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'MouseClick':
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse)
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'MouseButton':
+				var isDown = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										mouse: A2($author$project$Playground$Internal$mouseDown, isDown, computer.mouse)
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'VisibilityChanged':
+				var vis = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										keyboard: $author$project$Playground$Internal$emptyKeyboard,
+										mouse: A4($author$project$Playground$Internal$Mouse, computer.mouse.x, computer.mouse.y, false, false),
+										time: {delta: 0, now: computer.time.now}
+									}),
+								visibility: vis
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'GotTexture':
+				var r = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										time: {delta: 0, now: computer.time.now}
+									}),
+								textures: A2($author$project$Playground$Internal$gotTextures, r, model.textures)
+							})),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var time = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										time: {
+											delta: 0,
+											now: $elm$time$Time$posixToMillis(time)
+										}
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+		}
+	});
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$map2 = _Json_map2;
 var $elm$json$Json$Decode$succeed = _Json_succeed;
@@ -6580,9 +7943,6 @@ var $elm$browser$Browser$External = function (a) {
 };
 var $elm$browser$Browser$Internal = function (a) {
 	return {$: 'Internal', a: a};
-};
-var $elm$core$Basics$identity = function (x) {
-	return x;
 };
 var $elm$browser$Browser$Dom$NotFound = function (a) {
 	return {$: 'NotFound', a: a};
@@ -6725,642 +8085,63 @@ var $elm$core$Basics$never = function (_v0) {
 		continue never;
 	}
 };
-var $elm$core$Task$Perform = function (a) {
-	return {$: 'Perform', a: a};
-};
-var $elm$core$Task$succeed = _Scheduler_succeed;
-var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
-var $elm$core$List$foldrHelper = F4(
-	function (fn, acc, ctr, ls) {
-		if (!ls.b) {
-			return acc;
-		} else {
-			var a = ls.a;
-			var r1 = ls.b;
-			if (!r1.b) {
-				return A2(fn, a, acc);
-			} else {
-				var b = r1.a;
-				var r2 = r1.b;
-				if (!r2.b) {
-					return A2(
-						fn,
-						a,
-						A2(fn, b, acc));
-				} else {
-					var c = r2.a;
-					var r3 = r2.b;
-					if (!r3.b) {
-						return A2(
-							fn,
-							a,
-							A2(
-								fn,
-								b,
-								A2(fn, c, acc)));
-					} else {
-						var d = r3.a;
-						var r4 = r3.b;
-						var res = (ctr > 500) ? A3(
-							$elm$core$List$foldl,
-							fn,
-							acc,
-							$elm$core$List$reverse(r4)) : A4($elm$core$List$foldrHelper, fn, acc, ctr + 1, r4);
-						return A2(
-							fn,
-							a,
-							A2(
-								fn,
-								b,
-								A2(
-									fn,
-									c,
-									A2(fn, d, res))));
-					}
-				}
-			}
-		}
-	});
-var $elm$core$List$foldr = F3(
-	function (fn, acc, ls) {
-		return A4($elm$core$List$foldrHelper, fn, acc, 0, ls);
-	});
-var $elm$core$List$map = F2(
-	function (f, xs) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, acc) {
-					return A2(
-						$elm$core$List$cons,
-						f(x),
-						acc);
-				}),
-			_List_Nil,
-			xs);
-	});
-var $elm$core$Task$andThen = _Scheduler_andThen;
-var $elm$core$Task$map = F2(
-	function (func, taskA) {
-		return A2(
-			$elm$core$Task$andThen,
-			function (a) {
-				return $elm$core$Task$succeed(
-					func(a));
-			},
-			taskA);
-	});
-var $elm$core$Task$map2 = F3(
-	function (func, taskA, taskB) {
-		return A2(
-			$elm$core$Task$andThen,
-			function (a) {
-				return A2(
-					$elm$core$Task$andThen,
-					function (b) {
-						return $elm$core$Task$succeed(
-							A2(func, a, b));
-					},
-					taskB);
-			},
-			taskA);
-	});
-var $elm$core$Task$sequence = function (tasks) {
-	return A3(
-		$elm$core$List$foldr,
-		$elm$core$Task$map2($elm$core$List$cons),
-		$elm$core$Task$succeed(_List_Nil),
-		tasks);
-};
-var $elm$core$Platform$sendToApp = _Platform_sendToApp;
-var $elm$core$Task$spawnCmd = F2(
-	function (router, _v0) {
-		var task = _v0.a;
-		return _Scheduler_spawn(
-			A2(
-				$elm$core$Task$andThen,
-				$elm$core$Platform$sendToApp(router),
-				task));
-	});
-var $elm$core$Task$onEffects = F3(
-	function (router, commands, state) {
-		return A2(
-			$elm$core$Task$map,
-			function (_v0) {
-				return _Utils_Tuple0;
-			},
-			$elm$core$Task$sequence(
-				A2(
-					$elm$core$List$map,
-					$elm$core$Task$spawnCmd(router),
-					commands)));
-	});
-var $elm$core$Task$onSelfMsg = F3(
-	function (_v0, _v1, _v2) {
-		return $elm$core$Task$succeed(_Utils_Tuple0);
-	});
-var $elm$core$Task$cmdMap = F2(
-	function (tagger, _v0) {
-		var task = _v0.a;
-		return $elm$core$Task$Perform(
-			A2($elm$core$Task$map, tagger, task));
-	});
-_Platform_effectManagers['Task'] = _Platform_createManager($elm$core$Task$init, $elm$core$Task$onEffects, $elm$core$Task$onSelfMsg, $elm$core$Task$cmdMap);
-var $elm$core$Task$command = _Platform_leaf('Task');
 var $elm$core$Task$perform = F2(
 	function (toMessage, task) {
 		return $elm$core$Task$command(
 			$elm$core$Task$Perform(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
-var $elm$browser$Browser$document = _Browser_document;
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$browser$Browser$Dom$getViewport = _Browser_withWindow(_Browser_getViewport);
-var $author$project$Playground$Internal$Fail = function (a) {
-	return {$: 'Fail', a: a};
+var $author$project$Playground$Internal$initialComputer = {
+	keyboard: $author$project$Playground$Internal$emptyKeyboard,
+	mouse: A4($author$project$Playground$Internal$Mouse, 0, 0, false, false),
+	screen: A2($author$project$Playground$Internal$toScreen, 600, 600),
+	time: {delta: 0, now: 0}
 };
-var $author$project$Playground$Internal$Success = function (a) {
-	return {$: 'Success', a: a};
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
 };
-var $elm$core$Dict$Black = {$: 'Black'};
-var $elm$core$Dict$RBNode_elm_builtin = F5(
-	function (a, b, c, d, e) {
-		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
-	});
-var $elm$core$Dict$Red = {$: 'Red'};
-var $elm$core$Dict$balance = F5(
-	function (color, key, value, left, right) {
-		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
-			var _v1 = right.a;
-			var rK = right.b;
-			var rV = right.c;
-			var rLeft = right.d;
-			var rRight = right.e;
-			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-				var _v3 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var lLeft = left.d;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					key,
-					value,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					rK,
-					rV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
-					rRight);
-			}
-		} else {
-			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
-				var _v5 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var _v6 = left.d;
-				var _v7 = _v6.a;
-				var llK = _v6.b;
-				var llV = _v6.c;
-				var llLeft = _v6.d;
-				var llRight = _v6.e;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					lK,
-					lV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
-			} else {
-				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
-			}
-		}
-	});
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$insertHelp = F3(
-	function (key, value, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
-		} else {
-			var nColor = dict.a;
-			var nKey = dict.b;
-			var nValue = dict.c;
-			var nLeft = dict.d;
-			var nRight = dict.e;
-			var _v1 = A2($elm$core$Basics$compare, key, nKey);
-			switch (_v1.$) {
-				case 'LT':
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						A3($elm$core$Dict$insertHelp, key, value, nLeft),
-						nRight);
-				case 'EQ':
-					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
-				default:
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						nLeft,
-						A3($elm$core$Dict$insertHelp, key, value, nRight));
-			}
-		}
-	});
-var $elm$core$Dict$insert = F3(
-	function (key, value, dict) {
-		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
-var $elm_explorations$webgl$WebGL$Texture$LoadError = {$: 'LoadError'};
-var $elm_explorations$webgl$WebGL$Texture$SizeError = F2(
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
+var $elm$time$Time$Zone = F2(
 	function (a, b) {
-		return {$: 'SizeError', a: a, b: b};
+		return {$: 'Zone', a: a, b: b};
 	});
-var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
-var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
-var $author$project$Playground$Internal$gotTextures = F2(
-	function (r, textures) {
-		if (r.$ === 'Ok') {
-			var _v1 = r.a;
-			var name = _v1.a;
-			var t = _v1.b;
-			return A2(
-				$elm$core$Dict$insert,
-				name,
-				$author$project$Playground$Internal$Success(
-					{
-						size: function (_v2) {
-							var w = _v2.a;
-							var h = _v2.b;
-							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
-						}(
-							$elm_explorations$webgl$WebGL$Texture$size(t)),
-						texture: t
-					}))(textures);
-		} else {
-			var _v3 = r.a;
-			var name = _v3.a;
-			var err = _v3.b;
-			return A3(
-				$elm$core$Dict$insert,
-				name,
-				$author$project$Playground$Internal$Fail(err),
-				textures);
-		}
-	});
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
 };
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Playground$Transformation$identity = {a11: 1, a12: 0, a13: 0, a21: 0, a22: 1, a23: 0};
-var $elm$core$Tuple$mapSecond = F2(
-	function (func, _v0) {
-		var x = _v0.a;
-		var y = _v0.b;
-		return _Utils_Tuple2(
-			x,
-			func(y));
-	});
-var $author$project$Playground$Transformation$apply = F2(
-	function (a, b) {
-		return {a11: (a.a11 * b.a11) + (a.a12 * b.a21), a12: (a.a11 * b.a12) + (a.a12 * b.a22), a13: ((a.a11 * b.a13) + (a.a12 * b.a23)) + a.a13, a21: (a.a21 * b.a11) + (a.a22 * b.a21), a22: (a.a21 * b.a12) + (a.a22 * b.a22), a23: ((a.a21 * b.a13) + (a.a22 * b.a23)) + a.a23};
-	});
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
-		}
-	});
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
-	});
-var $author$project$Playground$Transformation$scale = F3(
-	function (sx, sy, b) {
-		return {a11: sx * b.a11, a12: sx * b.a12, a13: sx * b.a13, a21: sy * b.a21, a22: sy * b.a22, a23: sy * b.a23};
-	});
-var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
-var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
-var $author$project$Playground$Transformation$toGL = function (_v0) {
-	var a11 = _v0.a11;
-	var a12 = _v0.a12;
-	var a13 = _v0.a13;
-	var a21 = _v0.a21;
-	var a22 = _v0.a22;
-	var a23 = _v0.a23;
-	return _Utils_Tuple2(
-		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
-			{w: a22, x: a11, y: a12, z: a21}),
-		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
-			{x: a13, y: a23}));
-};
-var $elm$core$Basics$cos = _Basics_cos;
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
-var $elm$core$Basics$sin = _Basics_sin;
-var $author$project$Playground$Transformation$transform = F5(
-	function (tx, ty, sx, sy, angle) {
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
+var $author$project$Playground$Internal$create = F3(
+	function (viewMemory, updateMemory, initialMemory) {
+		var view = function (_v0) {
+			var entities = _v0.a.entities;
+			return entities;
+		};
+		var init = _Utils_Tuple2(
+			$author$project$Playground$Internal$Playground(
+				{
+					computer: $author$project$Playground$Internal$initialComputer,
+					entities: _List_Nil,
+					memory: initialMemory,
+					textures: {done: $elm$core$Dict$empty, loading: $elm$core$Set$empty},
+					visibility: $elm$browser$Browser$Events$Visible
+				}),
+			$elm$core$Platform$Cmd$batch(
+				_List_fromArray(
+					[
+						A2($elm$core$Task$perform, $author$project$Playground$Internal$GotViewport, $elm$browser$Browser$Dom$getViewport),
+						A2($elm$core$Task$perform, $author$project$Playground$Internal$InitTime, $elm$time$Time$now)
+					])));
 		return {
-			a11: $elm$core$Basics$cos(angle) * sx,
-			a12: $elm$core$Basics$sin(angle) * (-sy),
-			a13: tx,
-			a21: $elm$core$Basics$sin(angle) * sx,
-			a22: $elm$core$Basics$cos(angle) * sy,
-			a23: ty
+			init: init,
+			update: A2($author$project$Playground$Internal$gameUpdate, viewMemory, updateMemory),
+			view: view
 		};
 	});
-var $author$project$Playground$Internal$renderShape = F6(
-	function (screen, textures, parent, parentOpacity, _v0, acc) {
-		renderShape:
-		while (true) {
-			var x = _v0.a.x;
-			var y = _v0.a.y;
-			var a = _v0.a.a;
-			var sx = _v0.a.sx;
-			var sy = _v0.a.sy;
-			var o = _v0.a.o;
-			var form = _v0.a.form;
-			var entities = acc.a;
-			var missing = acc.b;
-			var opacity = o * parentOpacity;
-			var createTrans = F5(
-				function (tx, ty, sx_, sy_, a_) {
-					return A2(
-						$author$project$Playground$Transformation$apply,
-						parent,
-						A5($author$project$Playground$Transformation$transform, tx, ty, sx_, sy_, a_));
-				});
-			switch (form.$) {
-				case 'Form':
-					var width = form.a;
-					var height = form.b;
-					var fn = form.c;
-					var _v2 = $author$project$Playground$Transformation$toGL(
-						A3(
-							$author$project$Playground$Transformation$scale,
-							1 / screen.width,
-							1 / screen.height,
-							A5(createTrans, x * 2, y * 2, width * sx, height * sy, a)));
-					var t1 = _v2.a;
-					var t2 = _v2.b;
-					return _Utils_Tuple2(
-						A2(
-							$elm$core$List$cons,
-							A3(fn, t2, t1, opacity),
-							entities),
-						missing);
-				case 'Textured':
-					var src = form.a;
-					var fn = form.b;
-					var _v3 = _Utils_Tuple2(
-						A2($elm$core$Set$member, src, missing),
-						A2($elm$core$Dict$get, src, textures));
-					_v3$2:
-					while (true) {
-						if (_v3.b.$ === 'Just') {
-							if (_v3.b.a.$ === 'Success') {
-								var texture = _v3.b.a.a.texture;
-								var size = _v3.b.a.a.size;
-								var $temp$screen = screen,
-									$temp$textures = textures,
-									$temp$parent = A5(createTrans, x * 2, y * 2, sx, sy, a),
-									$temp$parentOpacity = opacity,
-									$temp$_v0 = fn(texture),
-									$temp$acc = acc;
-								screen = $temp$screen;
-								textures = $temp$textures;
-								parent = $temp$parent;
-								parentOpacity = $temp$parentOpacity;
-								_v0 = $temp$_v0;
-								acc = $temp$acc;
-								continue renderShape;
-							} else {
-								break _v3$2;
-							}
-						} else {
-							if (!_v3.a) {
-								var _v4 = _v3.b;
-								return _Utils_Tuple2(
-									entities,
-									A2($elm$core$Set$insert, src, missing));
-							} else {
-								break _v3$2;
-							}
-						}
-					}
-					return acc;
-				default:
-					var shapes = form.a;
-					return A3(
-						$elm$core$List$foldr,
-						A4(
-							$author$project$Playground$Internal$renderShape,
-							screen,
-							textures,
-							A5(createTrans, x * 2, y * 2, sx, sy, a),
-							opacity),
-						acc,
-						shapes);
-			}
-		}
-	});
-var $author$project$Playground$Internal$render = F3(
-	function (screen, textures, shapes) {
-		return A2(
-			$elm$core$Tuple$mapSecond,
-			$elm$core$Set$toList,
-			A3(
-				$elm$core$List$foldr,
-				A4($author$project$Playground$Internal$renderShape, screen, textures, $author$project$Playground$Transformation$identity, 1),
-				_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
-				shapes));
-	});
-var $author$project$Playground$Internal$GotTexture = function (a) {
-	return {$: 'GotTexture', a: a};
-};
-var $author$project$Playground$Internal$Loading = {$: 'Loading'};
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
-var $elm$core$Task$onError = _Scheduler_onError;
-var $elm$core$Task$attempt = F2(
-	function (resultToMessage, task) {
-		return $elm$core$Task$command(
-			$elm$core$Task$Perform(
-				A2(
-					$elm$core$Task$onError,
-					A2(
-						$elm$core$Basics$composeL,
-						A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
-						$elm$core$Result$Err),
-					A2(
-						$elm$core$Task$andThen,
-						A2(
-							$elm$core$Basics$composeL,
-							A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
-							$elm$core$Result$Ok),
-						task))));
-	});
-var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
-	function (_v0, url) {
-		var magnify = _v0.magnify;
-		var minify = _v0.minify;
-		var horizontalWrap = _v0.horizontalWrap;
-		var verticalWrap = _v0.verticalWrap;
-		var flipY = _v0.flipY;
-		var expand = F4(
-			function (_v1, _v2, _v3, _v4) {
-				var mag = _v1.a;
-				var min = _v2.a;
-				var hor = _v3.a;
-				var vert = _v4.a;
-				return A6(_Texture_load, mag, min, hor, vert, flipY, url);
-			});
-		return A4(expand, magnify, minify, horizontalWrap, verticalWrap);
-	});
-var $elm$core$Task$fail = _Scheduler_fail;
-var $elm$core$Task$mapError = F2(
-	function (convert, task) {
-		return A2(
-			$elm$core$Task$onError,
-			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
-			task);
-	});
-var $elm$core$Tuple$pair = F2(
-	function (a, b) {
-		return _Utils_Tuple2(a, b);
-	});
-var $elm_explorations$webgl$WebGL$Texture$Resize = function (a) {
-	return {$: 'Resize', a: a};
-};
-var $elm_explorations$webgl$WebGL$Texture$linear = $elm_explorations$webgl$WebGL$Texture$Resize(9729);
-var $elm_explorations$webgl$WebGL$Texture$Wrap = function (a) {
-	return {$: 'Wrap', a: a};
-};
-var $elm_explorations$webgl$WebGL$Texture$clampToEdge = $elm_explorations$webgl$WebGL$Texture$Wrap(33071);
-var $elm_explorations$webgl$WebGL$Texture$nearest = $elm_explorations$webgl$WebGL$Texture$Resize(9728);
-var $elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions = {flipY: true, horizontalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge, magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$nearest, verticalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
-var $author$project$Playground$Internal$textureOption = _Utils_update(
-	$elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions,
-	{magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$linear});
-var $author$project$Playground$Internal$requestTexture = F2(
-	function (missing, textures) {
-		return A2(
-			$elm$core$Tuple$mapSecond,
-			$elm$core$Platform$Cmd$batch,
-			A3(
-				$elm$core$List$foldl,
-				F2(
-					function (url, _v0) {
-						var acc1 = _v0.a;
-						var acc2 = _v0.b;
-						return _Utils_Tuple2(
-							A3($elm$core$Dict$insert, url, $author$project$Playground$Internal$Loading, acc1),
-							A2(
-								$elm$core$List$cons,
-								A2(
-									$elm$core$Task$attempt,
-									$author$project$Playground$Internal$GotTexture,
-									A2(
-										$elm$core$Task$mapError,
-										$elm$core$Tuple$pair(url),
-										A2(
-											$elm$core$Task$map,
-											$elm$core$Tuple$pair(url),
-											A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Playground$Internal$textureOption, url)))),
-								acc2));
-					}),
-				_Utils_Tuple2(textures, _List_Nil),
-				missing));
-	});
-var $author$project$Playground$renderPicture = F2(
-	function (shapes, _v0) {
-		var screen = _v0.a;
-		var textures = _v0.b;
-		var _v1 = A3($author$project$Playground$Internal$render, screen, textures, shapes);
-		var entities = _v1.a;
-		var missing = _v1.b;
-		var _v2 = function () {
-			if (!missing.b) {
-				return _Utils_Tuple2(textures, $elm$core$Platform$Cmd$none);
-			} else {
-				return A2($author$project$Playground$Internal$requestTexture, missing, textures);
-			}
-		}();
-		var newTextures = _v2.a;
-		var cmd = _v2.b;
-		return _Utils_Tuple2(
-			A3($author$project$Playground$Picture, screen, newTextures, entities),
-			cmd);
-	});
-var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$browser$Browser$document = _Browser_document;
 var $author$project$Playground$Internal$KeyChanged = F2(
 	function (a, b) {
 		return {$: 'KeyChanged', a: a, b: b};
@@ -7373,13 +8154,14 @@ var $author$project$Playground$Internal$MouseMove = F2(
 	function (a, b) {
 		return {$: 'MouseMove', a: a, b: b};
 	});
-var $author$project$Playground$Internal$Tick = function (a) {
-	return {$: 'Tick', a: a};
+var $author$project$Playground$Internal$Resized = function (a) {
+	return {$: 'Resized', a: a};
 };
 var $author$project$Playground$Internal$VisibilityChanged = function (a) {
 	return {$: 'VisibilityChanged', a: a};
 };
 var $elm$json$Json$Decode$andThen = _Json_andThen;
+var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$json$Json$Decode$field = _Json_decodeField;
@@ -7445,10 +8227,6 @@ var $elm$browser$Browser$AnimationManager$onEffects = F3(
 			}
 		}
 	});
-var $elm$time$Time$Posix = function (a) {
-	return {$: 'Posix', a: a};
-};
-var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
 var $elm$browser$Browser$AnimationManager$onSelfMsg = F3(
 	function (router, newTime, _v0) {
 		var subs = _v0.subs;
@@ -7552,31 +8330,6 @@ var $elm$core$Dict$fromList = function (assocs) {
 		$elm$core$Dict$empty,
 		assocs);
 };
-var $elm$core$Dict$foldl = F3(
-	function (func, acc, dict) {
-		foldl:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return acc;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var $temp$func = func,
-					$temp$acc = A3(
-					func,
-					key,
-					value,
-					A3($elm$core$Dict$foldl, func, acc, left)),
-					$temp$dict = right;
-				func = $temp$func;
-				acc = $temp$acc;
-				dict = $temp$dict;
-				continue foldl;
-			}
-		}
-	});
 var $elm$core$Dict$merge = F6(
 	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
 		var stepState = F3(
@@ -7823,7 +8576,6 @@ var $elm$browser$Browser$Events$onResize = function (func) {
 				A2($elm$json$Json$Decode$field, 'innerHeight', $elm$json$Json$Decode$int))));
 };
 var $elm$browser$Browser$Events$Hidden = {$: 'Hidden'};
-var $elm$browser$Browser$Events$Visible = {$: 'Visible'};
 var $elm$browser$Browser$Events$withHidden = F2(
 	function (func, isHidden) {
 		return func(
@@ -7843,17 +8595,8 @@ var $elm$browser$Browser$Events$onVisibilityChange = function (func) {
 				'target',
 				A2($elm$json$Json$Decode$field, info.hidden, $elm$json$Json$Decode$bool))));
 };
-var $author$project$Playground$Internal$toScreen = F2(
-	function (width, height) {
-		return {bottom: (-height) / 2, height: height, left: (-width) / 2, right: width / 2, top: height / 2, width: width};
-	});
-var $author$project$Playground$Internal$resize = F2(
-	function (w, h) {
-		return $author$project$Playground$Internal$Resized(
-			A2($author$project$Playground$Internal$toScreen, w, h));
-	});
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $author$project$Playground$Internal$subscriptions_ = {
+var $author$project$Playground$Internal$subscriptions = {
 	click: $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
@@ -7873,7 +8616,7 @@ var $author$project$Playground$Internal$subscriptions_ = {
 				A2(
 					$elm$json$Json$Decode$map,
 					$author$project$Playground$Internal$KeyChanged(false),
-					A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string))),
+					A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string))),
 				$elm$browser$Browser$Events$onKeyDown(
 				A2(
 					$elm$json$Json$Decode$andThen,
@@ -7881,7 +8624,7 @@ var $author$project$Playground$Internal$subscriptions_ = {
 						return repeat ? $elm$json$Json$Decode$fail('') : A2(
 							$elm$json$Json$Decode$map,
 							$author$project$Playground$Internal$KeyChanged(true),
-							A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string));
+							A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string));
 					},
 					A2($elm$json$Json$Decode$field, 'repeat', $elm$json$Json$Decode$bool)))
 			])),
@@ -7891,19 +8634,14 @@ var $author$project$Playground$Internal$subscriptions_ = {
 			$author$project$Playground$Internal$MouseMove,
 			A2($elm$json$Json$Decode$field, 'pageX', $elm$json$Json$Decode$float),
 			A2($elm$json$Json$Decode$field, 'pageY', $elm$json$Json$Decode$float))),
-	resize: $elm$browser$Browser$Events$onResize($author$project$Playground$Internal$resize),
+	resize: $elm$browser$Browser$Events$onResize(
+		F2(
+			function (w, h) {
+				return $author$project$Playground$Internal$Resized(
+					A2($author$project$Playground$Internal$toScreen, w, h));
+			})),
 	time: $elm$browser$Browser$Events$onAnimationFrame($author$project$Playground$Internal$Tick),
 	visibility: $elm$browser$Browser$Events$onVisibilityChange($author$project$Playground$Internal$VisibilityChanged)
-};
-var $author$project$Playground$Internal$subscriptions = {
-	all: $elm$core$Platform$Sub$batch(
-		_List_fromArray(
-			[$author$project$Playground$Internal$subscriptions_.keys, $author$project$Playground$Internal$subscriptions_.time, $author$project$Playground$Internal$subscriptions_.visibility, $author$project$Playground$Internal$subscriptions_.click, $author$project$Playground$Internal$subscriptions_.mouse, $author$project$Playground$Internal$subscriptions_.resize])),
-	click: $author$project$Playground$Internal$subscriptions_.click,
-	keys: $author$project$Playground$Internal$subscriptions_.keys,
-	mouse: $author$project$Playground$Internal$subscriptions_.mouse,
-	resize: $author$project$Playground$Internal$subscriptions_.resize,
-	time: $author$project$Playground$Internal$subscriptions_.time
 };
 var $elm$virtual_dom$VirtualDom$node = function (tag) {
 	return _VirtualDom_node(
@@ -8038,62 +8776,55 @@ var $author$project$Playground$Internal$viewWrap = F2(
 			]);
 	});
 var $author$project$Playground$picture = function (shapes) {
-	var view = function (_v4) {
-		var screen = _v4.a;
-		var entities = _v4.c;
+	var view = function (_v7) {
+		var computer = _v7.a.computer;
+		var entities = _v7.a.entities;
 		return {
-			body: A2($author$project$Playground$Internal$viewWrap, screen, entities),
+			body: A2($author$project$Playground$Internal$viewWrap, computer.screen, entities),
 			title: 'Playground'
 		};
 	};
-	var update = F2(
-		function (msg, model) {
-			var screen = model.a;
-			var textures = model.b;
-			var entities = model.c;
-			return A2(
-				$author$project$Playground$renderPicture,
-				shapes,
-				function () {
-					switch (msg.$) {
-						case 'Resized':
-							var newScreen = msg.a;
-							return A3($author$project$Playground$Picture, newScreen, textures, entities);
-						case 'GotTexture':
-							var r = msg.a;
-							return A3(
-								$author$project$Playground$Picture,
-								screen,
-								A2($author$project$Playground$Internal$gotTextures, r, textures),
-								entities);
-						default:
-							return model;
-					}
-				}());
-		});
-	var init = function (_v2) {
-		return _Utils_Tuple2(
-			A3(
-				$author$project$Playground$Picture,
-				A2($author$project$Playground$Internal$toScreen, 666, 666),
-				$elm$core$Dict$empty,
-				_List_Nil),
-			A2(
-				$elm$core$Task$perform,
-				function (_v1) {
-					var scene = _v1.scene;
-					return $author$project$Playground$Internal$Resized(
-						A2($author$project$Playground$Internal$toScreen, scene.width, scene.height));
-				},
-				$elm$browser$Browser$Dom$getViewport));
-	};
+	var _v0 = A3(
+		$author$project$Playground$Internal$create,
+		F2(
+			function (_v1, _v2) {
+				return shapes;
+			}),
+		F2(
+			function (_v3, m) {
+				return m;
+			}),
+		_Utils_Tuple0);
+	var init = _v0.init;
+	var update = _v0.update;
 	return $elm$browser$Browser$document(
 		{
-			init: init,
-			subscriptions: function (_v0) {
+			init: function (_v4) {
+				return A2(
+					$elm$core$Tuple$mapSecond,
+					function (cmd) {
+						return $elm$core$Platform$Cmd$batch(
+							_List_fromArray(
+								[
+									A2($elm$core$Task$perform, $author$project$Playground$Internal$Tick, $elm$time$Time$now),
+									cmd
+								]));
+					},
+					init);
+			},
+			subscriptions: function (_v5) {
 				return $author$project$Playground$Internal$subscriptions.resize;
 			},
-			update: update,
+			update: F2(
+				function (msg, m) {
+					if (msg.$ === 'GotTexture') {
+						return _Utils_Tuple2(
+							A2(update, msg, m).a,
+							A2($elm$core$Task$perform, $author$project$Playground$Internal$Tick, $elm$time$Time$now));
+					} else {
+						return A2(update, msg, m);
+					}
+				}),
 			view: view
 		});
 };
@@ -8213,17 +8944,17 @@ var $author$project$MulticolorPolygon$dude = _List_fromArray(
 			_Utils_Tuple2(334.86556, 478.09046)
 		])
 	]);
-var $author$project$Playground$Internal$Group = function (a) {
+var $justgook$webgl_shape$WebGL$Shape2d$Group = function (a) {
 	return {$: 'Group', a: a};
 };
-var $author$project$Playground$Internal$Shape = function (a) {
-	return {$: 'Shape', a: a};
+var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
+	return {$: 'Shape2d', a: a};
 };
 var $author$project$Playground$group = function (shapes) {
-	return $author$project$Playground$Internal$Shape(
+	return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 		{
 			a: 0,
-			form: $author$project$Playground$Internal$Group(shapes),
+			form: $justgook$webgl_shape$WebGL$Shape2d$Group(shapes),
 			o: 1,
 			sx: 1,
 			sy: 1,
@@ -8241,7 +8972,7 @@ var $author$project$Playground$move = F3(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{x: x + dx, y: y + dy}));
@@ -8256,7 +8987,7 @@ var $author$project$Playground$moveX = F2(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{x: x + dx}));
@@ -8271,7 +9002,7 @@ var $author$project$Playground$moveY = F2(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{y: y + dy}));
@@ -8595,22 +9326,9 @@ var $author$project$MulticolorPolygon$colors = function (i) {
 				_List_fromArray(
 					[$author$project$Playground$red, $author$project$Playground$orange, $author$project$Playground$yellow, $author$project$Playground$green, $author$project$Playground$blue, $author$project$Playground$purple, $author$project$Playground$brown, $author$project$Playground$lightRed, $author$project$Playground$lightOrange, $author$project$Playground$lightYellow, $author$project$Playground$lightGreen, $author$project$Playground$lightBlue, $author$project$Playground$lightPurple, $author$project$Playground$lightBrown, $author$project$Playground$darkRed, $author$project$Playground$darkOrange, $author$project$Playground$darkYellow, $author$project$Playground$darkGreen, $author$project$Playground$darkBlue, $author$project$Playground$darkPurple, $author$project$Playground$darkBrown, $author$project$Playground$lightGrey, $author$project$Playground$grey, $author$project$Playground$darkGrey, $author$project$Playground$lightCharcoal, $author$project$Playground$charcoal, $author$project$Playground$darkCharcoal, $author$project$Playground$black]))));
 };
-var $author$project$Playground$Internal$Form = F3(
+var $justgook$webgl_shape$WebGL$Shape2d$Form = F3(
 	function (a, b, c) {
 		return {$: 'Form', a: a, b: b, c: c};
-	});
-var $author$project$Playground$Advanced$custom = F3(
-	function (width, height, render) {
-		return $author$project$Playground$Internal$Shape(
-			{
-				a: 0,
-				form: A3($author$project$Playground$Internal$Form, width, height, render),
-				o: 1,
-				sx: 1,
-				sy: 1,
-				x: 0,
-				y: 0
-			});
 	});
 var $elm_explorations$webgl$WebGL$Internal$Blend = function (a) {
 	return function (b) {
@@ -8691,7 +9409,7 @@ var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragFill = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n\n        void main () {\n            gl_FragColor = color;\n\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color'}
 };
@@ -8708,14 +9426,19 @@ var $author$project$Playground$Shader$meshTriangle = $elm_explorations$webgl$Web
 			{i: 1},
 			{i: 2}
 		]));
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
 var $elm_explorations$linear_algebra$Math$Vector3$toRecord = _MJS_v3toRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$vec4 = _MJS_v4;
-var $author$project$Playground$Render$setAlpha = function (c) {
-	return function (c1) {
-		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, c1.x, c1.y, c1.z);
-	}(
-		$elm_explorations$linear_algebra$Math$Vector3$toRecord(c));
-};
+var $author$project$Playground$Render$setAlpha = A2(
+	$elm$core$Basics$composeR,
+	$elm_explorations$linear_algebra$Math$Vector3$toRecord,
+	function (a) {
+		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, a.x, a.y, a.z);
+	});
 var $author$project$Playground$Shader$vertTriangle = {
 	src: '\n    precision mediump float;\n    attribute float i;\n    uniform vec2 vert0;\n    uniform vec2 vert1;\n    uniform vec2 vert2;\n    uniform vec4 uT;\n    uniform vec2 uP;\n    void main () {\n     vec2 aP;\n     if (i == 0.) {\n        aP = vert0;\n     } else if (i == 1.) {\n        aP = vert1;\n     } else if (i == 2.) {\n        aP = vert2;\n     }\n     gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n    }\n    ',
 	attributes: {i: 'i'},
@@ -8743,12 +9466,22 @@ var $author$project$Playground$Render$triangle = F5(
 	});
 var $author$project$MulticolorPolygon$triangle = F2(
 	function (color, data) {
-		return A3(
-			$author$project$Playground$Advanced$custom,
-			1,
-			1,
-			A2($author$project$Playground$Render$triangle, color, data));
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			{
+				a: 0,
+				form: A3(
+					$justgook$webgl_shape$WebGL$Shape2d$Form,
+					1,
+					1,
+					A2($author$project$Playground$Render$triangle, color, data)),
+				o: 1,
+				sx: 1,
+				sy: 1,
+				x: 0,
+				y: 0
+			});
 	});
+var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
 var $author$project$MulticolorPolygon$pointsToTringle = $elm$core$List$indexedMap(
 	F2(
 		function (i, _v0) {
@@ -8806,11 +9539,11 @@ var $author$project$Playground$Render$rect = F4(
 	});
 var $author$project$Playground$rectangle = F3(
 	function (color, width, height) {
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			{
 				a: 0,
 				form: A3(
-					$author$project$Playground$Internal$Form,
+					$justgook$webgl_shape$WebGL$Shape2d$Form,
 					width,
 					height,
 					$author$project$Playground$Render$rect(color)),
@@ -8835,7 +9568,7 @@ var $author$project$Playground$rotate = F2(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{
@@ -8852,7 +9585,7 @@ var $author$project$Playground$scale = F2(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{sx: sx * ns, sy: sy * ns}));

@@ -387,7 +387,7 @@ function _Debug_toAnsiString(ansi, value)
 		return _Debug_stringColor(ansi, '<' + value.byteLength + ' bytes>');
 	}
 
-	if (typeof File === 'function' && value instanceof File)
+	if (typeof File !== 'undefined' && value instanceof File)
 	{
 		return _Debug_internalColor(ansi, '<' + value.name + '>');
 	}
@@ -457,7 +457,7 @@ function _Debug_fadeColor(ansi, string)
 
 function _Debug_internalColor(ansi, string)
 {
-	return ansi ? '\x1b[94m' + string + '\x1b[0m' : string;
+	return ansi ? '\x1b[36m' + string + '\x1b[0m' : string;
 }
 
 function _Debug_toHexDigit(n)
@@ -558,12 +558,6 @@ function _Utils_eq(x, y)
 
 function _Utils_eqHelp(x, y, depth, stack)
 {
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
 	if (x === y)
 	{
 		return true;
@@ -573,6 +567,12 @@ function _Utils_eqHelp(x, y, depth, stack)
 	{
 		typeof x === 'function' && _Debug_crash(5);
 		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
 	}
 
 	/**/
@@ -875,7 +875,7 @@ var _String_cons = F2(function(chr, str)
 function _String_uncons(string)
 {
 	var word = string.charCodeAt(0);
-	return word
+	return !isNaN(word)
 		? $elm$core$Maybe$Just(
 			0xD800 <= word && word <= 0xDBFF
 				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
@@ -1888,19 +1888,19 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
 	$elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
 	var managers = {};
-	result = init(result.a);
-	var model = result.a;
+	var initPair = init(result.a);
+	var model = initPair.a;
 	var stepper = stepperBuilder(sendToApp, model);
 	var ports = _Platform_setupEffects(managers, sendToApp);
 
 	function sendToApp(msg, viewMetadata)
 	{
-		result = A2(update, msg, model);
-		stepper(model = result.a, viewMetadata);
-		_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+		var pair = A2(update, msg, model);
+		stepper(model = pair.a, viewMetadata);
+		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
 	}
 
-	_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
 	return ports ? { ports: ports } : {};
 }
@@ -2058,6 +2058,51 @@ var _Platform_map = F2(function(tagger, bag)
 
 
 // PIPE BAGS INTO EFFECT MANAGERS
+//
+// Effects must be queued!
+//
+// Say your init contains a synchronous command, like Time.now or Time.here
+//
+//   - This will produce a batch of effects (FX_1)
+//   - The synchronous task triggers the subsequent `update` call
+//   - This will produce a batch of effects (FX_2)
+//
+// If we just start dispatching FX_2, subscriptions from FX_2 can be processed
+// before subscriptions from FX_1. No good! Earlier versions of this code had
+// this problem, leading to these reports:
+//
+//   https://github.com/elm/core/issues/980
+//   https://github.com/elm/core/pull/981
+//   https://github.com/elm/compiler/issues/1776
+//
+// The queue is necessary to avoid ordering issues for synchronous commands.
+
+
+// Why use true/false here? Why not just check the length of the queue?
+// The goal is to detect "are we currently dispatching effects?" If we
+// are, we need to bail and let the ongoing while loop handle things.
+//
+// Now say the queue has 1 element. When we dequeue the final element,
+// the queue will be empty, but we are still actively dispatching effects.
+// So you could get queue jumping in a really tricky category of cases.
+//
+var _Platform_effectsQueue = [];
+var _Platform_effectsActive = false;
+
+
+function _Platform_enqueueEffects(managers, cmdBag, subBag)
+{
+	_Platform_effectsQueue.push({ p: managers, q: cmdBag, r: subBag });
+
+	if (_Platform_effectsActive) return;
+
+	_Platform_effectsActive = true;
+	for (var fx; fx = _Platform_effectsQueue.shift(); )
+	{
+		_Platform_dispatchEffects(fx.p, fx.q, fx.r);
+	}
+	_Platform_effectsActive = false;
+}
 
 
 function _Platform_dispatchEffects(managers, cmdBag, subBag)
@@ -2095,8 +2140,8 @@ function _Platform_gatherEffects(isCmd, bag, effectsDict, taggers)
 
 		case 3:
 			_Platform_gatherEffects(isCmd, bag.o, effectsDict, {
-				p: bag.n,
-				q: taggers
+				s: bag.n,
+				t: taggers
 			});
 			return;
 	}
@@ -2107,9 +2152,9 @@ function _Platform_toEffect(isCmd, home, taggers, value)
 {
 	function applyTaggers(x)
 	{
-		for (var temp = taggers; temp; temp = temp.q)
+		for (var temp = taggers; temp; temp = temp.t)
 		{
-			x = temp.p(x);
+			x = temp.s(x);
 		}
 		return x;
 	}
@@ -2156,7 +2201,7 @@ function _Platform_outgoingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		e: _Platform_outgoingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupOutgoingPort
 	};
 	return _Platform_leaf(name);
@@ -2169,7 +2214,7 @@ var _Platform_outgoingPortMap = F2(function(tagger, value) { return value; });
 function _Platform_setupOutgoingPort(name)
 {
 	var subs = [];
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2226,7 +2271,7 @@ function _Platform_incomingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		f: _Platform_incomingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupIncomingPort
 	};
 	return _Platform_leaf(name);
@@ -2245,7 +2290,7 @@ var _Platform_incomingPortMap = F2(function(tagger, finalTagger)
 function _Platform_setupIncomingPort(name, sendToApp)
 {
 	var subs = _List_Nil;
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2325,6 +2370,67 @@ function _Platform_mergeExportsDebug(moduleName, obj, exports)
 			: (obj[name] = exports[name]);
 	}
 }
+
+
+// eslint-disable-next-line no-unused-vars
+var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap, flipY, url) {
+  var isMipmap = mininify !== 9728 && mininify !== 9729;
+  return _Scheduler_binding(function (callback) {
+    var img = new Image();
+    function createTexture(gl) {
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magnify);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mininify);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, horizontalWrap);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, verticalWrap);
+      if (isMipmap) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      return texture;
+    }
+    img.onload = function () {
+      var width = img.width;
+      var height = img.height;
+      var widthPowerOfTwo = (width & (width - 1)) === 0;
+      var heightPowerOfTwo = (height & (height - 1)) === 0;
+      var isSizeValid = (widthPowerOfTwo && heightPowerOfTwo) || (
+        !isMipmap
+        && horizontalWrap === 33071 // clamp to edge
+        && verticalWrap === 33071
+      );
+      if (isSizeValid) {
+        callback(_Scheduler_succeed({
+          $: 0,
+          createTexture: createTexture,
+          a: width,
+          b: height
+        }));
+      } else {
+        callback(_Scheduler_fail(A2(
+          $elm_explorations$webgl$WebGL$Texture$SizeError,
+          width,
+          height
+        )));
+      }
+    };
+    img.onerror = function () {
+      callback(_Scheduler_fail($elm_explorations$webgl$WebGL$Texture$LoadError));
+    };
+    if (url.slice(0, 5) !== 'data:') {
+      img.crossOrigin = 'Anonymous';
+    }
+    img.src = url;
+  });
+});
+
+// eslint-disable-next-line no-unused-vars
+var _Texture_size = function (texture) {
+  return _Utils_Tuple2(texture.a, texture.b);
+};
 
 
 /*
@@ -3339,67 +3445,6 @@ var _MJS_m4x4makeBasis = F3(function(vx, vy, vz) {
 
     return r;
 });
-
-
-// eslint-disable-next-line no-unused-vars
-var _Texture_load = F6(function (magnify, mininify, horizontalWrap, verticalWrap, flipY, url) {
-  var isMipmap = mininify !== 9728 && mininify !== 9729;
-  return _Scheduler_binding(function (callback) {
-    var img = new Image();
-    function createTexture(gl) {
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magnify);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mininify);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, horizontalWrap);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, verticalWrap);
-      if (isMipmap) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-      }
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      return texture;
-    }
-    img.onload = function () {
-      var width = img.width;
-      var height = img.height;
-      var widthPowerOfTwo = (width & (width - 1)) === 0;
-      var heightPowerOfTwo = (height & (height - 1)) === 0;
-      var isSizeValid = (widthPowerOfTwo && heightPowerOfTwo) || (
-        !isMipmap
-        && horizontalWrap === 33071 // clamp to edge
-        && verticalWrap === 33071
-      );
-      if (isSizeValid) {
-        callback(_Scheduler_succeed({
-          $: 0,
-          createTexture: createTexture,
-          a: width,
-          b: height
-        }));
-      } else {
-        callback(_Scheduler_fail(A2(
-          $elm_explorations$webgl$WebGL$Texture$SizeError,
-          width,
-          height
-        )));
-      }
-    };
-    img.onerror = function () {
-      callback(_Scheduler_fail($elm_explorations$webgl$WebGL$Texture$LoadError));
-    };
-    if (url.slice(0, 5) !== 'data:') {
-      img.crossOrigin = 'Anonymous';
-    }
-    img.src = url;
-  });
-});
-
-// eslint-disable-next-line no-unused-vars
-var _Texture_size = function (texture) {
-  return _Utils_Tuple2(texture.a, texture.b);
-};
 
 
 
@@ -5401,6 +5446,52 @@ function _Browser_load(url)
 }
 
 
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
+
 function _WebGL_log(/* msg */) {
   // console.log(msg);
 }
@@ -6078,9 +6169,6 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
-var $author$project$Playground$Internal$VisibilityChanged = function (a) {
-	return {$: 'VisibilityChanged', a: a};
-};
 var $elm$core$List$cons = _List_cons;
 var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
 var $elm$core$Array$foldr = F3(
@@ -6161,56 +6249,9 @@ var $elm$core$Set$toList = function (_v0) {
 var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
-var $elm$core$Basics$identity = function (x) {
-	return x;
+var $author$project$Playground$Internal$VisibilityChanged = function (a) {
+	return {$: 'VisibilityChanged', a: a};
 };
-var $author$project$Playground$Internal$Game = function (a) {
-	return {$: 'Game', a: a};
-};
-var $author$project$Playground$Internal$GotViewport = function (a) {
-	return {$: 'GotViewport', a: a};
-};
-var $elm$browser$Browser$Events$Visible = {$: 'Visible'};
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $elm$core$Basics$False = {$: 'False'};
-var $author$project$Playground$Internal$Mouse = F4(
-	function (x, y, down, click) {
-		return {click: click, down: down, x: x, y: y};
-	});
-var $author$project$Playground$Internal$Time = F2(
-	function (a, b) {
-		return {$: 'Time', a: a, b: b};
-	});
-var $elm$core$Basics$True = {$: 'True'};
-var $elm$core$Basics$add = _Basics_add;
-var $elm$core$Basics$apL = F2(
-	function (f, x) {
-		return f(x);
-	});
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
-};
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Playground$Internal$emptyKeyboard = {backspace: false, down: false, enter: false, keys: $elm$core$Set$empty, left: false, right: false, shift: false, space: false, up: false};
-var $elm$core$Basics$apR = F2(
-	function (x, f) {
-		return f(x);
-	});
-var $elm$core$Tuple$mapFirst = F2(
-	function (func, _v0) {
-		var x = _v0.a;
-		var y = _v0.b;
-		return _Utils_Tuple2(
-			func(x),
-			y);
-	});
-var $author$project$Playground$Internal$mouseClick = F2(
-	function (bool, mouse) {
-		return _Utils_update(
-			mouse,
-			{click: bool});
-	});
 var $elm$core$Result$Err = function (a) {
 	return {$: 'Err', a: a};
 };
@@ -6232,6 +6273,8 @@ var $elm$core$Result$Ok = function (a) {
 var $elm$json$Json$Decode$OneOf = function (a) {
 	return {$: 'OneOf', a: a};
 };
+var $elm$core$Basics$False = {$: 'False'};
+var $elm$core$Basics$add = _Basics_add;
 var $elm$core$Maybe$Just = function (a) {
 	return {$: 'Just', a: a};
 };
@@ -6470,6 +6513,14 @@ var $elm$core$Elm$JsArray$initialize = _JsArray_initialize;
 var $elm$core$Array$Leaf = function (a) {
 	return {$: 'Leaf', a: a};
 };
+var $elm$core$Basics$apL = F2(
+	function (f, x) {
+		return f(x);
+	});
+var $elm$core$Basics$apR = F2(
+	function (x, f) {
+		return f(x);
+	});
 var $elm$core$Basics$eq = _Utils_equal;
 var $elm$core$Basics$floor = _Basics_floor;
 var $elm$core$Elm$JsArray$length = _JsArray_length;
@@ -6588,6 +6639,7 @@ var $elm$core$Array$initialize = F2(
 			return A5($elm$core$Array$initializeHelp, fn, initialFromIndex, len, _List_Nil, tail);
 		}
 	});
+var $elm$core$Basics$True = {$: 'True'};
 var $elm$core$Result$isOk = function (result) {
 	if (result.$ === 'Ok') {
 		return true;
@@ -6595,8 +6647,67 @@ var $elm$core$Result$isOk = function (result) {
 		return false;
 	}
 };
+var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $author$project$Playground$Internal$GotViewport = function (a) {
+	return {$: 'GotViewport', a: a};
+};
+var $author$project$Playground$Internal$InitTime = function (a) {
+	return {$: 'InitTime', a: a};
+};
+var $elm$core$Basics$identity = function (x) {
+	return x;
+};
+var $author$project$Playground$Internal$Playground = function (a) {
+	return {$: 'Playground', a: a};
+};
+var $elm$browser$Browser$Events$Visible = {$: 'Visible'};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $author$project$Playground$Internal$Mouse = F4(
+	function (x, y, down, click) {
+		return {click: click, down: down, x: x, y: y};
+	});
+var $author$project$Playground$Internal$emptyKeyboard = {backspace: false, down: false, enter: false, keys: $elm$core$Set$empty, left: false, right: false, shift: false, space: false, up: false};
+var $elm$core$Dict$isEmpty = function (dict) {
+	if (dict.$ === 'RBEmpty_elm_builtin') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Set$isEmpty = function (_v0) {
+	var dict = _v0.a;
+	return $elm$core$Dict$isEmpty(dict);
+};
+var $elm$core$Tuple$mapFirst = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			func(x),
+			y);
+	});
+var $author$project$Playground$Internal$mouseClick = F2(
+	function (bool, mouse) {
+		return _Utils_update(
+			mouse,
+			{click: bool});
+	});
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Playground$Internal$GotTexture = function (a) {
+	return {$: 'GotTexture', a: a};
+};
+var $elm$core$Task$Perform = function (a) {
+	return {$: 'Perform', a: a};
+};
+var $elm$core$Task$andThen = _Scheduler_andThen;
+var $elm$core$Task$succeed = _Scheduler_succeed;
+var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
 var $elm$core$List$foldrHelper = F4(
 	function (fn, acc, ctr, ls) {
 		if (!ls.b) {
@@ -6652,330 +6763,6 @@ var $elm$core$List$foldr = F3(
 	function (fn, acc, ls) {
 		return A4($elm$core$List$foldrHelper, fn, acc, 0, ls);
 	});
-var $author$project$Playground$Transformation$identity = {a11: 1, a12: 0, a13: 0, a21: 0, a22: 1, a23: 0};
-var $elm$core$Tuple$mapSecond = F2(
-	function (func, _v0) {
-		var x = _v0.a;
-		var y = _v0.b;
-		return _Utils_Tuple2(
-			x,
-			func(y));
-	});
-var $author$project$Playground$Transformation$apply = F2(
-	function (a, b) {
-		return {a11: (a.a11 * b.a11) + (a.a12 * b.a21), a12: (a.a11 * b.a12) + (a.a12 * b.a22), a13: ((a.a11 * b.a13) + (a.a12 * b.a23)) + a.a13, a21: (a.a21 * b.a11) + (a.a22 * b.a21), a22: (a.a21 * b.a12) + (a.a22 * b.a22), a23: ((a.a21 * b.a13) + (a.a22 * b.a23)) + a.a23};
-	});
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
-		}
-	});
-var $elm$core$Dict$Black = {$: 'Black'};
-var $elm$core$Dict$RBNode_elm_builtin = F5(
-	function (a, b, c, d, e) {
-		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
-	});
-var $elm$core$Dict$Red = {$: 'Red'};
-var $elm$core$Dict$balance = F5(
-	function (color, key, value, left, right) {
-		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
-			var _v1 = right.a;
-			var rK = right.b;
-			var rV = right.c;
-			var rLeft = right.d;
-			var rRight = right.e;
-			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-				var _v3 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var lLeft = left.d;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					key,
-					value,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					rK,
-					rV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
-					rRight);
-			}
-		} else {
-			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
-				var _v5 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var _v6 = left.d;
-				var _v7 = _v6.a;
-				var llK = _v6.b;
-				var llV = _v6.c;
-				var llLeft = _v6.d;
-				var llRight = _v6.e;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					lK,
-					lV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
-			} else {
-				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
-			}
-		}
-	});
-var $elm$core$Dict$insertHelp = F3(
-	function (key, value, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
-		} else {
-			var nColor = dict.a;
-			var nKey = dict.b;
-			var nValue = dict.c;
-			var nLeft = dict.d;
-			var nRight = dict.e;
-			var _v1 = A2($elm$core$Basics$compare, key, nKey);
-			switch (_v1.$) {
-				case 'LT':
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						A3($elm$core$Dict$insertHelp, key, value, nLeft),
-						nRight);
-				case 'EQ':
-					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
-				default:
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						nLeft,
-						A3($elm$core$Dict$insertHelp, key, value, nRight));
-			}
-		}
-	});
-var $elm$core$Dict$insert = F3(
-	function (key, value, dict) {
-		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
-	});
-var $author$project$Playground$Transformation$scale = F3(
-	function (sx, sy, b) {
-		return {a11: sx * b.a11, a12: sx * b.a12, a13: sx * b.a13, a21: sy * b.a21, a22: sy * b.a22, a23: sy * b.a23};
-	});
-var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
-var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
-var $author$project$Playground$Transformation$toGL = function (_v0) {
-	var a11 = _v0.a11;
-	var a12 = _v0.a12;
-	var a13 = _v0.a13;
-	var a21 = _v0.a21;
-	var a22 = _v0.a22;
-	var a23 = _v0.a23;
-	return _Utils_Tuple2(
-		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
-			{w: a22, x: a11, y: a12, z: a21}),
-		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
-			{x: a13, y: a23}));
-};
-var $elm$core$Basics$cos = _Basics_cos;
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
-var $elm$core$Basics$sin = _Basics_sin;
-var $author$project$Playground$Transformation$transform = F5(
-	function (tx, ty, sx, sy, angle) {
-		return {
-			a11: $elm$core$Basics$cos(angle) * sx,
-			a12: $elm$core$Basics$sin(angle) * (-sy),
-			a13: tx,
-			a21: $elm$core$Basics$sin(angle) * sx,
-			a22: $elm$core$Basics$cos(angle) * sy,
-			a23: ty
-		};
-	});
-var $author$project$Playground$Internal$renderShape = F6(
-	function (screen, textures, parent, parentOpacity, _v0, acc) {
-		renderShape:
-		while (true) {
-			var x = _v0.a.x;
-			var y = _v0.a.y;
-			var a = _v0.a.a;
-			var sx = _v0.a.sx;
-			var sy = _v0.a.sy;
-			var o = _v0.a.o;
-			var form = _v0.a.form;
-			var entities = acc.a;
-			var missing = acc.b;
-			var opacity = o * parentOpacity;
-			var createTrans = F5(
-				function (tx, ty, sx_, sy_, a_) {
-					return A2(
-						$author$project$Playground$Transformation$apply,
-						parent,
-						A5($author$project$Playground$Transformation$transform, tx, ty, sx_, sy_, a_));
-				});
-			switch (form.$) {
-				case 'Form':
-					var width = form.a;
-					var height = form.b;
-					var fn = form.c;
-					var _v2 = $author$project$Playground$Transformation$toGL(
-						A3(
-							$author$project$Playground$Transformation$scale,
-							1 / screen.width,
-							1 / screen.height,
-							A5(createTrans, x * 2, y * 2, width * sx, height * sy, a)));
-					var t1 = _v2.a;
-					var t2 = _v2.b;
-					return _Utils_Tuple2(
-						A2(
-							$elm$core$List$cons,
-							A3(fn, t2, t1, opacity),
-							entities),
-						missing);
-				case 'Textured':
-					var src = form.a;
-					var fn = form.b;
-					var _v3 = _Utils_Tuple2(
-						A2($elm$core$Set$member, src, missing),
-						A2($elm$core$Dict$get, src, textures));
-					_v3$2:
-					while (true) {
-						if (_v3.b.$ === 'Just') {
-							if (_v3.b.a.$ === 'Success') {
-								var texture = _v3.b.a.a.texture;
-								var size = _v3.b.a.a.size;
-								var $temp$screen = screen,
-									$temp$textures = textures,
-									$temp$parent = A5(createTrans, x * 2, y * 2, sx, sy, a),
-									$temp$parentOpacity = opacity,
-									$temp$_v0 = fn(texture),
-									$temp$acc = acc;
-								screen = $temp$screen;
-								textures = $temp$textures;
-								parent = $temp$parent;
-								parentOpacity = $temp$parentOpacity;
-								_v0 = $temp$_v0;
-								acc = $temp$acc;
-								continue renderShape;
-							} else {
-								break _v3$2;
-							}
-						} else {
-							if (!_v3.a) {
-								var _v4 = _v3.b;
-								return _Utils_Tuple2(
-									entities,
-									A2($elm$core$Set$insert, src, missing));
-							} else {
-								break _v3$2;
-							}
-						}
-					}
-					return acc;
-				default:
-					var shapes = form.a;
-					return A3(
-						$elm$core$List$foldr,
-						A4(
-							$author$project$Playground$Internal$renderShape,
-							screen,
-							textures,
-							A5(createTrans, x * 2, y * 2, sx, sy, a),
-							opacity),
-						acc,
-						shapes);
-			}
-		}
-	});
-var $author$project$Playground$Internal$render = F3(
-	function (screen, textures, shapes) {
-		return A2(
-			$elm$core$Tuple$mapSecond,
-			$elm$core$Set$toList,
-			A3(
-				$elm$core$List$foldr,
-				A4($author$project$Playground$Internal$renderShape, screen, textures, $author$project$Playground$Transformation$identity, 1),
-				_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
-				shapes));
-	});
-var $author$project$Playground$Internal$GotTexture = function (a) {
-	return {$: 'GotTexture', a: a};
-};
-var $author$project$Playground$Internal$Loading = {$: 'Loading'};
-var $elm$core$Task$Perform = function (a) {
-	return {$: 'Perform', a: a};
-};
-var $elm$core$Task$andThen = _Scheduler_andThen;
-var $elm$core$Task$succeed = _Scheduler_succeed;
-var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
 var $elm$core$List$map = F2(
 	function (f, xs) {
 		return A3(
@@ -7081,6 +6868,158 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Set$foldl = F3(
+	function (func, initialState, _v0) {
+		var dict = _v0.a;
+		return A3(
+			$elm$core$Dict$foldl,
+			F3(
+				function (key, _v1, state) {
+					return A2(func, key, state);
+				}),
+			initialState,
+			dict);
+	});
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
 var $elm_explorations$webgl$WebGL$Texture$LoadError = {$: 'LoadError'};
 var $elm_explorations$webgl$WebGL$Texture$SizeError = F2(
 	function (a, b) {
@@ -7111,36 +7050,89 @@ var $elm$core$Task$mapError = F2(
 			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
 			task);
 	});
+var $elm$core$Tuple$mapSecond = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			x,
+			func(y));
+	});
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
 		return _Utils_Tuple2(a, b);
 	});
-var $elm_explorations$webgl$WebGL$Texture$Resize = function (a) {
-	return {$: 'Resize', a: a};
-};
-var $elm_explorations$webgl$WebGL$Texture$linear = $elm_explorations$webgl$WebGL$Texture$Resize(9729);
 var $elm_explorations$webgl$WebGL$Texture$Wrap = function (a) {
 	return {$: 'Wrap', a: a};
 };
 var $elm_explorations$webgl$WebGL$Texture$clampToEdge = $elm_explorations$webgl$WebGL$Texture$Wrap(33071);
-var $elm_explorations$webgl$WebGL$Texture$nearest = $elm_explorations$webgl$WebGL$Texture$Resize(9728);
-var $elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions = {flipY: true, horizontalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge, magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$nearest, verticalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
-var $author$project$Playground$Internal$textureOption = _Utils_update(
-	$elm_explorations$webgl$WebGL$Texture$nonPowerOfTwoOptions,
-	{magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$linear});
+var $elm_explorations$webgl$WebGL$Texture$Resize = function (a) {
+	return {$: 'Resize', a: a};
+};
+var $elm_explorations$webgl$WebGL$Texture$linear = $elm_explorations$webgl$WebGL$Texture$Resize(9729);
+var $author$project$Playground$Internal$textureOption = {flipY: true, horizontalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge, magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$linear, verticalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
 var $author$project$Playground$Internal$requestTexture = F2(
 	function (missing, textures) {
 		return A2(
 			$elm$core$Tuple$mapSecond,
 			$elm$core$Platform$Cmd$batch,
 			A3(
-				$elm$core$List$foldl,
+				$elm$core$Set$foldl,
 				F2(
-					function (url, _v0) {
-						var acc1 = _v0.a;
-						var acc2 = _v0.b;
-						return _Utils_Tuple2(
-							A3($elm$core$Dict$insert, url, $author$project$Playground$Internal$Loading, acc1),
+					function (url, acc) {
+						var done = acc.a.done;
+						var loading = acc.a.loading;
+						var acc2 = acc.b;
+						return A2($elm$core$Set$member, url, loading) ? acc : _Utils_Tuple2(
+							{
+								done: done,
+								loading: A2($elm$core$Set$insert, url, loading)
+							},
 							A2(
 								$elm$core$List$cons,
 								A2(
@@ -7158,6 +7150,133 @@ var $author$project$Playground$Internal$requestTexture = F2(
 				_Utils_Tuple2(textures, _List_Nil),
 				missing));
 	});
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity = {a11: 1, a12: 0, a13: 0, a21: 0, a22: 1, a23: 0};
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$apply = F2(
+	function (a, b) {
+		return {a11: (a.a11 * b.a11) + (a.a12 * b.a21), a12: (a.a11 * b.a12) + (a.a12 * b.a22), a13: ((a.a11 * b.a13) + (a.a12 * b.a23)) + a.a13, a21: (a.a21 * b.a11) + (a.a22 * b.a21), a22: (a.a21 * b.a12) + (a.a22 * b.a22), a23: ((a.a21 * b.a13) + (a.a22 * b.a23)) + a.a23};
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
+	function (sx, sy, b) {
+		return {a11: sx * b.a11, a12: sx * b.a12, a13: sx * b.a13, a21: sy * b.a21, a22: sy * b.a22, a23: sy * b.a23};
+	});
+var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
+var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
+	var a11 = _v0.a11;
+	var a12 = _v0.a12;
+	var a13 = _v0.a13;
+	var a21 = _v0.a21;
+	var a22 = _v0.a22;
+	var a23 = _v0.a23;
+	return _Utils_Tuple2(
+		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
+			{w: a22, x: a11, y: a12, z: a21}),
+		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
+			{x: a13, y: a23}));
+};
+var $elm$core$Basics$cos = _Basics_cos;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$core$Basics$sin = _Basics_sin;
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$transform = F5(
+	function (tx, ty, sx, sy, angle) {
+		return {
+			a11: $elm$core$Basics$cos(angle) * sx,
+			a12: $elm$core$Basics$sin(angle) * (-sy),
+			a13: tx,
+			a21: $elm$core$Basics$sin(angle) * sx,
+			a22: $elm$core$Basics$cos(angle) * sy,
+			a23: ty
+		};
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
+	function (screen, textures, parent, parentOpacity, _v0, acc) {
+		renderShape:
+		while (true) {
+			var x = _v0.a.x;
+			var y = _v0.a.y;
+			var a = _v0.a.a;
+			var sx = _v0.a.sx;
+			var sy = _v0.a.sy;
+			var o = _v0.a.o;
+			var form = _v0.a.form;
+			var entities = acc.a;
+			var missing = acc.b;
+			var opacity = o * parentOpacity;
+			var createTrans = F5(
+				function (tx, ty, sx_, sy_, a_) {
+					return A2(
+						$justgook$webgl_shape$WebGL$Shape2d$Transformation$apply,
+						parent,
+						A5($justgook$webgl_shape$WebGL$Shape2d$Transformation$transform, tx, ty, sx_, sy_, a_));
+				});
+			switch (form.$) {
+				case 'Form':
+					var width = form.a;
+					var height = form.b;
+					var fn = form.c;
+					var _v2 = $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL(
+						A3(
+							$justgook$webgl_shape$WebGL$Shape2d$Transformation$scale,
+							1 / screen.width,
+							1 / screen.height,
+							A5(createTrans, x * 2, y * 2, width * sx, height * sy, a)));
+					var t1 = _v2.a;
+					var t2 = _v2.b;
+					return _Utils_Tuple2(
+						A2(
+							$elm$core$List$cons,
+							A3(fn, t2, t1, opacity),
+							entities),
+						missing);
+				case 'Textured':
+					var src = form.a;
+					var fn = form.b;
+					var _v3 = A2($elm$core$Dict$get, src, textures);
+					if (_v3.$ === 'Just') {
+						var texture = _v3.a;
+						var $temp$screen = screen,
+							$temp$textures = textures,
+							$temp$parent = A5(createTrans, x * 2, y * 2, sx, sy, a),
+							$temp$parentOpacity = opacity,
+							$temp$_v0 = fn(texture),
+							$temp$acc = acc;
+						screen = $temp$screen;
+						textures = $temp$textures;
+						parent = $temp$parent;
+						parentOpacity = $temp$parentOpacity;
+						_v0 = $temp$_v0;
+						acc = $temp$acc;
+						continue renderShape;
+					} else {
+						return A2($elm$core$Set$member, src, missing) ? acc : _Utils_Tuple2(
+							entities,
+							A2($elm$core$Set$insert, src, missing));
+					}
+				default:
+					var shapes = form.a;
+					return A3(
+						$elm$core$List$foldr,
+						A4(
+							$justgook$webgl_shape$WebGL$Shape2d$renderShape,
+							screen,
+							textures,
+							A5(createTrans, x * 2, y * 2, sx, sy, a),
+							opacity),
+						acc,
+						shapes);
+			}
+		}
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$toEntities = F3(
+	function (textures, screen, shapes) {
+		return A3(
+			$elm$core$List$foldr,
+			A4($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity, 1),
+			_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
+			shapes);
+	});
 var $author$project$Playground$Internal$gameTick = F3(
 	function (viewMemory, updateMemory, model) {
 		var computer = model.computer;
@@ -7170,88 +7289,26 @@ var $author$project$Playground$Internal$gameTick = F3(
 				mouse: A2($author$project$Playground$Internal$mouseClick, false, computer.mouse)
 			}) : computer;
 		var _v0 = A3(
-			$author$project$Playground$Internal$render,
+			$justgook$webgl_shape$WebGL$Shape2d$toEntities,
+			textures.done,
 			computer.screen,
-			textures,
 			A2(viewMemory, newComputer, newMemory));
 		var entities = _v0.a;
 		var missing = _v0.b;
-		if (!missing.b) {
-			return _Utils_Tuple2(
-				$author$project$Playground$Internal$Game(
+		return $elm$core$Set$isEmpty(missing) ? _Utils_Tuple2(
+			$author$project$Playground$Internal$Playground(
+				_Utils_update(
+					model,
+					{computer: newComputer, entities: entities, memory: newMemory})),
+			$elm$core$Platform$Cmd$none) : A2(
+			$elm$core$Tuple$mapFirst,
+			function (loadingTextures) {
+				return $author$project$Playground$Internal$Playground(
 					_Utils_update(
 						model,
-						{computer: newComputer, entities: entities, memory: newMemory})),
-				$elm$core$Platform$Cmd$none);
-		} else {
-			return A2(
-				$elm$core$Tuple$mapFirst,
-				function (loadingTextures) {
-					return $author$project$Playground$Internal$Game(
-						_Utils_update(
-							model,
-							{computer: newComputer, entities: entities, memory: newMemory, textures: loadingTextures}));
-				},
-				A2($author$project$Playground$Internal$requestTexture, missing, textures));
-		}
-	});
-var $author$project$Playground$Internal$Fail = function (a) {
-	return {$: 'Fail', a: a};
-};
-var $author$project$Playground$Internal$Success = function (a) {
-	return {$: 'Success', a: a};
-};
-var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
-var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
-var $author$project$Playground$Internal$gotTextures = F2(
-	function (r, textures) {
-		if (r.$ === 'Ok') {
-			var _v1 = r.a;
-			var name = _v1.a;
-			var t = _v1.b;
-			return A2(
-				$elm$core$Dict$insert,
-				name,
-				$author$project$Playground$Internal$Success(
-					{
-						size: function (_v2) {
-							var w = _v2.a;
-							var h = _v2.b;
-							return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
-						}(
-							$elm_explorations$webgl$WebGL$Texture$size(t)),
-						texture: t
-					}))(textures);
-		} else {
-			var _v3 = r.a;
-			var name = _v3.a;
-			var err = _v3.b;
-			return A3(
-				$elm$core$Dict$insert,
-				name,
-				$author$project$Playground$Internal$Fail(err),
-				textures);
-		}
-	});
-var $author$project$Playground$Internal$mouseDown = F2(
-	function (bool, mouse) {
-		return _Utils_update(
-			mouse,
-			{down: bool});
-	});
-var $author$project$Playground$Internal$mouseMove = F3(
-	function (x, y, mouse) {
-		return _Utils_update(
-			mouse,
-			{x: x, y: y});
-	});
-var $elm$time$Time$posixToMillis = function (_v0) {
-	var millis = _v0.a;
-	return millis;
-};
-var $author$project$Playground$Internal$toScreen = F2(
-	function (width, height) {
-		return {bottom: (-height) / 2, height: height, left: (-width) / 2, right: width / 2, top: height / 2, width: width};
+						{computer: newComputer, entities: entities, memory: newMemory, textures: loadingTextures}));
+			},
+			A2($author$project$Playground$Internal$requestTexture, missing, textures));
 	});
 var $elm$core$Dict$getMin = function (dict) {
 	getMin:
@@ -7621,11 +7678,50 @@ var $elm$core$Set$remove = F2(
 		return $elm$core$Set$Set_elm_builtin(
 			A2($elm$core$Dict$remove, key, dict));
 	});
+var $author$project$Playground$Internal$gotTextures = F2(
+	function (r, textures) {
+		var done = textures.done;
+		var loading = textures.loading;
+		if (r.$ === 'Ok') {
+			var _v1 = r.a;
+			var name = _v1.a;
+			var t = _v1.b;
+			return {
+				done: A3($elm$core$Dict$insert, name, t, done),
+				loading: A2($elm$core$Set$remove, name, loading)
+			};
+		} else {
+			var _v2 = r.a;
+			var name = _v2.a;
+			var err = _v2.b;
+			return textures;
+		}
+	});
+var $author$project$Playground$Internal$mouseDown = F2(
+	function (bool, mouse) {
+		return _Utils_update(
+			mouse,
+			{down: bool});
+	});
+var $author$project$Playground$Internal$mouseMove = F3(
+	function (x, y, mouse) {
+		return _Utils_update(
+			mouse,
+			{x: x, y: y});
+	});
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $author$project$Playground$Internal$toScreen = F2(
+	function (width, height) {
+		return {bottom: (-height) / 2, height: height, left: (-width) / 2, right: width / 2, top: height / 2, width: width};
+	});
 var $author$project$Playground$Internal$updateKeyboard = F3(
 	function (isDown, key, keyboard) {
 		var keys = isDown ? A2($elm$core$Set$insert, key, keyboard.keys) : A2($elm$core$Set$remove, key, keyboard.keys);
 		switch (key) {
-			case ' ':
+			case 'Space':
 				return _Utils_update(
 					keyboard,
 					{keys: keys, space: isDown});
@@ -7633,7 +7729,11 @@ var $author$project$Playground$Internal$updateKeyboard = F3(
 				return _Utils_update(
 					keyboard,
 					{enter: isDown, keys: keys});
-			case 'Shift':
+			case 'ShiftLeft':
+				return _Utils_update(
+					keyboard,
+					{keys: keys, shift: isDown});
+			case 'ShiftRight':
 				return _Utils_update(
 					keyboard,
 					{keys: keys, shift: isDown});
@@ -7670,104 +7770,114 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 		var memory = model.memory;
 		var textures = model.textures;
 		var computer = model.computer;
-		var _v1 = computer.time;
-		var timeWas = _v1.a;
-		return A3(
-			$author$project$Playground$Internal$gameTick,
-			viewMemory,
-			updateMemory,
-			function () {
-				switch (msg.$) {
-					case 'Tick':
-						var time = msg.a;
-						var d = $elm$time$Time$posixToMillis(time) - $elm$time$Time$posixToMillis(timeWas);
-						return _Utils_update(
+		switch (msg.$) {
+			case 'Tick':
+				var time = msg.a;
+				var now = $elm$time$Time$posixToMillis(time);
+				var d = now - computer.time.now;
+				return A3(
+					$author$project$Playground$Internal$gameTick,
+					viewMemory,
+					updateMemory,
+					_Utils_update(
+						model,
+						{
+							computer: _Utils_update(
+								computer,
+								{
+									time: {delta: d, now: now}
+								})
+						}));
+			case 'GotViewport':
+				var viewport = msg.a.viewport;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{
-										time: A2($author$project$Playground$Internal$Time, time, d)
+										screen: A2($author$project$Playground$Internal$toScreen, viewport.width, viewport.height)
 									})
-							});
-					case 'GotViewport':
-						var viewport = msg.a.viewport;
-						return _Utils_update(
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'Resized':
+				var newScreen = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{screen: newScreen})
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'KeyChanged':
+				var isDown = msg.a;
+				var key = msg.b;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{
-										screen: A2($author$project$Playground$Internal$toScreen, viewport.width, viewport.height),
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+										keyboard: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.keyboard)
 									})
-							});
-					case 'Resized':
-						var newScreen = msg.a;
-						return _Utils_update(
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'MouseMove':
+				var pageX = msg.a;
+				var pageY = msg.b;
+				var y = computer.screen.top - pageY;
+				var x = computer.screen.left + pageX;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{
-										screen: newScreen,
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+										mouse: A3($author$project$Playground$Internal$mouseMove, x, y, computer.mouse)
 									})
-							});
-					case 'KeyChanged':
-						var isDown = msg.a;
-						var key = msg.b;
-						return _Utils_update(
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'MouseClick':
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{
-										keyboard: A3($author$project$Playground$Internal$updateKeyboard, isDown, key, computer.keyboard),
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+										mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse)
 									})
-							});
-					case 'MouseMove':
-						var pageX = msg.a;
-						var pageY = msg.b;
-						var y = computer.screen.top - pageY;
-						var x = computer.screen.left + pageX;
-						return _Utils_update(
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'MouseButton':
+				var isDown = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{
-										mouse: A3($author$project$Playground$Internal$mouseMove, x, y, computer.mouse),
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+										mouse: A2($author$project$Playground$Internal$mouseDown, isDown, computer.mouse)
 									})
-							});
-					case 'MouseClick':
-						return _Utils_update(
-							model,
-							{
-								computer: _Utils_update(
-									computer,
-									{
-										mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse),
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
-									})
-							});
-					case 'MouseButton':
-						var isDown = msg.a;
-						return _Utils_update(
-							model,
-							{
-								computer: _Utils_update(
-									computer,
-									{
-										mouse: A2($author$project$Playground$Internal$mouseDown, isDown, computer.mouse),
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
-									})
-							});
-					case 'VisibilityChanged':
-						var vis = msg.a;
-						return _Utils_update(
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'VisibilityChanged':
+				var vis = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
@@ -7775,24 +7885,44 @@ var $author$project$Playground$Internal$gameUpdate = F4(
 									{
 										keyboard: $author$project$Playground$Internal$emptyKeyboard,
 										mouse: A4($author$project$Playground$Internal$Mouse, computer.mouse.x, computer.mouse.y, false, false),
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+										time: {delta: 0, now: computer.time.now}
 									}),
 								visibility: vis
-							});
-					default:
-						var r = msg.a;
-						return _Utils_update(
+							})),
+					$elm$core$Platform$Cmd$none);
+			case 'GotTexture':
+				var r = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
 							model,
 							{
 								computer: _Utils_update(
 									computer,
 									{
-										time: A2($author$project$Playground$Internal$Time, timeWas, 0)
+										time: {delta: 0, now: computer.time.now}
 									}),
 								textures: A2($author$project$Playground$Internal$gotTextures, r, model.textures)
-							});
-				}
-			}());
+							})),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var time = msg.a;
+				return _Utils_Tuple2(
+					$author$project$Playground$Internal$Playground(
+						_Utils_update(
+							model,
+							{
+								computer: _Utils_update(
+									computer,
+									{
+										time: {
+											delta: 0,
+											now: $elm$time$Time$posixToMillis(time)
+										}
+									})
+							})),
+					$elm$core$Platform$Cmd$none);
+		}
 	});
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$map2 = _Json_map2;
@@ -7963,19 +8093,28 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$Dom$getViewport = _Browser_withWindow(_Browser_getViewport);
-var $elm$time$Time$Posix = function (a) {
-	return {$: 'Posix', a: a};
-};
-var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
 var $author$project$Playground$Internal$initialComputer = {
 	keyboard: $author$project$Playground$Internal$emptyKeyboard,
 	mouse: A4($author$project$Playground$Internal$Mouse, 0, 0, false, false),
 	screen: A2($author$project$Playground$Internal$toScreen, 600, 600),
-	time: A2(
-		$author$project$Playground$Internal$Time,
-		$elm$time$Time$millisToPosix(0),
-		0)
+	time: {delta: 0, now: 0}
 };
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $author$project$Playground$Internal$create = F3(
 	function (viewMemory, updateMemory, initialMemory) {
 		var view = function (_v0) {
@@ -7983,9 +8122,20 @@ var $author$project$Playground$Internal$create = F3(
 			return entities;
 		};
 		var init = _Utils_Tuple2(
-			$author$project$Playground$Internal$Game(
-				{computer: $author$project$Playground$Internal$initialComputer, entities: _List_Nil, memory: initialMemory, textures: $elm$core$Dict$empty, visibility: $elm$browser$Browser$Events$Visible}),
-			A2($elm$core$Task$perform, $author$project$Playground$Internal$GotViewport, $elm$browser$Browser$Dom$getViewport));
+			$author$project$Playground$Internal$Playground(
+				{
+					computer: $author$project$Playground$Internal$initialComputer,
+					entities: _List_Nil,
+					memory: initialMemory,
+					textures: {done: $elm$core$Dict$empty, loading: $elm$core$Set$empty},
+					visibility: $elm$browser$Browser$Events$Visible
+				}),
+			$elm$core$Platform$Cmd$batch(
+				_List_fromArray(
+					[
+						A2($elm$core$Task$perform, $author$project$Playground$Internal$GotViewport, $elm$browser$Browser$Dom$getViewport),
+						A2($elm$core$Task$perform, $author$project$Playground$Internal$InitTime, $elm$time$Time$now)
+					])));
 		return {
 			init: init,
 			update: A2($author$project$Playground$Internal$gameUpdate, viewMemory, updateMemory),
@@ -8035,31 +8185,6 @@ var $elm$core$Dict$fromList = function (assocs) {
 		assocs);
 };
 var $elm$core$Process$kill = _Scheduler_kill;
-var $elm$core$Dict$foldl = F3(
-	function (func, acc, dict) {
-		foldl:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return acc;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var $temp$func = func,
-					$temp$acc = A3(
-					func,
-					key,
-					value,
-					A3($elm$core$Dict$foldl, func, acc, left)),
-					$temp$dict = right;
-				func = $temp$func;
-				acc = $temp$acc;
-				dict = $temp$dict;
-				continue foldl;
-			}
-		}
-	});
 var $elm$core$Dict$merge = F6(
 	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
 		var stepState = F3(
@@ -8304,7 +8429,6 @@ var $elm$browser$Browser$Events$onVisibilityChange = function (func) {
 				'target',
 				A2($elm$json$Json$Decode$field, info.hidden, $elm$json$Json$Decode$bool))));
 };
-var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$Playground$Internal$KeyChanged = F2(
 	function (a, b) {
 		return {$: 'KeyChanged', a: a, b: b};
@@ -8317,6 +8441,9 @@ var $author$project$Playground$Internal$MouseMove = F2(
 	function (a, b) {
 		return {$: 'MouseMove', a: a, b: b};
 	});
+var $author$project$Playground$Internal$Resized = function (a) {
+	return {$: 'Resized', a: a};
+};
 var $author$project$Playground$Internal$Tick = function (a) {
 	return {$: 'Tick', a: a};
 };
@@ -8468,16 +8595,8 @@ var $elm$browser$Browser$Events$onResize = function (func) {
 				A2($elm$json$Json$Decode$field, 'innerWidth', $elm$json$Json$Decode$int),
 				A2($elm$json$Json$Decode$field, 'innerHeight', $elm$json$Json$Decode$int))));
 };
-var $author$project$Playground$Internal$Resized = function (a) {
-	return {$: 'Resized', a: a};
-};
-var $author$project$Playground$Internal$resize = F2(
-	function (w, h) {
-		return $author$project$Playground$Internal$Resized(
-			A2($author$project$Playground$Internal$toScreen, w, h));
-	});
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $author$project$Playground$Internal$subscriptions_ = {
+var $author$project$Playground$Internal$subscriptions = {
 	click: $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
@@ -8497,7 +8616,7 @@ var $author$project$Playground$Internal$subscriptions_ = {
 				A2(
 					$elm$json$Json$Decode$map,
 					$author$project$Playground$Internal$KeyChanged(false),
-					A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string))),
+					A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string))),
 				$elm$browser$Browser$Events$onKeyDown(
 				A2(
 					$elm$json$Json$Decode$andThen,
@@ -8505,7 +8624,7 @@ var $author$project$Playground$Internal$subscriptions_ = {
 						return repeat ? $elm$json$Json$Decode$fail('') : A2(
 							$elm$json$Json$Decode$map,
 							$author$project$Playground$Internal$KeyChanged(true),
-							A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string));
+							A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string));
 					},
 					A2($elm$json$Json$Decode$field, 'repeat', $elm$json$Json$Decode$bool)))
 			])),
@@ -8515,19 +8634,14 @@ var $author$project$Playground$Internal$subscriptions_ = {
 			$author$project$Playground$Internal$MouseMove,
 			A2($elm$json$Json$Decode$field, 'pageX', $elm$json$Json$Decode$float),
 			A2($elm$json$Json$Decode$field, 'pageY', $elm$json$Json$Decode$float))),
-	resize: $elm$browser$Browser$Events$onResize($author$project$Playground$Internal$resize),
+	resize: $elm$browser$Browser$Events$onResize(
+		F2(
+			function (w, h) {
+				return $author$project$Playground$Internal$Resized(
+					A2($author$project$Playground$Internal$toScreen, w, h));
+			})),
 	time: $elm$browser$Browser$Events$onAnimationFrame($author$project$Playground$Internal$Tick),
 	visibility: $elm$browser$Browser$Events$onVisibilityChange($author$project$Playground$Internal$VisibilityChanged)
-};
-var $author$project$Playground$Internal$subscriptions = {
-	all: $elm$core$Platform$Sub$batch(
-		_List_fromArray(
-			[$author$project$Playground$Internal$subscriptions_.keys, $author$project$Playground$Internal$subscriptions_.time, $author$project$Playground$Internal$subscriptions_.visibility, $author$project$Playground$Internal$subscriptions_.click, $author$project$Playground$Internal$subscriptions_.mouse, $author$project$Playground$Internal$subscriptions_.resize])),
-	click: $author$project$Playground$Internal$subscriptions_.click,
-	keys: $author$project$Playground$Internal$subscriptions_.keys,
-	mouse: $author$project$Playground$Internal$subscriptions_.mouse,
-	resize: $author$project$Playground$Internal$subscriptions_.resize,
-	time: $author$project$Playground$Internal$subscriptions_.time
 };
 var $elm$virtual_dom$VirtualDom$node = function (tag) {
 	return _VirtualDom_node(
@@ -8661,7 +8775,7 @@ var $author$project$Playground$Internal$viewWrap = F2(
 				entities)
 			]);
 	});
-var $author$project$Playground$Internal$game = F3(
+var $author$project$Playground$game = F3(
 	function (viewMemory, updateMemory, initialMemory) {
 		var view = function (_v4) {
 			var computer = _v4.a.computer;
@@ -8677,7 +8791,9 @@ var $author$project$Playground$Internal$game = F3(
 			if (visibility.$ === 'Hidden') {
 				return $elm$browser$Browser$Events$onVisibilityChange($author$project$Playground$Internal$VisibilityChanged);
 			} else {
-				return $author$project$Playground$Internal$subscriptions.all;
+				return $elm$core$Platform$Sub$batch(
+					_List_fromArray(
+						[$author$project$Playground$Internal$subscriptions.keys, $author$project$Playground$Internal$subscriptions.time, $author$project$Playground$Internal$subscriptions.visibility, $author$project$Playground$Internal$subscriptions.click, $author$project$Playground$Internal$subscriptions.mouse, $author$project$Playground$Internal$subscriptions.resize]));
 			}
 		};
 		var _v0 = A3($author$project$Playground$Internal$create, viewMemory, updateMemory, initialMemory);
@@ -8693,19 +8809,16 @@ var $author$project$Playground$Internal$game = F3(
 				view: view
 			});
 	});
-var $author$project$Playground$game = $author$project$Playground$Internal$game;
 var $author$project$Extra$Mario$init = {dir: 1, vx: 0, vy: 0, x: 0, y: 0};
-var $author$project$Playground$delta = function (_v0) {
-	var d = _v0.b;
-	return d;
-};
 var $author$project$Playground$toX = function (keyboard) {
 	return (keyboard.right ? 1 : 0) - (keyboard.left ? 1 : 0);
 };
 var $author$project$Extra$Mario$update = F2(
 	function (computer, mario) {
 		var vx = $author$project$Playground$toX(computer.keyboard);
-		var dt = $author$project$Playground$delta(computer.time) / 10;
+		var dt = function ($) {
+			return $.delta;
+		}(computer.time) / 10;
 		var vy = (!mario.y) ? (computer.keyboard.up ? 5 : 0) : (mario.vy - (dt / 8));
 		var x = mario.x + ((dt * vx) * 2);
 		var y = mario.y + (dt * vy);
@@ -8760,10 +8873,6 @@ var $elm$core$Array$get = F2(
 			A3($elm$core$Array$getHelp, startShift, index, tree)));
 	});
 var $elm$core$Basics$neq = _Utils_notEqual;
-var $author$project$Playground$now = function (_v0) {
-	var posix = _v0.a;
-	return $elm$time$Time$posixToMillis(posix);
-};
 var $elm$core$Array$fromListHelp = F3(
 	function (list, nodeList, nodeListSize) {
 		fromListHelp:
@@ -8813,14 +8922,16 @@ var $elm$core$Maybe$withDefault = F2(
 	});
 var $author$project$Extra$Mario$getFrame = F2(
 	function (mario, time) {
-		var frame = (($author$project$Playground$now(time) / 60) | 0) % 8;
+		var frame = ((function ($) {
+			return $.now;
+		}(time) / 60) | 0) % 8;
 		return (mario.y > 0) ? 5 : ((!(!mario.vx)) ? A2(
 			$elm$core$Maybe$withDefault,
 			0,
 			A2($elm$core$Array$get, frame, $author$project$Extra$Mario$run)) : 0);
 	});
-var $author$project$Playground$Internal$Shape = function (a) {
-	return {$: 'Shape', a: a};
+var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
+	return {$: 'Shape2d', a: a};
 };
 var $author$project$Playground$move = F3(
 	function (dx, dy, _v0) {
@@ -8832,7 +8943,7 @@ var $author$project$Playground$move = F3(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{x: x + dx, y: y + dy}));
@@ -8847,12 +8958,12 @@ var $author$project$Playground$moveY = F2(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{y: y + dy}));
 	});
-var $author$project$Playground$Internal$Form = F3(
+var $justgook$webgl_shape$WebGL$Shape2d$Form = F3(
 	function (a, b, c) {
 		return {$: 'Form', a: a, b: b, c: c};
 	});
@@ -8935,7 +9046,7 @@ var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragFill = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n\n        void main () {\n            gl_FragColor = color;\n\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color'}
 };
@@ -8945,6 +9056,7 @@ var $elm_explorations$webgl$WebGL$Mesh1 = F2(
 	});
 var $elm_explorations$webgl$WebGL$triangleStrip = $elm_explorations$webgl$WebGL$Mesh1(
 	{elemSize: 1, indexSize: 0, mode: 5});
+var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
 var $author$project$Playground$Shader$mesh = $elm_explorations$webgl$WebGL$triangleStrip(
 	_List_fromArray(
 		[
@@ -8961,14 +9073,19 @@ var $author$project$Playground$Shader$mesh = $elm_explorations$webgl$WebGL$trian
 			aP: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, 1)
 		}
 		]));
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
 var $elm_explorations$linear_algebra$Math$Vector3$toRecord = _MJS_v3toRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$vec4 = _MJS_v4;
-var $author$project$Playground$Render$setAlpha = function (c) {
-	return function (c1) {
-		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, c1.x, c1.y, c1.z);
-	}(
-		$elm_explorations$linear_algebra$Math$Vector3$toRecord(c));
-};
+var $author$project$Playground$Render$setAlpha = A2(
+	$elm$core$Basics$composeR,
+	$elm_explorations$linear_algebra$Math$Vector3$toRecord,
+	function (a) {
+		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, a.x, a.y, a.z);
+	});
 var $author$project$Playground$Shader$vertNone = {
 	src: '\n        precision mediump float;\n        attribute vec2 aP;\n        uniform vec4 uT;\n        uniform vec2 uP;\n        void main () {\n            gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n        }\n    ',
 	attributes: {aP: 'aP'},
@@ -8990,11 +9107,11 @@ var $author$project$Playground$Render$rect = F4(
 	});
 var $author$project$Playground$rectangle = F3(
 	function (color, width, height) {
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			{
 				a: 0,
 				form: A3(
-					$author$project$Playground$Internal$Form,
+					$justgook$webgl_shape$WebGL$Shape2d$Form,
 					width,
 					height,
 					$author$project$Playground$Render$rect(color)),
@@ -9009,12 +9126,12 @@ var $elm$core$Basics$clamp = F3(
 	function (low, high, number) {
 		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
 	});
-var $author$project$Playground$colorClamp = function (number) {
+var $author$project$Playground$colorClamp = function (n) {
 	return A3(
 		$elm$core$Basics$clamp,
 		0,
 		255,
-		$elm$core$Basics$round(number));
+		$elm$core$Basics$round(n));
 };
 var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
 var $author$project$Playground$rgb = F3(
@@ -9035,33 +9152,25 @@ var $author$project$Playground$scale = F2(
 		var sy = shape.sy;
 		var o = shape.o;
 		var form = shape.form;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{sx: sx * ns, sy: sy * ns}));
 	});
-var $author$project$Playground$Extra$scaleX = F2(
+var $author$project$Playground$scaleX = F2(
 	function (sx, _v0) {
 		var shape = _v0.a;
-		return $author$project$Playground$Internal$Shape(
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
 				{sx: shape.sx * sx}));
 	});
 var $author$project$Extra$Mario$spriteSheet = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAAbCAMAAACA2rsUAAAAAXNSR0IArs4c6QAAADNQTFRFAAAAEgkELg0AdgACUS0TAyVivAADq2c6+PYv2I1lEEWhFJfbko6G/bKIxse19PXnAAAA2GphuwAAABF0Uk5TAP////////////////////8QFUChAAACFklEQVRIib2WiW6EMAxEKTloKCT+/6+tHedwIFSmlWqJbdeZ8TzCgliWXEC1/H+BidGYS7QW5i/QkLxPHqN/AaOHvjeBy3uZrIXRQ9+amJgLo7tdC6OGnjTBcGF0s2thXkBPmrQJIe9DD1bC6KFnTdyFr/MrhbCuYqIK5oVu0sRgCJBODA6hKVUwL3STJoTzPPFY1/UUwSoYtW5KGKg+MDk0sxZGDT1rfpQ6EectjB561uRYmauG0ermzdIVDTXMO921uYAzxuEx3PEqGKHjHj4kktDBT4SY6/3u8B4bHmh3GMA7Akv2AEzV5SbEFDGNWYwR0pl5L7nDw/AOQ0P5IdB6kKIbzJASiQqMGDkxYzAWy0TvBgMHDeUnXw+uuuKm+d53GB8TPJkX+Nz3TxLGeEiYiDUEx+rtZ3wUaD4XOmU4BHRECzyZcVfRSzm4JGFihmwZOBLJ2Oou0FiEyRm7MXUHaQQ8mnmvOUfCDMGwWYchOM7Q9btA40fNyDDAl8/hT5xGPpjJ7XJy22pwtVHfGWDbrHVkRqe0uh2sxQwR7IC0LMv2B3PJce5oudkHLh74x0IPLmWtTKYYC/lGqleliNu+PJjJ7dwgpFE4QOjITO8Qdy+ubFndaThIiOZmoBhre6eM4pWtBfOpi14xQ127BA3fJ2aKoUO4y6hR1v8RwQx8e+m9kczM0OuifHpZF80HyQ/v+HnpGwFKQ0StZOtsAAAAAElFTkSuQmCC';
-var $author$project$Playground$Advanced$custom = F3(
-	function (width, height, render) {
-		return $author$project$Playground$Internal$Shape(
-			{
-				a: 0,
-				form: A3($author$project$Playground$Internal$Form, width, height, render),
-				o: 1,
-				sx: 1,
-				sy: 1,
-				x: 0,
-				y: 0
-			});
+var $justgook$webgl_shape$WebGL$Shape2d$Textured = F2(
+	function (a, b) {
+		return {$: 'Textured', a: a, b: b};
 	});
+var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
 var $author$project$Playground$Extra$size = function (t) {
 	return function (_v0) {
 		var w = _v0.a;
@@ -9076,7 +9185,7 @@ var $author$project$Playground$Shader$fragImage = {
 	uniforms: {uA: 'uA', uImg: 'uImg', uImgSize: 'uImgSize'}
 };
 var $author$project$Playground$Shader$vertTile = {
-	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float index;\n            uniform vec2 spriteSize;\n            uniform vec2 uImgSize;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                vec2 ratio = spriteSize / uImgSize;\n                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);\n                float column = mod(index, uImgSize.x / spriteSize.x);\n                vec2 offset = vec2(column, row) * ratio;\n                uv = (aP * .5 + 0.5) * ratio + offset + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float index;\n            uniform vec2 spriteSize;\n            uniform vec2 uImgSize;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                vec2 ratio = spriteSize / uImgSize;\n                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);\n                float column = mod(index, uImgSize.x / spriteSize.x);\n                vec2 offset = vec2(column, row) * ratio;\n                uv = (aP * 0.5 + 0.5) * ratio + offset + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0.0, 1.0);\n            }\n        ',
 	attributes: {aP: 'aP'},
 	uniforms: {index: 'index', spriteSize: 'spriteSize', uImgSize: 'uImgSize', uP: 'uP', uT: 'uT'}
 };
@@ -9090,39 +9199,40 @@ var $author$project$Playground$Render$tile = F7(
 			$author$project$Playground$Shader$mesh,
 			{index: index, spriteSize: spriteSize, uA: opacity, uImg: spriteSheet, uImgSize: imageSize, uP: translate, uT: scaleRotateSkew});
 	});
-var $author$project$Playground$Internal$Textured = F2(
-	function (a, b) {
-		return {$: 'Textured', a: a, b: b};
-	});
-var $author$project$Playground$Advanced$useTexture = F2(
-	function (url, fn) {
-		return $author$project$Playground$Internal$Shape(
+var $author$project$Playground$Extra$tile = F4(
+	function (tileW, tileH, tileset, index) {
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			{
 				a: 0,
-				form: A2($author$project$Playground$Internal$Textured, url, fn),
+				form: A2(
+					$justgook$webgl_shape$WebGL$Shape2d$Textured,
+					tileset,
+					function (t) {
+						return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+							{
+								a: 0,
+								form: A3(
+									$justgook$webgl_shape$WebGL$Shape2d$Form,
+									tileW,
+									tileH,
+									A4(
+										$author$project$Playground$Render$tile,
+										t,
+										A2($elm_explorations$linear_algebra$Math$Vector2$vec2, tileW, tileH),
+										$author$project$Playground$Extra$size(t),
+										index)),
+								o: 1,
+								sx: 1,
+								sy: 1,
+								x: 0,
+								y: 0
+							});
+					}),
 				o: 1,
 				sx: 1,
 				sy: 1,
 				x: 0,
 				y: 0
-			});
-	});
-var $author$project$Playground$Extra$tile = F4(
-	function (tileW, tileH, tileset, index) {
-		return A2(
-			$author$project$Playground$Advanced$useTexture,
-			tileset,
-			function (t) {
-				return A3(
-					$author$project$Playground$Advanced$custom,
-					tileW,
-					tileH,
-					A4(
-						$author$project$Playground$Render$tile,
-						t,
-						A2($elm_explorations$linear_algebra$Math$Vector2$vec2, tileW, tileH),
-						$author$project$Playground$Extra$size(t),
-						index));
 			});
 	});
 var $author$project$Extra$Mario$view = F2(
@@ -9150,7 +9260,7 @@ var $author$project$Extra$Mario$view = F2(
 				mario.x,
 				(b + 76) + mario.y,
 				A2(
-					$author$project$Playground$Extra$scaleX,
+					$author$project$Playground$scaleX,
 					mario.dir,
 					A2(
 						$author$project$Playground$scale,
