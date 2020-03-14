@@ -102,9 +102,7 @@ jobs:
       run: posthtml ./gh-pages/index_template.html -o ./gh-pages/index.html -c posthtml.config.js
 
     - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@3.2.1
+      uses: peaceiris/actions-gh-pages@v3.5.3
       with:
-        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        BASE_BRANCH: master
-        BRANCH: gh-pages
-        FOLDER: examples/gh-pages
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./examples/gh-pages
