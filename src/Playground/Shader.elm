@@ -150,8 +150,8 @@ vertTile =
             vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
                 vec2 ratio = spriteSize / uImgSize;
-                float row = floor(uImgSize.y / spriteSize.y - 1.0) - floor(index * ratio.x);
-                float column = mod(index, uImgSize.x / spriteSize.x);
+                float row = (uImgSize.y / spriteSize.y - 1.0) - floor((index + 0.5) * ratio.x);
+                float column = floor(mod((index + 0.5), uImgSize.x / spriteSize.x));
                 vec2 offset = vec2(column, row) * ratio;
                 uv = (aP * 0.5 + 0.5) * ratio + offset + edgeFix;
                 gl_Position = vec4(aP * mat2(uT) + uP, 0.0, 1.0);
