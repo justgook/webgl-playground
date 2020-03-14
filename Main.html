@@ -13666,21 +13666,24 @@ var $author$project$Embedded$subscriptions_ = {
 						_Utils_update(
 							computer,
 							{
-								mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse)
+								mouse: A2($author$project$Playground$Internal$mouseClick, true, computer.mouse),
+								time: {delta: 0, now: computer.time.now}
 							}))),
 					$elm$browser$Browser$Events$onMouseDown(
 					$elm$json$Json$Decode$succeed(
 						_Utils_update(
 							computer,
 							{
-								mouse: A2($author$project$Playground$Internal$mouseDown, true, computer.mouse)
+								mouse: A2($author$project$Playground$Internal$mouseDown, true, computer.mouse),
+								time: {delta: 0, now: computer.time.now}
 							}))),
 					$elm$browser$Browser$Events$onMouseUp(
 					$elm$json$Json$Decode$succeed(
 						_Utils_update(
 							computer,
 							{
-								mouse: A2($author$project$Playground$Internal$mouseDown, false, computer.mouse)
+								mouse: A2($author$project$Playground$Internal$mouseDown, false, computer.mouse),
+								time: {delta: 0, now: computer.time.now}
 							})))
 				]));
 	},
@@ -13695,10 +13698,11 @@ var $author$project$Embedded$subscriptions_ = {
 							return _Utils_update(
 								computer,
 								{
-									keyboard: A3($author$project$Playground$Internal$updateKeyboard, false, k, computer.keyboard)
+									keyboard: A3($author$project$Playground$Internal$updateKeyboard, false, k, computer.keyboard),
+									time: {delta: 0, now: computer.time.now}
 								});
 						},
-						A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string))),
+						A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string))),
 					$elm$browser$Browser$Events$onKeyDown(
 					A2(
 						$elm$json$Json$Decode$map,
@@ -13706,10 +13710,11 @@ var $author$project$Embedded$subscriptions_ = {
 							return _Utils_update(
 								computer,
 								{
-									keyboard: A3($author$project$Playground$Internal$updateKeyboard, true, k, computer.keyboard)
+									keyboard: A3($author$project$Playground$Internal$updateKeyboard, true, k, computer.keyboard),
+									time: {delta: 0, now: computer.time.now}
 								});
 						},
-						A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string)))
+						A2($elm$json$Json$Decode$field, 'code', $elm$json$Json$Decode$string)))
 				]));
 	},
 	mouse: function (computer) {
@@ -13726,7 +13731,8 @@ var $author$project$Embedded$subscriptions_ = {
 							{
 								mouse: _Utils_update(
 									mouse,
-									{x: x, y: y})
+									{x: x, y: y}),
+								time: {delta: 0, now: computer.time.now}
 							});
 					}),
 				A2($elm$json$Json$Decode$field, 'pageX', $elm$json$Json$Decode$float),
@@ -13739,7 +13745,8 @@ var $author$project$Embedded$subscriptions_ = {
 					return _Utils_update(
 						computer,
 						{
-							screen: A2($author$project$Playground$Internal$toScreen, w, h)
+							screen: A2($author$project$Playground$Internal$toScreen, w, h),
+							time: {delta: 0, now: computer.time.now}
 						});
 				}));
 	},
@@ -13934,16 +13941,6 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
-var $elm_explorations$webgl$WebGL$Texture$Resize = function (a) {
-	return {$: 'Resize', a: a};
-};
-var $elm_explorations$webgl$WebGL$Texture$linear = $elm_explorations$webgl$WebGL$Texture$Resize(9729);
-var $elm_explorations$webgl$WebGL$Texture$nearestMipmapLinear = $elm_explorations$webgl$WebGL$Texture$Resize(9986);
-var $elm_explorations$webgl$WebGL$Texture$Wrap = function (a) {
-	return {$: 'Wrap', a: a};
-};
-var $elm_explorations$webgl$WebGL$Texture$repeat = $elm_explorations$webgl$WebGL$Texture$Wrap(10497);
-var $elm_explorations$webgl$WebGL$Texture$defaultOptions = {flipY: true, horizontalWrap: $elm_explorations$webgl$WebGL$Texture$repeat, magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$nearestMipmapLinear, verticalWrap: $elm_explorations$webgl$WebGL$Texture$repeat};
 var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 	function (_v0, url) {
 		var magnify = _v0.magnify;
@@ -13961,7 +13958,15 @@ var $elm_explorations$webgl$WebGL$Texture$loadWith = F2(
 			});
 		return A4(expand, magnify, minify, horizontalWrap, verticalWrap);
 	});
-var $elm_explorations$webgl$WebGL$Texture$load = $elm_explorations$webgl$WebGL$Texture$loadWith($elm_explorations$webgl$WebGL$Texture$defaultOptions);
+var $elm_explorations$webgl$WebGL$Texture$Wrap = function (a) {
+	return {$: 'Wrap', a: a};
+};
+var $elm_explorations$webgl$WebGL$Texture$clampToEdge = $elm_explorations$webgl$WebGL$Texture$Wrap(33071);
+var $elm_explorations$webgl$WebGL$Texture$Resize = function (a) {
+	return {$: 'Resize', a: a};
+};
+var $elm_explorations$webgl$WebGL$Texture$linear = $elm_explorations$webgl$WebGL$Texture$Resize(9729);
+var $author$project$Embedded$textureOption = {flipY: true, horizontalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge, magnify: $elm_explorations$webgl$WebGL$Texture$linear, minify: $elm_explorations$webgl$WebGL$Texture$linear, verticalWrap: $elm_explorations$webgl$WebGL$Texture$clampToEdge};
 var $author$project$Embedded$getTexture = function (url) {
 	return A2(
 		$elm$core$Task$attempt,
@@ -13974,7 +13979,7 @@ var $author$project$Embedded$getTexture = function (url) {
 				return $author$project$Embedded$TextureFail(e);
 			}
 		},
-		$elm_explorations$webgl$WebGL$Texture$load(url));
+		A2($elm_explorations$webgl$WebGL$Texture$loadWith, $author$project$Embedded$textureOption, url));
 };
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity = {a11: 1, a12: 0, a13: 0, a21: 0, a22: 1, a23: 0};
@@ -14135,7 +14140,7 @@ var $author$project$Embedded$update = F4(
 			case 'Computer':
 				var c = msg.a;
 				var computer = A2($author$project$Embedded$unClick, model.computer, c);
-				var newMemory = (!_Utils_eq(computer.time.delta, computer.time.now)) ? A2(updateMemory, model.computer, model.memory) : model.memory;
+				var newMemory = ((!(!computer.time.delta)) && (!_Utils_eq(computer.time.delta, computer.time.now))) ? A2(updateMemory, model.computer, model.memory) : model.memory;
 				var _v1 = A3(
 					$justgook$webgl_shape$WebGL$Shape2d$toEntities,
 					textures.done,
