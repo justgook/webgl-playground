@@ -446,6 +446,16 @@ type alias Screen =
 Helpful when making an [`animation`](#animation) with functions like
 [`spin`](#spin), [`wave`](#wave), and [`zigzag`](#zigzag).
 
+`Time` is defined as:
+
+    type alias Time = 
+        { now: Int
+        , delta: Int
+        }
+
+Where `now` is the number of milliseconds since 1970 January 1 at 00:00:00 UTC, 
+and `delta` is the number of milliseconds since the previous animation frame.
+
 -}
 type alias Time =
     Internal.Time
@@ -1213,11 +1223,13 @@ scale ns (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
     Shape2d { shape | sx = sx * ns, sy = sy * ns }
 
 
-{-| Make a shape **horizontally** bigger or smaller.
-Also can be used to flip object:
+{-| Make a shape _horizontally_ bigger or smaller.
+Also, passing a negative value mirrors a shape:
 
     tile 20 27 0 "character.png" 1
         |> scaleX -1
+
+**Note**: If you just need to mirror a shape horizontally use `flipX`.
 
 -}
 scaleX : Float -> Shape -> Shape
@@ -1225,11 +1237,13 @@ scaleX sx (Shape2d shape) =
     Shape2d { shape | sx = shape.sx * sx }
 
 
-{-| Make a shape **vertically** bigger or smaller.
-Also can be used to flip object:
+{-| Make a shape _vertically_ bigger or smaller.
+Also, passing a negative value mirrors a shape:
 
     tile 20 27 0 "character.png" 1
         |> scaleY -1
+
+**Note**: If you just need to mirror a shape vertically use `flipY`.
 
 -}
 scaleY : Float -> Shape -> Shape
@@ -1237,7 +1251,7 @@ scaleY sy (Shape2d shape) =
     Shape2d { shape | sy = shape.sy * sy }
 
 
-{-| Mirror shape horizontally
+{-| Mirror shape horizontally.
 
     tile 20 27 0 "character.png" 1
         |> flipX
@@ -1248,7 +1262,7 @@ flipX (Shape2d shape) =
     Shape2d { shape | sx = shape.sx * -1 }
 
 
-{-| Mirror shape vertically
+{-| Mirror shape vertically.
 
     tile 20 27 0 "character.png" 1
         |> flipY
@@ -1269,7 +1283,7 @@ flipY (Shape2d shape) =
                 |> rotate 10
             ]
 
-The degrees go **counter-clockwise** to match the direction of the
+The degrees go _counter-clockwise_ to match the direction of the
 [unit circle](https://en.wikipedia.org/wiki/Unit_circle).
 
 -}

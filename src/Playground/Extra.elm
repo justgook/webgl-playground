@@ -28,7 +28,7 @@ import WebGL.Texture exposing (Texture)
 
 {-| Show tile from a tileset.
 
-All tiles are fixed size and placed into a grid, where the first tile has a **0** index
+All tiles are fixed size and placed into a grid, where the _first tile has a 0 index_
 increasing left to right and top to bottom.
 
 Example: having a 3x3 tileset with each tile of 16x24 pixels
@@ -60,7 +60,7 @@ tile tileW tileH tileset index =
 
 {-| Show sprite from a sprite sheet.
 
-Sprites can be placed anywhere in the atlas and each can have different sizes.
+Sprites can be placed anywhere in the sprite sheet and each can have different sizes.
 
 Example: this draws a sprite of 16x24 pixels taking it from a sprite sheet,
 starting at position `16,0` up to _including_ pixels at `31,23`
@@ -106,22 +106,23 @@ sprite atlas { xmin, xmax, ymin, ymax } =
 
 {-| Show tilemap from a tileset and a corresponding lookup table stored as a texture.
 
-Example: this lookup table is used to draw a T-shaped platform
+For example, this lookup table is used to draw a T-shaped platform:
 
     | 2 2 2 |
     | 0 1 0 |
     | 0 1 0 |
 
-which in turn uses this 3x3 tileset with each tile 16x24px
+which in turn uses this 3x3 tileset with each tile 16x24px.
 
     | 1 2 3 |
     | 4 5 6 |
     | 7 8 9 |
 
-**Note:** tileset indexing starts from **1** when used in lookup table
+Finally, the function is used as follows: 
 
     tilemap 16 24 "sprites.png" "lookuptable.png"
 
+**Note:** tileset indexing starts from 1 when used in lookup table, since 0 is used to communicate "no tile here".
 
 ## Why
 
@@ -145,7 +146,7 @@ to pick from the tileset.
 
 All tiles are fixed size and placed into a grid, with indices increasing left to right and top to bottom. Notice
 that a fully black but transparent pixel (`0x00000000`) means "no tile here" and nothing is rendered.
-Unlike `tile`, this makes the lookup table indices to start from **1**.
+Hence, unlike `tile` function, this makes the lookup table indices to _start from 1_.
 
 More details about this rendering technique can be found in [Brandon Jones’ blog][2].
 
