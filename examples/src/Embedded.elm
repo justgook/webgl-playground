@@ -24,7 +24,6 @@ view { computer, entities } =
             [ WebGL.alpha False
             , WebGL.depth 1
             , WebGL.clearColor 1 1 1 1
-            , WebGL.depth 0
             ]
             [ width (round computer.screen.width), height (round computer.screen.height) ]
 
