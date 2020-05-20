@@ -9762,7 +9762,7 @@ var $author$project$Playground$rotate = F2(
 				}));
 	});
 var $author$project$Playground$Shader$fragNgon = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        uniform float n;\n        varying vec2 uv;\n        void main () {\n            float angle = 3.1415926535897932384626433832795 / n * 3.0;\n            float a = atan(uv.x,uv.y) + angle;\n            float b = 6.28319 / n;\n            float f = smoothstep(0.5,.5,cos(floor(.5 + a/b)*b-a)*length(uv));\n            gl_FragColor = color;\n            gl_FragColor.a -= f;\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        uniform float n;\n        varying vec2 uv;\n        void main () {\n            float angle = 3.1415926535897932384626433832795 / n * 3.0;\n            float a = atan(uv.x,uv.y) + angle;\n            float b = 6.28319 / n;\n            gl_FragColor = color;\n            gl_FragColor.a -= smoothstep(0.5, 0.5001, cos(floor(.5 + a/b)*b-a)*length(uv));\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color', n: 'n'}
 };
