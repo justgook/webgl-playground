@@ -20,7 +20,12 @@ import WebGL.Texture as Texture exposing (Texture)
 view : Model memory -> Html msg
 view { computer, entities } =
     entities
-        |> WebGL.toHtmlWith [ WebGL.alpha False, WebGL.depth 1, WebGL.clearColor 1 1 1 1 ]
+        |> WebGL.toHtmlWith
+            [ WebGL.alpha False
+            , WebGL.depth 1
+            , WebGL.clearColor 1 1 1 1
+            , WebGL.depth 0
+            ]
             [ width (round computer.screen.width), height (round computer.screen.height) ]
 
 

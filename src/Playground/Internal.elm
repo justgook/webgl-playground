@@ -255,7 +255,7 @@ viewWrap screen entities =
 
 webGLOption : List WebGL.Option
 webGLOption =
-    [ WebGL.alpha False
+    [ WebGL.alpha True
     , WebGL.depth 1
     , WebGL.clearColor 1 1 1 1
     ]

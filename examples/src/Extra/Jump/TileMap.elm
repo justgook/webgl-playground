@@ -24,6 +24,7 @@ fullscreen =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -31,7 +32,7 @@ fullscreen =
         , form =
             Form 1
                 1
-                (\translate scaleRotateSkew opacity ->
+                (\translate scaleRotateSkew z opacity ->
                     WebGL.entityWith
                         defaultEntitySettings
                         vertFullscreen
@@ -41,6 +42,7 @@ fullscreen =
                         , uT = scaleRotateSkew
                         , uA = opacity
                         , color = vec4 (14 / 255) (21 / 255) (28 / 255) 1
+                        , z = z
                         }
                 )
         }

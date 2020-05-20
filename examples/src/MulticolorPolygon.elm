@@ -2,14 +2,27 @@ module MulticolorPolygon exposing (main, view)
 
 import Array
 import Math.Vector2 exposing (vec2)
+import Math.Vector3 exposing (Vec3)
 import Playground exposing (..)
 import Playground.Polygon exposing (signedArea, triangulate)
 import Playground.Render as Render
-import WebGL.Shape2d as Shape2d exposing (Render)
+import WebGL.Shape2d as Shape2d exposing (Render, Shape2d)
 
 
+triangle : Vec3 -> ( Math.Vector2.Vec2, Math.Vector2.Vec2, Math.Vector2.Vec2 ) -> Shape2d
 triangle color data =
-    Shape2d.Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Shape2d.Form 1 1 <| Render.triangle color data }
+    Shape2d.Shape2d
+        { x = 0
+        , y = 0
+        , z = 0
+        , a = 0
+        , sx = 1
+        , sy = 1
+        , o = 1
+        , form =
+            Shape2d.Form 1 1 <|
+                Render.triangle color data
+        }
 
 
 main : Program () (Playground ()) Msg

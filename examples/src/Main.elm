@@ -20,6 +20,7 @@ import Set
 import Shmup
 import Tree
 import Vectors
+import Zindex
 
 
 config =
@@ -282,6 +283,7 @@ initialMemory =
         , { img = Just "JumpGun.png", name = "JumpGun(E)", run = GameExample <| JumpGunGame { view = JumpGun.view, update = JumpGun.update, memory = JumpGun.init } }
         , { img = Just "Mario.png", name = "Mario(E)", run = GameExample <| MarioGame { view = Mario.view, update = Mario.update, memory = Mario.init } }
         , { img = Just "MSDF.png", name = "MSDF(E)", run = PictureExample Extra.Font.view }
+        , { img = Just "Zindex.png", name = "Zindex", run = PictureExample Zindex.view }
         ]
         |> Init
 

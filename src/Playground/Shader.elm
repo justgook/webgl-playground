@@ -30,9 +30,10 @@ import WebGL.Texture exposing (Texture)
 
 
 {-| -}
-vertTriangle : Shader { a | i : Float } { b | uP : Vec2, uT : Vec4, vert0 : Vec2, vert1 : Vec2, vert2 : Vec2 } {}
+vertTriangle : Shader { a | i : Float } { b | uP : Vec2, uT : Vec4, z : Float, vert0 : Vec2, vert1 : Vec2, vert2 : Vec2 } {}
 vertTriangle =
     --http://in2gpu.com/2014/11/24/creating-a-triangle-in-opengl-shader/
+    -- 1 / (2 ^ 23 - 1)  = 0.000000119209304
     [glsl|
     precision mediump float;
     attribute float i;
@@ -41,6 +42,7 @@ vertTriangle =
     uniform vec2 vert2;
     uniform vec4 uT;
     uniform vec2 uP;
+    uniform float z;
     void main () {
      vec2 aP;
      if (i == 0.) {
@@ -50,7 +52,7 @@ vertTriangle =
      } else if (i == 2.) {
         aP = vert2;
      }
-     gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
+     gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);
     }
     |]
 
@@ -60,7 +62,7 @@ vertTriangle =
 
 
 {-| -}
-vertSprite : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4, uUV : Vec4 } { uv : Vec2 }
+vertSprite : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4, uUV : Vec4, z : Float } { uv : Vec2 }
 vertSprite =
     [glsl|
             precision mediump float;
@@ -69,59 +71,63 @@ vertSprite =
             uniform vec2 uP;
             varying vec2 uv;
             uniform vec4 uUV;
+            uniform float z;
             vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
                 vec2 aP_ = aP * .5 + 0.5;
                 uv = uUV.xy + (aP_ * uUV.zw) + edgeFix;
-                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);
             }
         |]
 
 
 {-| -}
-vertImage : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4 } { uv : Vec2 }
+vertImage : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4, z : Float } { uv : Vec2 }
 vertImage =
     [glsl|
             precision mediump float;
             attribute vec2 aP;
             uniform vec4 uT;
             uniform vec2 uP;
+            uniform float z;
             varying vec2 uv;
             vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
                 uv = aP * .5 + 0.5 + edgeFix;
-                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);
             }
         |]
 
 
 {-| -}
-vertNone : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4 } {}
+vertNone : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4, z : Float } {}
 vertNone =
     [glsl|
         precision mediump float;
         attribute vec2 aP;
         uniform vec4 uT;
         uniform vec2 uP;
+        uniform float z;
         void main () {
-            gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
+            gl_Position = vec4(aP * mat2(uT) + uP, z * -1.19209304e-7, 1.0);
         }
     |]
 
 
 {-| -}
-vertRect : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4 } { uv : Vec2 }
+vertRect : Shader { a | aP : Vec2 } { b | uP : Vec2, uT : Vec4, z : Float } { uv : Vec2 }
 vertRect =
     [glsl|
             precision mediump float;
             attribute vec2 aP;
             uniform vec4 uT;
             uniform vec2 uP;
+            uniform float z;
             varying vec2 uv;
             vec2 edgeFix = vec2(0.0000001, -0.0000001);
             void main () {
                 uv = aP + edgeFix;
-                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);
             }
         |]
 
@@ -135,6 +141,7 @@ vertTile :
             , spriteSize : Vec2
             , uP : Vec2
             , uT : Vec4
+            , z : Float
         }
         { uv : Vec2 }
 vertTile =
@@ -143,6 +150,7 @@ vertTile =
             attribute vec2 aP;
             uniform vec4 uT;
             uniform vec2 uP;
+            uniform float z;
             uniform float index;
             uniform vec2 spriteSize;
             uniform vec2 uImgSize;
@@ -154,7 +162,7 @@ vertTile =
                 float column = floor(mod((index + 0.5), uImgSize.x / spriteSize.x));
                 vec2 offset = vec2(column, row) * ratio;
                 uv = (aP * 0.5 + 0.5) * ratio + offset + edgeFix;
-                gl_Position = vec4(aP * mat2(uT) + uP, 0.0, 1.0);
+                gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);
             }
         |]
 

@@ -17,6 +17,7 @@ const examples = [
     "JumpGun",
     "Mario",
     "HexGrid",
+    "Zindex",
     "Main"
 ];
 const server = http.createServer((req, res) => {

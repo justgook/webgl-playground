@@ -12,6 +12,7 @@ tileFont { charW, charH, src, getIndex } color string =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -36,7 +37,16 @@ tileFont { charW, charH, src, getIndex } color string =
                                 |> List.foldl (outputFold toChar getIndex charW charH)
                                     { chars = [], x = charW, y = charH, width = 0 }
                     in
-                    Shape2d { x = max output.x output.width * -0.5, y = output.y * -0.5 + 0.5 * -charH, a = 0, sx = 1, sy = 1, o = 1, form = Group output.chars }
+                    Shape2d
+                        { x = max output.x output.width * -0.5
+                        , y = output.y * -0.5 + 0.5 * -charH
+                        , z = 0
+                        , a = 0
+                        , sx = 1
+                        , sy = 1
+                        , o = 1
+                        , form = Group output.chars
+                        }
                 )
         }
 
@@ -46,6 +56,7 @@ char spriteSheet imageSize color w h x y index =
     Shape2d
         { x = x
         , y = y
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1

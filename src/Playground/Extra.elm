@@ -47,6 +47,7 @@ tile tileW tileH tileset index =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -54,7 +55,16 @@ tile tileW tileH tileset index =
         , form =
             Textured tileset <|
                 \t ->
-                    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index) }
+                    Shape2d
+                        { x = 0
+                        , y = 0
+                        , z = 0
+                        , a = 0
+                        , sx = 1
+                        , sy = 1
+                        , o = 1
+                        , form = Form tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
+                        }
         }
 
 
@@ -80,6 +90,7 @@ sprite atlas { xmin, xmax, ymin, ymax } =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -100,7 +111,16 @@ sprite atlas { xmin, xmax, ymin, ymax } =
                         uv =
                             vec4 (xmin / tW) (1 - ymin / tH - (h / tH)) (w / tW) (h / tH)
                     in
-                    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form w h <| Render.sprite t (vec2 tW tH) uv }
+                    Shape2d
+                        { x = 0
+                        , y = 0
+                        , z = 0
+                        , a = 0
+                        , sx = 1
+                        , sy = 1
+                        , o = 1
+                        , form = Form w h <| Render.sprite t (vec2 tW tH) uv
+                        }
         }
 
 
@@ -118,11 +138,12 @@ which in turn uses this 3x3 tileset with each tile 16x24px.
     | 4 5 6 |
     | 7 8 9 |
 
-Finally, the function is used as follows: 
+Finally, the function is used as follows:
 
     tilemap 16 24 "sprites.png" "lookuptable.png"
 
 **Note:** tileset indexing starts from 1 when used in lookup table, since 0 is used to communicate "no tile here".
+
 
 ## Why
 

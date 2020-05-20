@@ -14,6 +14,7 @@ tilemap tileW tileH tileset lut =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -24,6 +25,7 @@ tilemap tileW tileH tileset lut =
                     Shape2d
                         { x = 0
                         , y = 0
+                        , z = 0
                         , a = 0
                         , sx = 1
                         , sy = 1
@@ -43,6 +45,7 @@ tilemap tileW tileH tileset lut =
                                     Shape2d
                                         { x = 0
                                         , y = 0
+                                        , z = 0
                                         , a = 0
                                         , sx = 1
                                         , sy = 1
@@ -51,7 +54,7 @@ tilemap tileW tileH tileset lut =
                                             Form
                                                 (w2 * tileW)
                                                 (h2 * tileH)
-                                                (\translate scaleRotateSkew opacity ->
+                                                (\translate scaleRotateSkew z opacity ->
                                                     WebGL.entityWith
                                                         defaultEntitySettings
                                                         Shader.vertImage
@@ -65,6 +68,7 @@ tilemap tileW tileH tileset lut =
                                                         , uAtlasSize = vec2 w1 h1
                                                         , uLut = lut_
                                                         , uLutSize = vec2 w2 h2
+                                                        , z = z
                                                         }
                                                 )
                                         }

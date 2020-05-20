@@ -3,7 +3,7 @@ module Playground exposing
     , Shape, circle, oval, square, rectangle, triangle, pentagon, hexagon, octagon, polygon
     , words
     , image
-    , move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY
+    , move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY, moveZ
     , rotate, fade, scale, scaleX, scaleY, flipY, flipX
     , group
     , Time, spin, wave, zigzag
@@ -41,7 +41,7 @@ module Playground exposing
 
 # Move Shapes
 
-@docs move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY
+@docs move, moveUp, moveDown, moveLeft, moveRight, moveX, moveY, moveZ
 
 
 # Customize Shapes
@@ -150,11 +150,11 @@ picture shapes =
         , update =
             \msg m ->
                 case msg of
-                    GotTexture _ ->
-                        ( update msg m |> Tuple.first, Task.perform Tick Time.now )
+                    Tick _ ->
+                        update msg m
 
                     _ ->
-                        update msg m
+                        ( update msg m |> Tuple.first, Task.perform Tick Time.now )
         , subscriptions = \_ -> Internal.subscriptions.resize
         }
 
@@ -448,12 +448,12 @@ Helpful when making an [`animation`](#animation) with functions like
 
 `Time` is defined as:
 
-    type alias Time = 
-        { now: Int
-        , delta: Int
+    type alias Time =
+        { now : Int
+        , delta : Int
         }
 
-Where `now` is the number of milliseconds since 1970 January 1 at 00:00:00 UTC, 
+Where `now` is the number of milliseconds since 1970 January 1 at 00:00:00 UTC,
 and `delta` is the number of milliseconds since the previous animation frame.
 
 -}
@@ -733,6 +733,7 @@ circle color radius =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -754,6 +755,7 @@ oval color width height =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -781,6 +783,7 @@ square color n =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -808,6 +811,7 @@ rectangle color width height =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -835,6 +839,7 @@ triangle color radius =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -861,6 +866,7 @@ pentagon color radius =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -889,6 +895,7 @@ hexagon color radius =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1.75
         , sy = 1.75
@@ -913,6 +920,7 @@ octagon color radius =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -955,6 +963,7 @@ polygonTriangle color data =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -980,6 +989,7 @@ image width height src =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -990,6 +1000,7 @@ image width height src =
                     Shape2d
                         { x = 0
                         , y = 0
+                        , z = 0
                         , a = 0
                         , sx = 1
                         , sy = 1
@@ -1061,7 +1072,7 @@ them as a group. Maybe you want to put a bunch of stars in the sky:
 -}
 group : List Shape -> Shape
 group shapes =
-    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group shapes }
+    Shape2d { x = 0, y = 0, z = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group shapes }
 
 
 
@@ -1204,6 +1215,19 @@ top of the screen, since the values are negative sometimes.
 moveY : Float -> Shape -> Shape
 moveY dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
     Shape2d { shape | y = y + dy }
+
+
+{-| The `moveZ` specifies the stack order of a shapes.
+
+A shape with greater stack order is always in front of an element with a lower stack order.
+
+**Note:** be aware z-indexing will mess up semi-transparent shapes,
+if you need both (z ordering and semi-transparency) better sort shapes.
+
+-}
+moveZ : Int -> Shape2d -> Shape2d
+moveZ z (Shape2d shape) =
+    Shape2d { shape | z = toFloat z }
 
 
 {-| Make a shape bigger or smaller. So if you wanted some [`words`](#words) to

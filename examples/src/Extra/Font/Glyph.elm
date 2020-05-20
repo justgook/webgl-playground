@@ -22,6 +22,7 @@ glyphSprite tileW tileH atlas uv =
     Shape2d
         { x = 0
         , y = 0
+        , z = 0
         , a = 0
         , sx = 1
         , sy = 1
@@ -29,12 +30,21 @@ glyphSprite tileW tileH atlas uv =
         , form =
             Textured atlas <|
                 \t ->
-                    Shape2d { x = 0, y = 0, a = 0, sx = 1, sy = 1, o = 1, form = Form tileW tileH <| myGlyph t (size t) (vec3 1 0 0) uv }
+                    Shape2d
+                        { x = 0
+                        , y = 0
+                        , z = 0
+                        , a = 0
+                        , sx = 1
+                        , sy = 1
+                        , o = 1
+                        , form = Form tileW tileH <| myGlyph t (size t) (vec3 1 0 0) uv
+                        }
         }
 
 
-myGlyph : Texture -> Vec2 -> Vec3 -> Vec4 -> Vec2 -> Vec4 -> Float -> WebGL.Entity
-myGlyph t imgSize color uv translate scaleRotateSkew opacity =
+myGlyph : Texture -> Vec2 -> Vec3 -> Vec4 -> Render
+myGlyph t imgSize color uv translate scaleRotateSkew z opacity =
     WebGL.entityWith
         defaultEntitySettings
         Shader.vertSprite
@@ -46,6 +56,7 @@ myGlyph t imgSize color uv translate scaleRotateSkew opacity =
         , uImgSize = imgSize
         , uUV = uv
         , color = setAlpha color opacity
+        , z = z
         }
 
 
