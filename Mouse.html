@@ -7118,25 +7118,6 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$apply = F2(
 	function (a, b) {
 		return {a11: (a.a11 * b.a11) + (a.a12 * b.a21), a12: (a.a11 * b.a12) + (a.a12 * b.a22), a13: ((a.a11 * b.a13) + (a.a12 * b.a23)) + a.a13, a21: (a.a21 * b.a11) + (a.a22 * b.a21), a22: (a.a21 * b.a12) + (a.a22 * b.a22), a23: ((a.a21 * b.a13) + (a.a22 * b.a23)) + a.a23};
 	});
-var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
-	function (sx, sy, b) {
-		return {a11: sx * b.a11, a12: sx * b.a12, a13: sx * b.a13, a21: sy * b.a21, a22: sy * b.a22, a23: sy * b.a23};
-	});
-var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
-var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
-var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
-	var a11 = _v0.a11;
-	var a12 = _v0.a12;
-	var a13 = _v0.a13;
-	var a21 = _v0.a21;
-	var a22 = _v0.a22;
-	var a23 = _v0.a23;
-	return _Utils_Tuple2(
-		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
-			{w: a22, x: a11, y: a12, z: a21}),
-		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
-			{x: a13, y: a23}));
-};
 var $elm$core$Basics$cos = _Basics_cos;
 var $elm$core$Basics$negate = function (n) {
 	return -n;
@@ -7153,12 +7134,51 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$transform = F5(
 			a23: ty
 		};
 	});
+var $justgook$webgl_shape$WebGL$Shape2d$createTrans = F6(
+	function (tx, ty, sx_, sy_, a_, parent) {
+		return A2(
+			$justgook$webgl_shape$WebGL$Shape2d$Transformation$apply,
+			parent,
+			A5($justgook$webgl_shape$WebGL$Shape2d$Transformation$transform, tx, ty, sx_, sy_, a_));
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
+	function (sx, sy, b) {
+		return {a11: sx * b.a11, a12: sx * b.a12, a13: sx * b.a13, a21: sy * b.a21, a22: sy * b.a22, a23: sy * b.a23};
+	});
+var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
+	return {$: 'Shape2d', a: a};
+};
+var $justgook$webgl_shape$WebGL$Shape2d$setZ = F2(
+	function (parentZ, _v0) {
+		var shape = _v0.a;
+		var z = shape.z;
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			_Utils_update(
+				shape,
+				{z: parentZ + z}));
+	});
+var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
+var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
+var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
+	var a11 = _v0.a11;
+	var a12 = _v0.a12;
+	var a13 = _v0.a13;
+	var a21 = _v0.a21;
+	var a22 = _v0.a22;
+	var a23 = _v0.a23;
+	return _Utils_Tuple2(
+		$elm_explorations$linear_algebra$Math$Vector4$fromRecord(
+			{w: a22, x: a11, y: a12, z: a21}),
+		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
+			{x: a13, y: a23}));
+};
 var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 	function (screen, textures, parent, parentOpacity, _v0, acc) {
 		renderShape:
 		while (true) {
 			var x = _v0.a.x;
 			var y = _v0.a.y;
+			var z = _v0.a.z;
 			var a = _v0.a.a;
 			var sx = _v0.a.sx;
 			var sy = _v0.a.sy;
@@ -7166,14 +7186,6 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 			var form = _v0.a.form;
 			var entities = acc.a;
 			var missing = acc.b;
-			var opacity = o * parentOpacity;
-			var createTrans = F5(
-				function (tx, ty, sx_, sy_, a_) {
-					return A2(
-						$justgook$webgl_shape$WebGL$Shape2d$Transformation$apply,
-						parent,
-						A5($justgook$webgl_shape$WebGL$Shape2d$Transformation$transform, tx, ty, sx_, sy_, a_));
-				});
 			switch (form.$) {
 				case 'Form':
 					var width = form.a;
@@ -7184,13 +7196,13 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 							$justgook$webgl_shape$WebGL$Shape2d$Transformation$scale,
 							1 / screen.width,
 							1 / screen.height,
-							A5(createTrans, x * 2, y * 2, width * sx, height * sy, a)));
+							A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, width * sx, height * sy, a, parent)));
 					var t1 = _v2.a;
 					var t2 = _v2.b;
 					return _Utils_Tuple2(
 						A2(
 							$elm$core$List$cons,
-							A3(fn, t2, t1, opacity),
+							A4(fn, t2, t1, z, o * parentOpacity),
 							entities),
 						missing);
 				case 'Textured':
@@ -7201,8 +7213,8 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 						var texture = _v3.a;
 						var $temp$screen = screen,
 							$temp$textures = textures,
-							$temp$parent = A5(createTrans, x * 2, y * 2, sx, sy, a),
-							$temp$parentOpacity = opacity,
+							$temp$parent = A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
+							$temp$parentOpacity = o * parentOpacity,
 							$temp$_v0 = fn(texture),
 							$temp$acc = acc;
 						screen = $temp$screen;
@@ -7219,16 +7231,16 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					}
 				default:
 					var shapes = form.a;
-					return A3(
-						$elm$core$List$foldr,
-						A4(
+					var fn = function (shape) {
+						return A5(
 							$justgook$webgl_shape$WebGL$Shape2d$renderShape,
 							screen,
 							textures,
-							A5(createTrans, x * 2, y * 2, sx, sy, a),
-							opacity),
-						acc,
-						shapes);
+							A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
+							o * parentOpacity,
+							A2($justgook$webgl_shape$WebGL$Shape2d$setZ, z, shape));
+					};
+					return A3($elm$core$List$foldr, fn, acc, shapes);
 			}
 		}
 	});
@@ -8710,7 +8722,7 @@ var $elm_explorations$webgl$WebGL$Internal$Depth = function (a) {
 var $elm_explorations$webgl$WebGL$depth = $elm_explorations$webgl$WebGL$Internal$Depth;
 var $author$project$Playground$Internal$webGLOption = _List_fromArray(
 	[
-		$elm_explorations$webgl$WebGL$alpha(false),
+		$elm_explorations$webgl$WebGL$alpha(true),
 		$elm_explorations$webgl$WebGL$depth(1),
 		A4($elm_explorations$webgl$WebGL$clearColor, 1, 1, 1, 1)
 	]);
@@ -8780,9 +8792,6 @@ var $justgook$webgl_shape$WebGL$Shape2d$Form = F3(
 	function (a, b, c) {
 		return {$: 'Form', a: a, b: b, c: c};
 	});
-var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
-	return {$: 'Shape2d', a: a};
-};
 var $elm_explorations$webgl$WebGL$Internal$Blend = function (a) {
 	return function (b) {
 		return function (c) {
@@ -8850,6 +8859,16 @@ var $elm_explorations$webgl$WebGL$Internal$ColorMask = F4(
 		return {$: 'ColorMask', a: a, b: b, c: c, d: d};
 	});
 var $elm_explorations$webgl$WebGL$Settings$colorMask = $elm_explorations$webgl$WebGL$Internal$ColorMask;
+var $elm_explorations$webgl$WebGL$Internal$DepthTest = F4(
+	function (a, b, c, d) {
+		return {$: 'DepthTest', a: a, b: b, c: c, d: d};
+	});
+var $elm_explorations$webgl$WebGL$Settings$DepthTest$lessOrEqual = function (_v0) {
+	var write = _v0.write;
+	var near = _v0.near;
+	var far = _v0.far;
+	return A4($elm_explorations$webgl$WebGL$Internal$DepthTest, 515, write, near, far);
+};
 var $elm_explorations$webgl$WebGL$Settings$Blend$Factor = function (a) {
 	return {$: 'Factor', a: a};
 };
@@ -8858,7 +8877,9 @@ var $elm_explorations$webgl$WebGL$Settings$Blend$srcAlpha = $elm_explorations$we
 var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 	[
 		A2($elm_explorations$webgl$WebGL$Settings$Blend$add, $elm_explorations$webgl$WebGL$Settings$Blend$srcAlpha, $elm_explorations$webgl$WebGL$Settings$Blend$oneMinusSrcAlpha),
-		A4($elm_explorations$webgl$WebGL$Settings$colorMask, true, true, true, false)
+		A4($elm_explorations$webgl$WebGL$Settings$colorMask, true, true, true, false),
+		$elm_explorations$webgl$WebGL$Settings$DepthTest$lessOrEqual(
+		{far: -1, near: 1, write: true})
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragCircle = {
@@ -8903,12 +8924,12 @@ var $author$project$Playground$Render$setAlpha = A2(
 		return A3($elm_explorations$linear_algebra$Math$Vector4$vec4, a.x, a.y, a.z);
 	});
 var $author$project$Playground$Shader$vertRect = {
-	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                uv = aP + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n            }\n        ',
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float z;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                uv = aP + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);\n            }\n        ',
 	attributes: {aP: 'aP'},
-	uniforms: {uP: 'uP', uT: 'uT'}
+	uniforms: {uP: 'uP', uT: 'uT', z: 'z'}
 };
-var $author$project$Playground$Render$circle = F4(
-	function (color, uP, uT, opacity) {
+var $author$project$Playground$Render$circle = F5(
+	function (color, uP, uT, z, opacity) {
 		return A5(
 			$elm_explorations$webgl$WebGL$entityWith,
 			$author$project$Playground$Render$defaultEntitySettings,
@@ -8918,7 +8939,8 @@ var $author$project$Playground$Render$circle = F4(
 			{
 				color: A2($author$project$Playground$Render$setAlpha, color, opacity),
 				uP: uP,
-				uT: uT
+				uT: uT,
+				z: z
 			});
 	});
 var $author$project$Playground$circle = F2(
@@ -8935,7 +8957,8 @@ var $author$project$Playground$circle = F2(
 				sx: 1,
 				sy: 1,
 				x: 0,
-				y: 0
+				y: 0,
+				z: 0
 			});
 	});
 var $author$project$Playground$fade = F2(
@@ -9104,12 +9127,12 @@ var $author$project$Playground$Shader$fragFill = {
 	uniforms: {color: 'color'}
 };
 var $author$project$Playground$Shader$vertNone = {
-	src: '\n        precision mediump float;\n        attribute vec2 aP;\n        uniform vec4 uT;\n        uniform vec2 uP;\n        void main () {\n            gl_Position = vec4(aP * mat2(uT) + uP, 0., 1.0);\n        }\n    ',
+	src: '\n        precision mediump float;\n        attribute vec2 aP;\n        uniform vec4 uT;\n        uniform vec2 uP;\n        uniform float z;\n        void main () {\n            gl_Position = vec4(aP * mat2(uT) + uP, z * -1.19209304e-7, 1.0);\n        }\n    ',
 	attributes: {aP: 'aP'},
-	uniforms: {uP: 'uP', uT: 'uT'}
+	uniforms: {uP: 'uP', uT: 'uT', z: 'z'}
 };
-var $author$project$Playground$Render$rect = F4(
-	function (color, uP, uT, opacity) {
+var $author$project$Playground$Render$rect = F5(
+	function (color, uP, uT, z, opacity) {
 		return A5(
 			$elm_explorations$webgl$WebGL$entityWith,
 			$author$project$Playground$Render$defaultEntitySettings,
@@ -9119,7 +9142,8 @@ var $author$project$Playground$Render$rect = F4(
 			{
 				color: A2($author$project$Playground$Render$setAlpha, color, opacity),
 				uP: uP,
-				uT: uT
+				uT: uT,
+				z: z
 			});
 	});
 var $author$project$Playground$rectangle = F3(
@@ -9136,7 +9160,8 @@ var $author$project$Playground$rectangle = F3(
 				sx: 1,
 				sy: 1,
 				x: 0,
-				y: 0
+				y: 0,
+				z: 0
 			});
 	});
 var $author$project$Playground$red = A2(
