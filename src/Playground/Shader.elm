@@ -245,9 +245,8 @@ fragNgon =
             float angle = 3.1415926535897932384626433832795 / n * 3.0;
             float a = atan(uv.x,uv.y) + angle;
             float b = 6.28319 / n;
-            float f = smoothstep(0.5,.5,cos(floor(.5 + a/b)*b-a)*length(uv));
             gl_FragColor = color;
-            gl_FragColor.a -= f;
+            gl_FragColor.a -= smoothstep(0.5, 0.5001, cos(floor(.5 + a/b)*b-a)*length(uv));
         }
     |]
 
