@@ -99,10 +99,10 @@ jobs:
         NODE_ENV: production
         BUNDLE_JS: jump.js
       working-directory: examples
-      run: posthtml ./gh-pages/index_template.html -o ./gh-pages/index.html -c posthtml.config.js
+      run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
 
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3.5.3
+      uses: peaceiris/actions-gh-pages@v3.6.1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./examples/gh-pages
