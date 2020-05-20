@@ -86,12 +86,11 @@ jobs:
         elm make src/Vectors.elm --output=./gh-pages/Vectors.html
         elm make src/Shmup.elm --output=./gh-pages/Shmup.html
         elm make src/Circles.elm --output=./gh-pages/Circles.html
-        elm make src/Main.elm --output=./gh-pages/Main.html
         elm make src/Font.elm --output=./gh-pages/Font.html
         elm make src/Extra/Font.elm --output=./gh-pages/MSDF.html
         elm make src/Extra/JumpGun.elm --output=./gh-pages/JumpGun.html
         elm make src/Extra/Mario.elm --output=./gh-pages/Mario.html
-        elm make src/Extra/Zindex.elm --output=./gh-pages/Zindex.html
+        elm make src/Zindex.elm --output=./gh-pages/Zindex.html
         elm make src/Main.elm --output=./gh-pages/Main.html
         node build-assets.js
       working-directory: examples
