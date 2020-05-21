@@ -219,7 +219,7 @@ defaultEntitySettings : List Setting
 defaultEntitySettings =
     [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha
     , WebGL.colorMask True True True False
-    , DepthTest.lessOrEqual { write = True, near = 1, far = -1 }
+    , DepthTest.lessOrEqual { write = True, near = 0, far = 1 }
     ]
 
 
