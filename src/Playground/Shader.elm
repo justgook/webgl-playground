@@ -185,6 +185,7 @@ fragImage =
             vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
             gl_FragColor = texture2D(uImg, pixel);
             gl_FragColor.a *= uA;
+            if(gl_FragColor.a <= 0.025) discard;
         }
     |]
 
@@ -201,6 +202,7 @@ fragImageColor =
         void main () {
             vec2 pixel = ((floor(uv * uImgSize) + 0.5) * 2.0 ) / uImgSize / 2.0;
             gl_FragColor = texture2D(uImg, pixel) * color;
+            if(gl_FragColor.a <= 0.025) discard;
         }
     |]
 
@@ -213,6 +215,7 @@ fragFill =
         uniform vec4 color;
         void main () {
             gl_FragColor = color;
+            if(gl_FragColor.a <= 0.025) discard;
         }
     |]
 
@@ -227,6 +230,7 @@ fragCircle =
         void main () {
             gl_FragColor = color;
             gl_FragColor.a *= smoothstep(0.01,0.04,1.-length(uv));
+            if(gl_FragColor.a <= 0.025) discard;
         }
     |]
 
@@ -247,6 +251,7 @@ fragNgon =
             float b = 6.28319 / n;
             gl_FragColor = color;
             gl_FragColor.a -= smoothstep(0.5, 0.5001, cos(floor(.5 + a/b)*b-a)*length(uv));
+            if(gl_FragColor.a <= 0.025) discard;
         }
     |]
 
@@ -300,6 +305,7 @@ fragImageSaturation =
         void main () {
             gl_FragColor = texture2D(uImg, uv);
             gl_FragColor.xyz=saturation(gl_FragColor.xyz, adjustment);
+            if(gl_FragColor.a <= 0.025) discard;
         }
     |]
 
@@ -317,6 +323,7 @@ rotSprite =
         void main () {
             vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;
             gl_FragColor = texture2D(uImg, pixel);
+            if(gl_FragColor.a <= 0.025) discard;
 
         }
     |]

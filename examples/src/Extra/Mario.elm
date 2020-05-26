@@ -1,4 +1,4 @@
-module Extra.Mario exposing (Memory, init, main, update, view)
+module Extra.Mario exposing (Memory, init, main, spriteSheet, update, view)
 
 import Array exposing (Array)
 import Playground exposing (..)

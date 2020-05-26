@@ -126,5 +126,6 @@ void main () {
    vec2 pixel = (floor(tile * uTileSize + fragmentOffsetPx) + 0.5) / uAtlasSize;
    gl_FragColor = texture2D(uAtlas, pixel);
    gl_FragColor.a *= float(index != 0.);
+   if(gl_FragColor.a <= 0.025) discard;
 }
     |]
