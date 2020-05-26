@@ -179,10 +179,6 @@ All tiles is fixed size and placed in grid
 -}
 tile : Texture -> Vec2 -> Vec2 -> Float -> Render
 tile spriteSheet spriteSize imageSize index translate scaleRotateSkew z opacity =
-    let
-        _ =
-            Debug.log "tile" z
-    in
     WebGL.entityWith
         defaultEntitySettings
         Shader.vertTile
