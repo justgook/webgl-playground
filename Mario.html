@@ -7185,14 +7185,13 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
 var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
 	return {$: 'Shape2d', a: a};
 };
-var $justgook$webgl_shape$WebGL$Shape2d$setZ = F2(
-	function (parentZ, _v0) {
+var $justgook$webgl_shape$WebGL$Shape2d$setOZ = F3(
+	function (o, z, _v0) {
 		var shape = _v0.a;
-		var z = shape.z;
 		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
-				{z: parentZ + z}));
+				{o: o * shape.o, z: z + shape.z}));
 	});
 var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
@@ -7209,8 +7208,8 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
 		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
 			{x: a13, y: a23}));
 };
-var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
-	function (screen, textures, parent, parentOpacity, _v0, acc) {
+var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F5(
+	function (screen, textures, parent, _v0, acc) {
 		renderShape:
 		while (true) {
 			var x = _v0.a.x;
@@ -7239,7 +7238,7 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					return _Utils_Tuple2(
 						A2(
 							$elm$core$List$cons,
-							A4(fn, t2, t1, z, o * parentOpacity),
+							A4(fn, t2, t1, z, o),
 							entities),
 						missing);
 				case 'Textured':
@@ -7248,16 +7247,15 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					var _v3 = A2($elm$core$Dict$get, src, textures);
 					if (_v3.$ === 'Just') {
 						var texture = _v3.a;
+						var shape = fn(texture);
 						var $temp$screen = screen,
 							$temp$textures = textures,
 							$temp$parent = A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
-							$temp$parentOpacity = o * parentOpacity,
-							$temp$_v0 = fn(texture),
+							$temp$_v0 = A3($justgook$webgl_shape$WebGL$Shape2d$setOZ, o, z, shape),
 							$temp$acc = acc;
 						screen = $temp$screen;
 						textures = $temp$textures;
 						parent = $temp$parent;
-						parentOpacity = $temp$parentOpacity;
 						_v0 = $temp$_v0;
 						acc = $temp$acc;
 						continue renderShape;
@@ -7269,13 +7267,12 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 				default:
 					var shapes = form.a;
 					var fn = function (shape) {
-						return A5(
+						return A4(
 							$justgook$webgl_shape$WebGL$Shape2d$renderShape,
 							screen,
 							textures,
 							A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
-							o * parentOpacity,
-							A2($justgook$webgl_shape$WebGL$Shape2d$setZ, z, shape));
+							A3($justgook$webgl_shape$WebGL$Shape2d$setOZ, o, z, shape));
 					};
 					return A3($elm$core$List$foldr, fn, acc, shapes);
 			}
@@ -7285,7 +7282,7 @@ var $justgook$webgl_shape$WebGL$Shape2d$toEntities = F3(
 	function (textures, screen, shapes) {
 		return A3(
 			$elm$core$List$foldr,
-			A4($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity, 1),
+			A3($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity),
 			_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
 			shapes);
 	});
@@ -9067,7 +9064,7 @@ var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragFill = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color'}
 };
@@ -9203,7 +9200,7 @@ var $author$project$Playground$Extra$size = function (t) {
 		$elm_explorations$webgl$WebGL$Texture$size(t));
 };
 var $author$project$Playground$Shader$fragImage = {
-	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform float uA;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel);\n            gl_FragColor.a *= uA;\n        }\n    ',
+	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform float uA;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel);\n            gl_FragColor.a *= uA;\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
 	uniforms: {uA: 'uA', uImg: 'uImg', uImgSize: 'uImgSize'}
 };

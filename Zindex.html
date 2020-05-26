@@ -7147,14 +7147,13 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
 var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
 	return {$: 'Shape2d', a: a};
 };
-var $justgook$webgl_shape$WebGL$Shape2d$setZ = F2(
-	function (parentZ, _v0) {
+var $justgook$webgl_shape$WebGL$Shape2d$setOZ = F3(
+	function (o, z, _v0) {
 		var shape = _v0.a;
-		var z = shape.z;
 		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
-				{z: parentZ + z}));
+				{o: o * shape.o, z: z + shape.z}));
 	});
 var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
@@ -7171,8 +7170,8 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
 		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
 			{x: a13, y: a23}));
 };
-var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
-	function (screen, textures, parent, parentOpacity, _v0, acc) {
+var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F5(
+	function (screen, textures, parent, _v0, acc) {
 		renderShape:
 		while (true) {
 			var x = _v0.a.x;
@@ -7201,7 +7200,7 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					return _Utils_Tuple2(
 						A2(
 							$elm$core$List$cons,
-							A4(fn, t2, t1, z, o * parentOpacity),
+							A4(fn, t2, t1, z, o),
 							entities),
 						missing);
 				case 'Textured':
@@ -7210,16 +7209,15 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					var _v3 = A2($elm$core$Dict$get, src, textures);
 					if (_v3.$ === 'Just') {
 						var texture = _v3.a;
+						var shape = fn(texture);
 						var $temp$screen = screen,
 							$temp$textures = textures,
 							$temp$parent = A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
-							$temp$parentOpacity = o * parentOpacity,
-							$temp$_v0 = fn(texture),
+							$temp$_v0 = A3($justgook$webgl_shape$WebGL$Shape2d$setOZ, o, z, shape),
 							$temp$acc = acc;
 						screen = $temp$screen;
 						textures = $temp$textures;
 						parent = $temp$parent;
-						parentOpacity = $temp$parentOpacity;
 						_v0 = $temp$_v0;
 						acc = $temp$acc;
 						continue renderShape;
@@ -7231,13 +7229,12 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 				default:
 					var shapes = form.a;
 					var fn = function (shape) {
-						return A5(
+						return A4(
 							$justgook$webgl_shape$WebGL$Shape2d$renderShape,
 							screen,
 							textures,
 							A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
-							o * parentOpacity,
-							A2($justgook$webgl_shape$WebGL$Shape2d$setZ, z, shape));
+							A3($justgook$webgl_shape$WebGL$Shape2d$setOZ, o, z, shape));
 					};
 					return A3($elm$core$List$foldr, fn, acc, shapes);
 			}
@@ -7247,7 +7244,7 @@ var $justgook$webgl_shape$WebGL$Shape2d$toEntities = F3(
 	function (textures, screen, shapes) {
 		return A3(
 			$elm$core$List$foldr,
-			A4($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity, 1),
+			A3($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity),
 			_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
 			shapes);
 	});
@@ -8937,33 +8934,25 @@ var $author$project$Playground$fade = F2(
 				shape,
 				{o: o}));
 	});
-var $author$project$Playground$move = F3(
-	function (dx, dy, _v0) {
-		var shape = _v0.a;
-		var x = shape.x;
-		var y = shape.y;
-		var a = shape.a;
-		var sx = shape.sx;
-		var sy = shape.sy;
-		var o = shape.o;
-		var form = shape.form;
-		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
-			_Utils_update(
-				shape,
-				{x: x + dx, y: y + dy}));
-	});
-var $author$project$Playground$moveZ = F2(
-	function (z, _v0) {
-		var shape = _v0.a;
-		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
-			_Utils_update(
-				shape,
-				{z: z}));
-	});
+var $author$project$Extra$Mario$spriteSheet = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAAbCAMAAACA2rsUAAAAAXNSR0IArs4c6QAAADNQTFRFAAAAEgkELg0AdgACUS0TAyVivAADq2c6+PYv2I1lEEWhFJfbko6G/bKIxse19PXnAAAA2GphuwAAABF0Uk5TAP////////////////////8QFUChAAACFklEQVRIib2WiW6EMAxEKTloKCT+/6+tHedwIFSmlWqJbdeZ8TzCgliWXEC1/H+BidGYS7QW5i/QkLxPHqN/AaOHvjeBy3uZrIXRQ9+amJgLo7tdC6OGnjTBcGF0s2thXkBPmrQJIe9DD1bC6KFnTdyFr/MrhbCuYqIK5oVu0sRgCJBODA6hKVUwL3STJoTzPPFY1/UUwSoYtW5KGKg+MDk0sxZGDT1rfpQ6EectjB561uRYmauG0ermzdIVDTXMO921uYAzxuEx3PEqGKHjHj4kktDBT4SY6/3u8B4bHmh3GMA7Akv2AEzV5SbEFDGNWYwR0pl5L7nDw/AOQ0P5IdB6kKIbzJASiQqMGDkxYzAWy0TvBgMHDeUnXw+uuuKm+d53GB8TPJkX+Nz3TxLGeEiYiDUEx+rtZ3wUaD4XOmU4BHRECzyZcVfRSzm4JGFihmwZOBLJ2Oou0FiEyRm7MXUHaQQ8mnmvOUfCDMGwWYchOM7Q9btA40fNyDDAl8/hT5xGPpjJ7XJy22pwtVHfGWDbrHVkRqe0uh2sxQwR7IC0LMv2B3PJce5oudkHLh74x0IPLmWtTKYYC/lGqleliNu+PJjJ7dwgpFE4QOjITO8Qdy+ubFndaThIiOZmoBhre6eM4pWtBfOpi14xQ127BA3fJ2aKoUO4y6hR1v8RwQx8e+m9kczM0OuifHpZF80HyQ/v+HnpGwFKQ0StZOtsAAAAAElFTkSuQmCC';
 var $justgook$webgl_shape$WebGL$Shape2d$Form = F3(
 	function (a, b, c) {
 		return {$: 'Form', a: a, b: b, c: c};
 	});
+var $justgook$webgl_shape$WebGL$Shape2d$Textured = F2(
+	function (a, b) {
+		return {$: 'Textured', a: a, b: b};
+	});
+var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
+var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
+var $author$project$Playground$Extra$size = function (t) {
+	return function (_v0) {
+		var w = _v0.a;
+		var h = _v0.b;
+		return A2($elm_explorations$linear_algebra$Math$Vector2$vec2, w, h);
+	}(
+		$elm_explorations$webgl$WebGL$Texture$size(t));
+};
 var $elm_explorations$webgl$WebGL$Internal$Blend = function (a) {
 	return function (b) {
 		return function (c) {
@@ -9054,10 +9043,10 @@ var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 		{far: 1, near: 0, write: true})
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
-var $author$project$Playground$Shader$fragFill = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n        }\n    ',
+var $author$project$Playground$Shader$fragImage = {
+	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform float uA;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel);\n            gl_FragColor.a *= uA;\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
-	uniforms: {color: 'color'}
+	uniforms: {uA: 'uA', uImg: 'uImg', uImgSize: 'uImgSize'}
 };
 var $elm_explorations$webgl$WebGL$Mesh1 = F2(
 	function (a, b) {
@@ -9065,7 +9054,6 @@ var $elm_explorations$webgl$WebGL$Mesh1 = F2(
 	});
 var $elm_explorations$webgl$WebGL$triangleStrip = $elm_explorations$webgl$WebGL$Mesh1(
 	{elemSize: 1, indexSize: 0, mode: 5});
-var $elm_explorations$linear_algebra$Math$Vector2$vec2 = _MJS_v2;
 var $author$project$Playground$Shader$mesh = $elm_explorations$webgl$WebGL$triangleStrip(
 	_List_fromArray(
 		[
@@ -9082,6 +9070,103 @@ var $author$project$Playground$Shader$mesh = $elm_explorations$webgl$WebGL$trian
 			aP: A2($elm_explorations$linear_algebra$Math$Vector2$vec2, 1, 1)
 		}
 		]));
+var $author$project$Playground$Shader$vertTile = {
+	src: '\n            precision mediump float;\n            attribute vec2 aP;\n            uniform vec4 uT;\n            uniform vec2 uP;\n            uniform float z;\n            uniform float index;\n            uniform vec2 spriteSize;\n            uniform vec2 uImgSize;\n            varying vec2 uv;\n            vec2 edgeFix = vec2(0.0000001, -0.0000001);\n            void main () {\n                vec2 ratio = spriteSize / uImgSize;\n                float row = (uImgSize.y / spriteSize.y - 1.0) - floor((index + 0.5) * ratio.x);\n                float column = floor(mod((index + 0.5), uImgSize.x / spriteSize.x));\n                vec2 offset = vec2(column, row) * ratio;\n                uv = (aP * 0.5 + 0.5) * ratio + offset + edgeFix;\n                gl_Position = vec4(aP * mat2(uT) + uP, z  * -1.19209304e-7, 1.0);\n            }\n        ',
+	attributes: {aP: 'aP'},
+	uniforms: {index: 'index', spriteSize: 'spriteSize', uImgSize: 'uImgSize', uP: 'uP', uT: 'uT', z: 'z'}
+};
+var $author$project$Playground$Render$tile = F8(
+	function (spriteSheet, spriteSize, imageSize, index, translate, scaleRotateSkew, z, opacity) {
+		return A5(
+			$elm_explorations$webgl$WebGL$entityWith,
+			$author$project$Playground$Render$defaultEntitySettings,
+			$author$project$Playground$Shader$vertTile,
+			$author$project$Playground$Shader$fragImage,
+			$author$project$Playground$Shader$mesh,
+			{index: index, spriteSize: spriteSize, uA: opacity, uImg: spriteSheet, uImgSize: imageSize, uP: translate, uT: scaleRotateSkew, z: z});
+	});
+var $author$project$Playground$Extra$tile = F4(
+	function (tileW, tileH, tileset, index) {
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			{
+				a: 0,
+				form: A2(
+					$justgook$webgl_shape$WebGL$Shape2d$Textured,
+					tileset,
+					function (t) {
+						return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+							{
+								a: 0,
+								form: A3(
+									$justgook$webgl_shape$WebGL$Shape2d$Form,
+									tileW,
+									tileH,
+									A4(
+										$author$project$Playground$Render$tile,
+										t,
+										A2($elm_explorations$linear_algebra$Math$Vector2$vec2, tileW, tileH),
+										$author$project$Playground$Extra$size(t),
+										index)),
+								o: 1,
+								sx: 1,
+								sy: 1,
+								x: 0,
+								y: 0,
+								z: 0
+							});
+					}),
+				o: 1,
+				sx: 1,
+				sy: 1,
+				x: 0,
+				y: 0,
+				z: 0
+			});
+	});
+var $author$project$Zindex$mario = A3($author$project$Playground$Extra$tile, 20, 27, $author$project$Extra$Mario$spriteSheet);
+var $author$project$Playground$move = F3(
+	function (dx, dy, _v0) {
+		var shape = _v0.a;
+		var x = shape.x;
+		var y = shape.y;
+		var a = shape.a;
+		var sx = shape.sx;
+		var sy = shape.sy;
+		var o = shape.o;
+		var form = shape.form;
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			_Utils_update(
+				shape,
+				{x: x + dx, y: y + dy}));
+	});
+var $author$project$Playground$moveY = F2(
+	function (dy, _v0) {
+		var shape = _v0.a;
+		var x = shape.x;
+		var y = shape.y;
+		var a = shape.a;
+		var sx = shape.sx;
+		var sy = shape.sy;
+		var o = shape.o;
+		var form = shape.form;
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			_Utils_update(
+				shape,
+				{y: y + dy}));
+	});
+var $author$project$Playground$moveZ = F2(
+	function (z, _v0) {
+		var shape = _v0.a;
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			_Utils_update(
+				shape,
+				{z: z}));
+	});
+var $author$project$Playground$Shader$fragFill = {
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
+	attributes: {},
+	uniforms: {color: 'color'}
+};
 var $elm$core$Basics$composeR = F3(
 	function (f, g, x) {
 		return g(
@@ -9137,6 +9222,21 @@ var $author$project$Playground$red = A2(
 	$elm$core$Maybe$withDefault,
 	A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
 	$author$project$Playground$hexColor2Vec3('#cc0000'));
+var $author$project$Playground$scale = F2(
+	function (ns, _v0) {
+		var shape = _v0.a;
+		var x = shape.x;
+		var y = shape.y;
+		var a = shape.a;
+		var sx = shape.sx;
+		var sy = shape.sy;
+		var o = shape.o;
+		var form = shape.form;
+		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
+			_Utils_update(
+				shape,
+				{sx: sx * ns, sy: sy * ns}));
+	});
 var $author$project$Playground$square = F2(
 	function (color, n) {
 		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
@@ -9169,6 +9269,16 @@ var $author$project$Zindex$view = _List_fromArray(
 			-15,
 			0,
 			A2($author$project$Playground$square, $author$project$Playground$red, 50))),
+		A2(
+		$author$project$Playground$scale,
+		2,
+		A2(
+			$author$project$Playground$moveZ,
+			10,
+			A2(
+				$author$project$Playground$moveY,
+				25,
+				$author$project$Zindex$mario(0)))),
 		A2(
 		$author$project$Playground$moveZ,
 		1,

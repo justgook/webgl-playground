@@ -7149,14 +7149,13 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$scale = F3(
 var $justgook$webgl_shape$WebGL$Shape2d$Shape2d = function (a) {
 	return {$: 'Shape2d', a: a};
 };
-var $justgook$webgl_shape$WebGL$Shape2d$setZ = F2(
-	function (parentZ, _v0) {
+var $justgook$webgl_shape$WebGL$Shape2d$setOZ = F3(
+	function (o, z, _v0) {
 		var shape = _v0.a;
-		var z = shape.z;
 		return $justgook$webgl_shape$WebGL$Shape2d$Shape2d(
 			_Utils_update(
 				shape,
-				{z: parentZ + z}));
+				{o: o * shape.o, z: z + shape.z}));
 	});
 var $elm_explorations$linear_algebra$Math$Vector2$fromRecord = _MJS_v2fromRecord;
 var $elm_explorations$linear_algebra$Math$Vector4$fromRecord = _MJS_v4fromRecord;
@@ -7173,8 +7172,8 @@ var $justgook$webgl_shape$WebGL$Shape2d$Transformation$toGL = function (_v0) {
 		$elm_explorations$linear_algebra$Math$Vector2$fromRecord(
 			{x: a13, y: a23}));
 };
-var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
-	function (screen, textures, parent, parentOpacity, _v0, acc) {
+var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F5(
+	function (screen, textures, parent, _v0, acc) {
 		renderShape:
 		while (true) {
 			var x = _v0.a.x;
@@ -7203,7 +7202,7 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					return _Utils_Tuple2(
 						A2(
 							$elm$core$List$cons,
-							A4(fn, t2, t1, z, o * parentOpacity),
+							A4(fn, t2, t1, z, o),
 							entities),
 						missing);
 				case 'Textured':
@@ -7212,16 +7211,15 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 					var _v3 = A2($elm$core$Dict$get, src, textures);
 					if (_v3.$ === 'Just') {
 						var texture = _v3.a;
+						var shape = fn(texture);
 						var $temp$screen = screen,
 							$temp$textures = textures,
 							$temp$parent = A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
-							$temp$parentOpacity = o * parentOpacity,
-							$temp$_v0 = fn(texture),
+							$temp$_v0 = A3($justgook$webgl_shape$WebGL$Shape2d$setOZ, o, z, shape),
 							$temp$acc = acc;
 						screen = $temp$screen;
 						textures = $temp$textures;
 						parent = $temp$parent;
-						parentOpacity = $temp$parentOpacity;
 						_v0 = $temp$_v0;
 						acc = $temp$acc;
 						continue renderShape;
@@ -7233,13 +7231,12 @@ var $justgook$webgl_shape$WebGL$Shape2d$renderShape = F6(
 				default:
 					var shapes = form.a;
 					var fn = function (shape) {
-						return A5(
+						return A4(
 							$justgook$webgl_shape$WebGL$Shape2d$renderShape,
 							screen,
 							textures,
 							A6($justgook$webgl_shape$WebGL$Shape2d$createTrans, x * 2, y * 2, sx, sy, a, parent),
-							o * parentOpacity,
-							A2($justgook$webgl_shape$WebGL$Shape2d$setZ, z, shape));
+							A3($justgook$webgl_shape$WebGL$Shape2d$setOZ, o, z, shape));
 					};
 					return A3($elm$core$List$foldr, fn, acc, shapes);
 			}
@@ -7249,7 +7246,7 @@ var $justgook$webgl_shape$WebGL$Shape2d$toEntities = F3(
 	function (textures, screen, shapes) {
 		return A3(
 			$elm$core$List$foldr,
-			A4($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity, 1),
+			A3($justgook$webgl_shape$WebGL$Shape2d$renderShape, screen, textures, $justgook$webgl_shape$WebGL$Shape2d$Transformation$identity),
 			_Utils_Tuple2(_List_Nil, $elm$core$Set$empty),
 			shapes);
 	});
@@ -8964,7 +8961,7 @@ var $author$project$Playground$Render$defaultEntitySettings = _List_fromArray(
 	]);
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
 var $author$project$Playground$Shader$fragCircle = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        varying vec2 uv;\n        void main () {\n            gl_FragColor = color;\n            gl_FragColor.a *= smoothstep(0.01,0.04,1.-length(uv));\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        varying vec2 uv;\n        void main () {\n            gl_FragColor = color;\n            gl_FragColor.a *= smoothstep(0.01,0.04,1.-length(uv));\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color'}
 };
@@ -9699,7 +9696,7 @@ var $author$project$Playground$moveX = F2(
 	});
 var $elm$core$Basics$pi = _Basics_pi;
 var $author$project$Playground$Shader$fragFill = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        void main () {\n            gl_FragColor = color;\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color'}
 };
@@ -9762,7 +9759,7 @@ var $author$project$Playground$rotate = F2(
 				}));
 	});
 var $author$project$Playground$Shader$fragNgon = {
-	src: '\n        precision mediump float;\n        uniform vec4 color;\n        uniform float n;\n        varying vec2 uv;\n        void main () {\n            float angle = 3.1415926535897932384626433832795 / n * 3.0;\n            float a = atan(uv.x,uv.y) + angle;\n            float b = 6.28319 / n;\n            gl_FragColor = color;\n            gl_FragColor.a -= smoothstep(0.5, 0.5001, cos(floor(.5 + a/b)*b-a)*length(uv));\n        }\n    ',
+	src: '\n        precision mediump float;\n        uniform vec4 color;\n        uniform float n;\n        varying vec2 uv;\n        void main () {\n            float angle = 3.1415926535897932384626433832795 / n * 3.0;\n            float a = atan(uv.x,uv.y) + angle;\n            float b = 6.28319 / n;\n            gl_FragColor = color;\n            gl_FragColor.a -= smoothstep(0.5, 0.5001, cos(floor(.5 + a/b)*b-a)*length(uv));\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
 	uniforms: {color: 'color', n: 'n'}
 };
@@ -9954,7 +9951,7 @@ var $elm$core$Basics$abs = function (n) {
 };
 var $elm_explorations$webgl$WebGL$Texture$size = _Texture_size;
 var $author$project$Playground$Shader$fragImage = {
-	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform float uA;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel);\n            gl_FragColor.a *= uA;\n        }\n    ',
+	src: '\n        precision mediump float;\n        varying vec2 uv;\n        uniform vec2 uImgSize;\n        uniform sampler2D uImg;\n        uniform float uA;\n        void main () {\n            vec2 pixel = (floor(uv * uImgSize) + 0.5) / uImgSize;\n            gl_FragColor = texture2D(uImg, pixel);\n            gl_FragColor.a *= uA;\n            if(gl_FragColor.a <= 0.025) discard;\n        }\n    ',
 	attributes: {},
 	uniforms: {uA: 'uA', uImg: 'uImg', uImgSize: 'uImgSize'}
 };
@@ -10674,7 +10671,7 @@ var $author$project$Extra$Jump$TileMap$a3 = 'data:image/png;base64,iVBORw0KGgoAA
 var $author$project$Extra$Jump$TileMap$a4 = 'data:image/png;base64,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';
 var $author$project$Extra$Jump$TileMap$bg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAACWCAYAAAB3qaIPAAADYUlEQVR4nO3dP6prVRjGYe9Jjo1OwMpK8M8EdAIWYmWhthY6AQWxslAnoBNQECsbBWsdgSJWNjoBncA9SfBdiBAuklxy74aVdz8PfOurAtlZv+oETu49AUUETRVBU0XQVBE0VQRNFUFTRdBTuv0gx7ibM3P3STZH8qEwn9uvcoy7OTN3b2ZzJB8K87n9Oce4mzNz90I2R/KhMJ/buxzjbo7mXmbs47m/y+ZIPhTm8+TzOcbdnJn7v2RzJB8K9BA0VQRNlZUEffNajvGsC8zhy2wmkQtZg5sPc4xnzWwe+Bvv/p1/96VzeD+bSeRC1uDm6xzjWTOPPehXs5lELmQNbn7NMZ51gTk8k80kciFrcHPIkWf9vy8nHnX2f2UziVzIGmxeyjGedYHZ/5jNJHIha7B5O8d41gVm/3k2k8iFrMHmsxzjWReY/bvZTCIXsgab73OMZ11g9i9nM4lcyBps/swxnnWB2T+VzSRyIRd7NjNef2p+z0xg+3SO8X4WmN0f2UwiF3Kx1zPj9afm28wEtq/kGO9ngdl9l80kciEX+ygzXn9qPs5MYPtejvF+Fpjdp9lMIhdysW8y4/Wn5o3MBLZf5BjvZ4HZvZXNJHIhF/stM15/ap7LTGD7U47xfhaY3YvZTCIXsgbbv3OMZ30M8+DX53f7bCaRC4EegqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKmysqD/+7e6hx+yKZTLhR6CpoqgqSJoqgiaKg8RtB9S53okxHP8kDrXIyGe44fUuR4J8Rw/pM71SIjn+CF1rkdChB6CpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoqgqaKoKkiaKoImiqCpoqgqSJoqgiaKoKmiqCpImiqCJoq/wCjsEOXcknw0gAAAABJRU5ErkJggg==';
 var $author$project$Playground$Extra$Tilemap$fragTilemap = {
-	src: '\nprecision mediump float;\nvarying vec2 uv;\nuniform sampler2D uAtlas;\nuniform sampler2D uLut;\nuniform vec2 uAtlasSize;\nuniform vec2 uLutSize;\nuniform vec2 uTileSize;\nuniform float uA;\n\nfloat color2float(vec4 color) {\n\n    return\n    color.a * 255.0\n    + color.b * 256.0 * 255.0\n    + color.g * 256.0 * 256.0 * 255.0\n    + color.r * 256.0 * 256.0 * 256.0 * 255.0;\n    }\n\n/**\n * Returns accurate MOD when arguments are approximate integers.\n */\nfloat modI(float a,float b) {\n    float m=a-floor((a+0.5)/b)*b;\n    return floor(m+0.5);\n}\n\nvoid main () {\n   vec2 point = floor(uv * uLutSize);\n   vec2 offset = fract(uv * uLutSize);\n\n   //(2i + 1)/(2N) Pixel center\n   vec2 coordinate = (point + 0.5) / uLutSize;\n   float index = color2float(texture2D(uLut, coordinate));\n   if (index <= 0.0) discard;\n   vec2 grid = uAtlasSize / uTileSize;\n   // tile indexes in uAtlas starts from zero, but in lut zero is used for\n   // \"none\" placeholder\n   vec2 tile = vec2(modI((index - 1.), grid.x), int(index - 1.) / int(grid.x));\n   // inverting reading botom to top\n   tile.y = grid.y - tile.y - 1.;\n   vec2 fragmentOffsetPx = floor(offset * uTileSize);\n   //(2i + 1)/(2N) Pixel center\n   vec2 pixel = (floor(tile * uTileSize + fragmentOffsetPx) + 0.5) / uAtlasSize;\n   gl_FragColor = texture2D(uAtlas, pixel);\n   gl_FragColor.a *= float(index != 0.);\n}\n    ',
+	src: '\nprecision mediump float;\nvarying vec2 uv;\nuniform sampler2D uAtlas;\nuniform sampler2D uLut;\nuniform vec2 uAtlasSize;\nuniform vec2 uLutSize;\nuniform vec2 uTileSize;\nuniform float uA;\n\nfloat color2float(vec4 color) {\n\n    return\n    color.a * 255.0\n    + color.b * 256.0 * 255.0\n    + color.g * 256.0 * 256.0 * 255.0\n    + color.r * 256.0 * 256.0 * 256.0 * 255.0;\n    }\n\n/**\n * Returns accurate MOD when arguments are approximate integers.\n */\nfloat modI(float a,float b) {\n    float m=a-floor((a+0.5)/b)*b;\n    return floor(m+0.5);\n}\n\nvoid main () {\n   vec2 point = floor(uv * uLutSize);\n   vec2 offset = fract(uv * uLutSize);\n\n   //(2i + 1)/(2N) Pixel center\n   vec2 coordinate = (point + 0.5) / uLutSize;\n   float index = color2float(texture2D(uLut, coordinate));\n   if (index <= 0.0) discard;\n   vec2 grid = uAtlasSize / uTileSize;\n   // tile indexes in uAtlas starts from zero, but in lut zero is used for\n   // \"none\" placeholder\n   vec2 tile = vec2(modI((index - 1.), grid.x), int(index - 1.) / int(grid.x));\n   // inverting reading botom to top\n   tile.y = grid.y - tile.y - 1.;\n   vec2 fragmentOffsetPx = floor(offset * uTileSize);\n   //(2i + 1)/(2N) Pixel center\n   vec2 pixel = (floor(tile * uTileSize + fragmentOffsetPx) + 0.5) / uAtlasSize;\n   gl_FragColor = texture2D(uAtlas, pixel);\n   gl_FragColor.a *= float(index != 0.);\n   if(gl_FragColor.a <= 0.025) discard;\n}\n    ',
 	attributes: {},
 	uniforms: {uA: 'uA', uAtlas: 'uAtlas', uAtlasSize: 'uAtlasSize', uLut: 'uLut', uLutSize: 'uLutSize', uTileSize: 'uTileSize'}
 };
