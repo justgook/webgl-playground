@@ -9,7 +9,7 @@
   "author": "Romāns Potašovs <justgook@gmail.com>",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "@actions/core": "1.2.0",
+    "@actions/core": "1.2.6",
     "@actions/exec": "1.0.2"
   }
 }
