@@ -1,4 +1,6 @@
 # WebGL Playground
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjustgook%2Fwebgl-playground.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjustgook%2Fwebgl-playground?ref=badge_shield)
+
 
 Fork of [evancz/elm-playground](https://package.elm-lang.org/packages/evancz/elm-playground/latest/), but with [WebGL](https://package.elm-lang.org/packages/elm-explorations/webgl/latest/) backend.
 
@@ -96,3 +98,7 @@ I started off trying to make Pong, then worked on games like Breakout and Space 
   1. `Number` - removed - just use `Float`
   
   
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fjustgook%2Fwebgl-playground.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fjustgook%2Fwebgl-playground?ref=badge_large)
