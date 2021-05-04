@@ -96,22 +96,28 @@ module Playground exposing
 -}
 
 import Browser
-import Browser.Dom as Dom
-import Browser.Events
-import Dict exposing (Dict)
 import Math.Vector2 exposing (vec2)
 import Math.Vector3
-import Playground.Extra.Font exposing (tileFont)
 import Playground.Font.SimpleMood as SimpleMood
-import Playground.Internal as Internal exposing (Msg(..), Playground(..), TextureManager, create, subscriptions, viewWrap)
+import Playground.Internal as Internal exposing (Msg(..), Playground(..), PlaygroundModel)
 import Playground.Polygon exposing (signedArea, triangulate)
-import Playground.Render as Render
 import Set exposing (Set)
-import Task exposing (Task)
-import Time
-import WebGL exposing (Entity)
-import WebGL.Shape2d exposing (Form(..), Shape2d(..), toEntities)
-import WebGL.Texture as Texture
+import WebGL.Shape2d as Shape2d
+import WebGL.Shape2d.Render as Render
+import WebGL.Shape2d.TexturedShape as TexturedShape exposing (TextureLoader(..), TexturedShape)
+import WebGL.Shape2d.Util
+import WebGL.Texture as Texture exposing (Texture)
+
+
+{-| Playground State
+-}
+type alias Playground memory =
+    Internal.Playground memory
+
+
+{-| -}
+type alias Msg =
+    Internal.Msg
 
 
 
@@ -133,29 +139,20 @@ import WebGL.Texture as Texture
 picture : List Shape -> Program () (Playground ()) Msg
 picture shapes =
     let
-        { init, update } =
-            create (\_ _ -> shapes) (\_ m -> m) ()
+        view _ =
+            shapes
 
-        view (Playground { computer, entities }) =
-            { title = "Playground"
-            , body = viewWrap computer.screen entities
-            }
+        initModel =
+            Internal.initModel ()
+
+        ( entities, textures, cmd ) =
+            Internal.render view (Playground initModel)
     in
     Browser.document
-        { init =
-            \_ ->
-                init
-                    |> Tuple.mapSecond (\cmd -> [ Task.perform Tick Time.now, cmd ] |> Cmd.batch)
-        , view = view
-        , update =
-            \msg m ->
-                case msg of
-                    Tick _ ->
-                        update msg m
-
-                    _ ->
-                        ( update msg m |> Tuple.first, Task.perform Tick Time.now )
-        , subscriptions = \_ -> Internal.subscriptions.resize
+        { init = \_ -> ( Playground { initModel | entities = entities, textures = textures }, Cmd.batch [ cmd, Internal.requestScreen ] )
+        , view = \(Playground m) -> { body = [ Shape2d.view m ], title = "Playground::Picture" }
+        , update = Internal.update view
+        , subscriptions = \_ -> Sub.map ScreenMsg Shape2d.resize
         }
 
 
@@ -458,7 +455,7 @@ and `delta` is the number of milliseconds since the previous animation frame.
 
 -}
 type alias Time =
-    Internal.Time
+    Shape2d.Time
 
 
 {-| Create an angle that cycles from 0 to 360 degrees over time.
@@ -570,31 +567,25 @@ and [`zigzag`](#zigzag) to move and rotate our shapes.
 animation : (Time -> List Shape) -> Program () (Playground ()) Msg
 animation viewFrame =
     let
-        { init, update } =
-            create (\{ time } _ -> viewFrame time) (\_ m -> m) ()
+        view { computer } =
+            viewFrame computer.time
 
-        view (Playground { computer, entities }) =
-            { title = "Playground"
-            , body = viewWrap computer.screen entities
-            }
+        initModel =
+            Internal.initModel ()
 
-        subs (Playground { visibility, computer }) =
-            case visibility of
-                Browser.Events.Hidden ->
-                    Browser.Events.onVisibilityChange VisibilityChanged
-
-                Browser.Events.Visible ->
-                    Sub.batch
-                        [ Internal.subscriptions.resize
-                        , Internal.subscriptions.time
-                        , Internal.subscriptions.visibility
-                        ]
+        ( entities, textures, cmd ) =
+            Internal.render view (Playground initModel)
     in
     Browser.document
-        { init = \_ -> init
-        , view = view
-        , update = update
-        , subscriptions = subs
+        { init = \_ -> ( Playground { initModel | entities = entities, textures = textures }, Cmd.batch [ cmd, Internal.requestScreen ] )
+        , view = \(Playground m) -> { body = [ Shape2d.view m ], title = "Playground::Animation" }
+        , update = Internal.update view
+        , subscriptions =
+            \_ ->
+                Sub.batch
+                    [ Sub.map ScreenMsg Shape2d.resize
+                    , Sub.map TimeMsg Shape2d.tick
+                    ]
         }
 
 
@@ -660,46 +651,28 @@ Notice that in the `update` we use information from the keyboard to update the
 game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Playground memory) Msg
 game viewMemory updateMemory initialMemory =
     let
-        { init, update } =
-            create viewMemory updateMemory initialMemory
+        view { computer, memory } =
+            viewMemory computer memory
 
-        subs (Playground { visibility, computer }) =
-            case visibility of
-                Browser.Events.Hidden ->
-                    Browser.Events.onVisibilityChange VisibilityChanged
+        initModel =
+            Internal.initModel initialMemory
 
-                Browser.Events.Visible ->
-                    Sub.batch
-                        [ subscriptions.keys
-                        , subscriptions.time
-                        , subscriptions.visibility
-                        , subscriptions.click
-                        , subscriptions.mouse
-                        , subscriptions.resize
-                        ]
-
-        view (Playground { computer, entities }) =
-            { title = "Playground"
-            , body = viewWrap computer.screen entities
-            }
+        ( entities, textures, cmd ) =
+            Internal.render view (Playground initModel)
     in
     Browser.document
-        { init = \_ -> init
-        , view = view
-        , update = update
-        , subscriptions = subs
+        { init = \_ -> ( Playground { initModel | entities = entities, textures = textures }, Cmd.batch [ cmd, Internal.requestScreen ] )
+        , view = \(Playground m) -> { body = [ Shape2d.view m ], title = "Playground::Game" }
+        , update = Internal.gameUpdate view updateMemory
+        , subscriptions =
+            \_ ->
+                Sub.batch
+                    [ Sub.map ScreenMsg Shape2d.resize
+                    , Sub.map TimeMsg Shape2d.tick
+                    , Sub.map KeyboardMsg Shape2d.keyboardSubscription
+                    , Sub.map MouseMsg Internal.mouseSubscription
+                    ]
         }
-
-
-{-| Playground State
--}
-type alias Playground memory =
-    Internal.Playground memory
-
-
-{-| -}
-type alias Msg =
-    Internal.Msg
 
 
 
@@ -713,7 +686,7 @@ Read on to see examples of [`circle`](#circle), [`rectangle`](#rectangle),
 
 -}
 type alias Shape =
-    Shape2d
+    TexturedShape String
 
 
 {-| Make circles:
@@ -729,17 +702,9 @@ the circle.
 
 -}
 circle : Color -> Float -> Shape
-circle color radius =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form (radius * 2) (radius * 2) (Render.circle color)
-        }
+circle color r =
+    Render.circle color
+        |> TexturedShape.shape (r * 2) (r * 2)
 
 
 {-| Make ovals:
@@ -752,16 +717,8 @@ You give the color, and then the width and height. So our `football` example is 
 -}
 oval : Color -> Float -> Float -> Shape
 oval color width height =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form width height (Render.circle color)
-        }
+    Render.circle color
+        |> TexturedShape.shape width height
 
 
 {-| Make squares. Here are two squares combined to look like an empty box:
@@ -780,16 +737,8 @@ be 80 pixels by 80 pixels.
 -}
 square : Color -> Float -> Shape
 square color n =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form n n (Render.rect color)
-        }
+    Render.rect color
+        |> TexturedShape.shape n n
 
 
 {-| Make rectangles. This example makes a red cross:
@@ -808,16 +757,8 @@ part of the cross, the thinner and taller part.
 -}
 rectangle : Color -> Float -> Float -> Shape
 rectangle color width height =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form width height (Render.rect color)
-        }
+    Render.rect color
+        |> TexturedShape.shape width height
 
 
 {-| Make triangles. So if you wanted to draw the Egyptian pyramids, you could
@@ -835,17 +776,9 @@ the pyramid is `200`. Pretty big!
 
 -}
 triangle : Color -> Float -> Shape
-triangle color radius =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form (radius * 2) (radius * 2) (Render.ngon 3 color)
-        }
+triangle color r =
+    Render.ngon 3 color
+        |> TexturedShape.shape (r * 2) (r * 2)
 
 
 {-| Make pentagons:
@@ -862,17 +795,9 @@ of the five points is 100 pixels.
 
 -}
 pentagon : Color -> Float -> Shape
-pentagon color radius =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form (radius * 2) (radius * 2) (Render.ngon 5 color)
-        }
+pentagon color r =
+    Render.ngon 5 color
+        |> TexturedShape.shape (r * 2) (r * 2)
 
 
 {-| Make hexagons:
@@ -891,17 +816,9 @@ honeycomb pattern!
 
 -}
 hexagon : Color -> Float -> Shape
-hexagon color radius =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1.75
-        , sy = 1.75
-        , o = 1
-        , form = Form (radius * 2) (radius * 2) (Render.ngon 6 color)
-        }
+hexagon color r =
+    Render.ngon 6 color
+        |> TexturedShape.shape (r * 2) (r * 2)
 
 
 {-| Make octagons:
@@ -916,17 +833,9 @@ from the center.
 
 -}
 octagon : Color -> Float -> Shape
-octagon color radius =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form (radius * 2) (radius * 2) (Render.ngon 8 color)
-        }
+octagon color r =
+    Render.ngon 8 color
+        |> TexturedShape.shape (r * 2) (r * 2)
 
 
 {-| Make any shape you want! Here is a very thin triangle:
@@ -960,16 +869,8 @@ polygon color points =
 
 
 polygonTriangle color data =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form = Form 2 2 (Render.triangle color data)
-        }
+    Render.triangle color data
+        |> TexturedShape.shape 1 1
 
 
 {-| Add some image from the internet:
@@ -985,35 +886,15 @@ You provide the width, height, and then the URL of the image you want to show.
 
 -}
 image : Float -> Float -> String -> Shape
-image width height src =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form =
-            Textured src
-                (\t ->
-                    Shape2d
-                        { x = 0
-                        , y = 0
-                        , z = 0
-                        , a = 0
-                        , sx = 1
-                        , sy = 1
-                        , o = 1
-                        , form =
-                            t
-                                |> Texture.size
-                                |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
-                                |> Render.image t
-                                |> Form width height
-                        }
-                )
-        }
+image width height =
+    TexturedShape.textured
+        (\t ->
+            t
+                |> Texture.size
+                |> (\( w, h ) -> Math.Vector2.vec2 (toFloat w) (toFloat h))
+                |> Render.image t
+                |> TexturedShape.shape width height
+        )
 
 
 {-| Show some words!
@@ -1029,8 +910,9 @@ You can use [`scale`](#scale) to make the words bigger or smaller.
 
 -}
 words : Color -> String -> Shape
-words =
-    tileFont wordsConfig
+words c tt =
+    [ WebGL.Shape2d.Util.tileFont wordsConfig c tt |> move (toFloat (String.length tt) * -8) 0 ]
+        |> group
 
 
 wordsConfig =
@@ -1071,8 +953,8 @@ them as a group. Maybe you want to put a bunch of stars in the sky:
 
 -}
 group : List Shape -> Shape
-group shapes =
-    Shape2d { x = 0, y = 0, z = 0, a = 0, sx = 1, sy = 1, o = 1, form = Group shapes }
+group =
+    TexturedShape.group
 
 
 
@@ -1097,8 +979,8 @@ group shapes =
 
 -}
 move : Float -> Float -> Shape -> Shape
-move dx dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | x = x + dx, y = y + dy }
+move =
+    Shape2d.move
 
 
 {-| Move a shape up by some Float of pixels. So if you wanted to make a tree
@@ -1134,8 +1016,8 @@ above the ground, you could move the sky up and the ground down:
 
 -}
 moveDown : Float -> Shape -> Shape
-moveDown dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | y = y - dy }
+moveDown dy =
+    Shape2d.move 0 -dy
 
 
 {-| Move shapes to the left.
@@ -1151,8 +1033,8 @@ moveDown dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
 
 -}
 moveLeft : Float -> Shape -> Shape
-moveLeft dx (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | x = x - dx }
+moveLeft dx =
+    Shape2d.move -dx 0
 
 
 {-| Move shapes to the right.
@@ -1189,8 +1071,8 @@ Using `moveX` feels a bit nicer here because the movement may be positive or neg
 
 -}
 moveX : Float -> Shape -> Shape
-moveX dx (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | x = x + dx }
+moveX dx =
+    Shape2d.move dx 0
 
 
 {-| Move the `y` coordinate of shape by some amount. Maybe you want to make grass along the bottom of the screen:
@@ -1213,8 +1095,8 @@ top of the screen, since the values are negative sometimes.
 
 -}
 moveY : Float -> Shape -> Shape
-moveY dy (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | y = y + dy }
+moveY dy =
+    Shape2d.move 0 dy
 
 
 {-| The `moveZ` specifies the stack order of a shapes.
@@ -1225,9 +1107,9 @@ A shape with greater stack order is always in front of an element with a lower s
 if you need both (z ordering and semi-transparency) better sort shapes.
 
 -}
-moveZ : Int -> Shape2d -> Shape2d
-moveZ z (Shape2d shape) =
-    Shape2d { shape | z = toFloat z }
+moveZ : Int -> Shape -> Shape
+moveZ =
+    Shape2d.setZ
 
 
 {-| Make a shape bigger or smaller. So if you wanted some [`words`](#words) to
@@ -1243,8 +1125,8 @@ be larger, you could say:
 
 -}
 scale : Float -> Shape -> Shape
-scale ns (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | sx = sx * ns, sy = sy * ns }
+scale ns =
+    Shape2d.scale ns ns
 
 
 {-| Make a shape _horizontally_ bigger or smaller.
@@ -1257,8 +1139,8 @@ Also, passing a negative value mirrors a shape:
 
 -}
 scaleX : Float -> Shape -> Shape
-scaleX sx (Shape2d shape) =
-    Shape2d { shape | sx = shape.sx * sx }
+scaleX sx =
+    Shape2d.scale sx 1
 
 
 {-| Make a shape _vertically_ bigger or smaller.
@@ -1271,8 +1153,8 @@ Also, passing a negative value mirrors a shape:
 
 -}
 scaleY : Float -> Shape -> Shape
-scaleY sy (Shape2d shape) =
-    Shape2d { shape | sy = shape.sy * sy }
+scaleY sy =
+    Shape2d.scale 1 sy
 
 
 {-| Mirror shape horizontally.
@@ -1282,8 +1164,8 @@ scaleY sy (Shape2d shape) =
 
 -}
 flipX : Shape -> Shape
-flipX (Shape2d shape) =
-    Shape2d { shape | sx = shape.sx * -1 }
+flipX =
+    Shape2d.scale -1 1
 
 
 {-| Mirror shape vertically.
@@ -1293,8 +1175,8 @@ flipX (Shape2d shape) =
 
 -}
 flipY : Shape -> Shape
-flipY (Shape2d shape) =
-    Shape2d { shape | sy = shape.sy * -1 }
+flipY =
+    Shape2d.scale 1 -1
 
 
 {-| Rotate shapes in degrees.
@@ -1312,8 +1194,8 @@ The degrees go _counter-clockwise_ to match the direction of the
 
 -}
 rotate : Float -> Shape -> Shape
-rotate da (Shape2d ({ x, y, a, sx, sy, o, form } as shape)) =
-    Shape2d { shape | a = a + degrees da }
+rotate =
+    Shape2d.rotate
 
 
 {-| Fade a shape. This lets you make shapes see-through or even completely
@@ -1335,8 +1217,8 @@ and `1` is completely solid.
 
 -}
 fade : Float -> Shape -> Shape
-fade o (Shape2d shape) =
-    Shape2d { shape | o = o }
+fade =
+    Shape2d.fade
 
 
 

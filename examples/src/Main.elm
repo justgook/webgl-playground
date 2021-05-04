@@ -4,22 +4,22 @@ import Array exposing (Array)
 import Browser
 import Circles
 import Clock
-import Embedded
 import Extra.Font
 import Extra.JumpGun as JumpGun
 import Extra.Mario as Mario
 import Font
 import GitHubCorner
 import HexGrid
-import Html exposing (Html)
 import Mouse
 import MulticolorPolygon
 import Playground exposing (..)
+import Playground.Internal as Internal exposing (Msg(..), Playground(..))
 import Polygon
 import Set
 import Shmup
 import Tree
 import Vectors
+import WebGL.Shape2d as Shape2d
 import Zindex
 
 
@@ -34,28 +34,46 @@ animationTime =
     60
 
 
-main : Program () (Embedded.Model Memory) Embedded.Msg
+main : Program () (Playground Memory) Msg
 main =
+    let
+        view { computer, memory } =
+            viewMemory computer memory
+
+        initModel =
+            Internal.initModel initialMemory
+
+        ( entities, textures, cmd ) =
+            Internal.render view (Playground initModel)
+    in
     Browser.document
-        { init = \_ -> Embedded.init initialMemory
+        { init =
+            \_ ->
+                ( Playground
+                    { initModel
+                        | entities = entities
+                        , textures = textures
+                    }
+                , Cmd.batch [ cmd, Internal.requestScreen ]
+                )
         , view =
-            \model ->
-                { title = "WebGL Playground Demo"
-                , body =
-                    [ GitHubCorner.topRight "https://github.com/justgook/webgl-playground"
-                    , Embedded.view model
-                    , Html.node "style" [] [ Html.text "html,body{margin:0;padding:0;overflow:hidden;}canvas{display:block}" ]
+            \(Playground m) ->
+                { body =
+                    [ Shape2d.view m
+                    , GitHubCorner.topRight "https://github.com/justgook/webgl-playground"
                     ]
+                , title = "Playground::Examples"
                 }
-        , update = Embedded.update updateMemory viewMemory
-        , subscriptions = Embedded.subscriptions
+        , update = Internal.gameUpdate view updateMemory
+        , subscriptions =
+            \_ ->
+                Sub.batch
+                    [ Sub.map ScreenMsg Shape2d.resize
+                    , Sub.map TimeMsg Shape2d.tick
+                    , Sub.map KeyboardMsg Shape2d.keyboardSubscription
+                    , Sub.map MouseMsg Internal.mouseSubscription
+                    ]
         }
-
-
-
---
---playground =
---    embed viewMemory updateMemory initialMemory
 
 
 viewMemory : Computer -> Memory -> List Shape
@@ -282,7 +300,7 @@ initialMemory =
         , { img = Just "Vectors.png", name = "Vectors", run = GameExample <| VectorsGame { view = Vectors.view, update = Vectors.update, memory = Vectors.init } }
         , { img = Just "JumpGun.png", name = "JumpGun(E)", run = GameExample <| JumpGunGame { view = JumpGun.view, update = JumpGun.update, memory = JumpGun.init } }
         , { img = Just "Mario.png", name = "Mario(E)", run = GameExample <| MarioGame { view = Mario.view, update = Mario.update, memory = Mario.init } }
-        , { img = Just "MSDF.png", name = "MSDF(E)", run = PictureExample Extra.Font.view }
+        , { img = Just "MSDF.png", name = "MSDF(E)", run = AnimationExample Extra.Font.view }
         , { img = Just "Zindex.png", name = "Zindex", run = PictureExample Zindex.view }
         ]
         |> Init

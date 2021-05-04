@@ -78,6 +78,9 @@ When you start making fancier games, you will store fancier things in memory. Th
 I started off trying to make Pong, then worked on games like Breakout and Space Invaders as I learned more and more. It was really fun, and I hope it will be for you as well!
 # Changelog
 
+# 4.0.0 -> 5.0.0
+  1. Update [`WebGL.Shape2d`](https://package.elm-lang.org/packages/justgook/webgl-shape/latest/) to *3.0.0*
+
 # 3.0.1 -> 4.0.0
 
   1. `Playground.Advanced` move to own package [`WebGL.Shape2d`](https://package.elm-lang.org/packages/justgook/webgl-shape/latest/) [example](https://raw.githubusercontent.com/justgook/webgl-playground/master/examples/src/Embedded.elm)

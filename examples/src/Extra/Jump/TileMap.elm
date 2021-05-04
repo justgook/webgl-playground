@@ -3,11 +3,10 @@ module Extra.Jump.TileMap exposing (fullscreen, level1)
 import Math.Vector4 exposing (vec4)
 import Playground exposing (group)
 import Playground.Extra as Extra
-import Playground.Render exposing (defaultEntitySettings)
-import Playground.Shader as Shader
 import WebGL
-import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
-import WebGL.Texture exposing (Texture)
+import WebGL.Shape2d.Render exposing (defaultEntitySettings)
+import WebGL.Shape2d.Shader as Shader
+import WebGL.Shape2d.TexturedShape as TexturedShape
 
 
 level1 =
@@ -21,30 +20,20 @@ level1 =
 
 
 fullscreen =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form =
-            Form 1
-                1
-                (\translate scaleRotateSkew z opacity ->
-                    WebGL.entityWith
-                        defaultEntitySettings
-                        vertFullscreen
-                        Shader.fragFill
-                        Shader.mesh
-                        { uP = translate
-                        , uT = scaleRotateSkew
-                        , uA = opacity
-                        , color = vec4 (14 / 255) (21 / 255) (28 / 255) 1
-                        , z = z
-                        }
-                )
+    TexturedShape.shape 1 1 fullScreenRender
+
+
+fullScreenRender translate scaleRotateSkew z opacity =
+    WebGL.entityWith
+        defaultEntitySettings
+        vertFullscreen
+        Shader.fragFill
+        Shader.mesh
+        { uP = translate
+        , uT = scaleRotateSkew
+        , uA = opacity
+        , color = vec4 (14 / 255) (21 / 255) (28 / 255) 1
+        , z = z
         }
 
 

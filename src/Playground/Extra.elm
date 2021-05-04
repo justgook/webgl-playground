@@ -20,10 +20,10 @@ module Playground.Extra exposing
 import Math.Vector2 exposing (vec2)
 import Math.Vector4 exposing (Vec4, vec4)
 import Playground exposing (Color, Shape)
-import Playground.Extra.Tilemap as Tilemap
-import Playground.Render as Render
-import WebGL.Shape2d exposing (Form(..), Render, Shape2d(..))
-import WebGL.Texture exposing (Texture)
+import WebGL.Shape2d.Render as Render
+import WebGL.Shape2d.TexturedShape as AutoTextures
+import WebGL.Shape2d.Util as Util
+import WebGL.Texture as Texture exposing (Texture)
 
 
 {-| Show tile from a tileset.
@@ -44,28 +44,12 @@ this draws the first tile of the second row
 -}
 tile : Float -> Float -> String -> Int -> Shape
 tile tileW tileH tileset index =
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form =
-            Textured tileset <|
-                \t ->
-                    Shape2d
-                        { x = 0
-                        , y = 0
-                        , z = 0
-                        , a = 0
-                        , sx = 1
-                        , sy = 1
-                        , o = 1
-                        , form = Form tileW tileH <| Render.tile t (vec2 tileW tileH) (size t) (toFloat index)
-                        }
-        }
+    tileset
+        |> AutoTextures.textured
+            (\t ->
+                Render.tile t (vec2 tileW tileH) (Util.size t) index
+                    |> AutoTextures.shape tileW tileH
+            )
 
 
 {-| Show sprite from a sprite sheet.
@@ -87,41 +71,25 @@ sprite atlas { xmin, xmax, ymin, ymax } =
         h =
             abs (ymax - ymin) + 1
     in
-    Shape2d
-        { x = 0
-        , y = 0
-        , z = 0
-        , a = 0
-        , sx = 1
-        , sy = 1
-        , o = 1
-        , form =
-            Textured atlas <|
-                \t ->
-                    let
-                        ( tW_, tH_ ) =
-                            WebGL.Texture.size t
+    atlas
+        |> AutoTextures.textured
+            (\t ->
+                let
+                    ( tW_, tH_ ) =
+                        Texture.size t
 
-                        tW =
-                            toFloat tW_
+                    tW =
+                        toFloat tW_
 
-                        tH =
-                            toFloat tH_
+                    tH =
+                        toFloat tH_
 
-                        uv =
-                            vec4 (xmin / tW) (1 - ymin / tH - (h / tH)) (w / tW) (h / tH)
-                    in
-                    Shape2d
-                        { x = 0
-                        , y = 0
-                        , z = 0
-                        , a = 0
-                        , sx = 1
-                        , sy = 1
-                        , o = 1
-                        , form = Form w h <| Render.sprite t (vec2 tW tH) uv
-                        }
-        }
+                    uv =
+                        vec4 (xmin / tW) (1 - ymin / tH - (h / tH)) (w / tW) (h / tH)
+                in
+                Render.sprite t (vec2 tW tH) uv
+                    |> AutoTextures.shape w h
+            )
 
 
 {-| Show tilemap from a tileset and a corresponding lookup table stored as a texture.
@@ -176,10 +144,16 @@ More details about this rendering technique can be found in [Brandon Jones’ bl
 
 -}
 tilemap : Float -> Float -> String -> String -> Shape
-tilemap =
-    Tilemap.tilemap
-
-
-size : WebGL.Texture.Texture -> Math.Vector2.Vec2
-size t =
-    WebGL.Texture.size t |> (\( w, h ) -> vec2 (toFloat w) (toFloat h))
+tilemap tileW tileH tileset lut =
+    AutoTextures.textured2
+        (\t1 t2 ->
+            let
+                ( w2, h2 ) =
+                    Texture.size t2
+                        |> Tuple.mapBoth (toFloat >> (*) tileW) (toFloat >> (*) tileH)
+            in
+            Render.tilemap tileW tileH t1 t2
+                |> AutoTextures.shape w2 h2
+        )
+        tileset
+        lut

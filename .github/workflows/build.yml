@@ -10,99 +10,105 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2.0.0
-      with:
-        persist-credentials: false
+      - name: Checkout
+        uses: actions/checkout@v2.3.4
+        with:
+          persist-credentials: false
 
-    - name: Setup Elm
-      uses: justgook/setup-elm@v1
+      - name: Setup Elm
+        uses: justgook/setup-elm@1.2.0
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
 
-    - name: Setup Node.js for use with actions
-      uses: actions/setup-node@v1.4.2
-      with:
-        node-version: '12.x'
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2.1.5
+        with:
+          node-version: '14'
 
-    - name: Set yarn
-      id: yarn
-      run: |
-        echo "::set-output name=dir::$(yarn cache dir)"
-        echo "::add-path::$(yarn bin)"
-        echo "::add-path::$(yarn global bin)"
+      - name: Set yarn
+        id: yarn
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+        run: |
+          echo "::set-output name=dir::$(yarn cache dir)"
+          echo "::add-path::$(yarn bin)"
+          echo "::add-path::$(yarn global bin)"
 
-    - name: Get Yarn cache
-      uses: actions/cache@v1.1.0
-      id: yarn-cache-exists
-      with:
-        path: ${{ steps.yarn.outputs.dir }}
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
+      - name: Get Yarn cache
+        uses: actions/cache@v1.1.0
+        id: yarn-cache-exists
+        with:
+          path: ${{ steps.yarn.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
-    - name: Get node_modules
-      uses: actions/cache@v1.1.0
-      id: node_modules-cache-exists
-      with:
-        path: ./examples/node_modules
-        key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-node_modules-
+      - name: Get node_modules
+        uses: actions/cache@v1.1.0
+        id: node_modules-cache-exists
+        with:
+          path: ./examples/node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
 
-    - name: Install Dependencies
-      #if: steps.yarn-cache-exists.outputs.cache-hit != 'true'
-      run: |
-        yarn
-        echo "::add-path::$(yarn bin)"
-      working-directory: examples
+      - name: Install Dependencies
+        #if: steps.yarn-cache-exists.outputs.cache-hit != 'true'
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
+        run: |
+          yarn
+          echo "::add-path::$(yarn bin)"
+        working-directory: examples
 
-    - name: Build
-      run: |
-        elm make src/Main.elm --optimize --output=./gh-pages/bundle.js
-      working-directory: examples
+      - name: Build
+        run: |
+          elm make src/Main.elm --optimize --output=./gh-pages/bundle.js
+        working-directory: examples
 
 
-    - name: Optimize Javascript
-      env:
-        NODE_ENV: production
-      working-directory: examples
-      run: |
-        jscodeshift -t transform.js ./gh-pages/bundle.js
-        uglifyjs ./gh-pages/bundle.js --compress "pure_funcs=[F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9],pure_getters" --output=./gh-pages/bundle.js
-        uglifyjs ./gh-pages/bundle.js --compress 'keep_fargs=false,unsafe_comps,unsafe' --mangle --output=./gh-pages/bundle.js
+      - name: Optimize Javascript
+        env:
+          NODE_ENV: production
+        working-directory: examples
+        run: |
+          jscodeshift -t transform.js ./gh-pages/bundle.js
+          uglifyjs ./gh-pages/bundle.js --compress "pure_funcs=[F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9],pure_getters" --output=./gh-pages/bundle.js
+          uglifyjs ./gh-pages/bundle.js --compress 'keep_fargs=false,unsafe_comps,unsafe' --mangle --output=./gh-pages/bundle.js
 
-#    - name: Optimize Javascript Jump
-#      uses: ./.github/actions/optimize-js
-#      with:
-#        file: ./examples/gh-pages/jump.js
-#        transform: ./examples/transform.js
-    - name: Building assets
-      run: |
-        elm make src/Clock.elm --output=./gh-pages/Clock.html
-        elm make src/HexGrid.elm --output=./gh-pages/HexGrid.html
-        elm make src/Polygon.elm --output=./gh-pages/Polygon.html
-        elm make src/MulticolorPolygon.elm --output=./gh-pages/Polygon2.html
-        elm make src/Tree.elm --output=./gh-pages/Tree.html
-        elm make src/Mouse.elm --output=./gh-pages/Mouse.html
-        elm make src/Vectors.elm --output=./gh-pages/Vectors.html
-        elm make src/Shmup.elm --output=./gh-pages/Shmup.html
-        elm make src/Circles.elm --output=./gh-pages/Circles.html
-        elm make src/Font.elm --output=./gh-pages/Font.html
-        elm make src/Extra/Font.elm --output=./gh-pages/MSDF.html
-        elm make src/Extra/JumpGun.elm --output=./gh-pages/JumpGun.html
-        elm make src/Extra/Mario.elm --output=./gh-pages/Mario.html
-        elm make src/Zindex.elm --output=./gh-pages/Zindex.html
-        elm make src/Main.elm --output=./gh-pages/Main.html
-        node build-assets.js
-      working-directory: examples
-    - name: Building HTML
-      env:
-        NODE_ENV: production
-        BUNDLE_JS: jump.js
-      working-directory: examples
-      run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
+      #    - name: Optimize Javascript Jump
+      #      uses: ./.github/actions/optimize-js
+      #      with:
+      #        file: ./examples/gh-pages/jump.js
+      #        transform: ./examples/transform.js
+      - name: Building assets
+        run: |
+          elm make src/Clock.elm --output=./gh-pages/Clock.html
+          elm make src/HexGrid.elm --output=./gh-pages/HexGrid.html
+          elm make src/Polygon.elm --output=./gh-pages/Polygon.html
+          elm make src/MulticolorPolygon.elm --output=./gh-pages/Polygon2.html
+          elm make src/Tree.elm --output=./gh-pages/Tree.html
+          elm make src/Mouse.elm --output=./gh-pages/Mouse.html
+          elm make src/Vectors.elm --output=./gh-pages/Vectors.html
+          elm make src/Shmup.elm --output=./gh-pages/Shmup.html
+          elm make src/Circles.elm --output=./gh-pages/Circles.html
+          elm make src/Font.elm --output=./gh-pages/Font.html
+          elm make src/Extra/Font.elm --output=./gh-pages/MSDF.html
+          elm make src/Extra/JumpGun.elm --output=./gh-pages/JumpGun.html
+          elm make src/Extra/Mario.elm --output=./gh-pages/Mario.html
+          elm make src/Zindex.elm --output=./gh-pages/Zindex.html
+          elm make src/Main.elm --output=./gh-pages/Main.html
+          node build-assets.js
+        working-directory: examples
+      - name: Building HTML
+        env:
+          NODE_ENV: production
+          BUNDLE_JS: jump.js
+        working-directory: examples
+        run: posthtml ./gh-pages/index.html -o ./gh-pages/index.html -c posthtml.config.js
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3.6.1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./examples/gh-pages
+      - name: GitHub Pages action
+        uses: peaceiris/actions-gh-pages@v3.7.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: examples/gh-pages

@@ -6,7 +6,7 @@ module Playground.Font.SimpleMood exposing (image, letters)
 import Dict
 
 
-letters : Char -> Float
+letters : Char -> Int
 letters c =
     Dict.get c letters_
         |> Maybe.withDefault 0
@@ -31,7 +31,7 @@ letters_ =
     , [ '≡', '±', '≥', '≤', '⌠', '⌡', '÷', '≈', '°', '∙', '·', '√', 'ⁿ', '²', '■', '\u{00A0}' ]
     ]
         |> List.concat
-        |> List.indexedMap (\a b -> ( b, toFloat a ))
+        |> List.indexedMap (\a b -> ( b, a ))
         |> Dict.fromList
 
 
